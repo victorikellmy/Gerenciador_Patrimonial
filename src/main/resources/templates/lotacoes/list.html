@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Lotações')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="d-flex justify-content-between mb-3">
+        <h1 class="h3">Lotações</h1>
+    </div>
+
+    <!-- Formulário de cadastro rápido -->
+    <div class="card card-panel mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Nova Lotação</h5>
+            <form th:action="@{/lotacoes}" th:object="${lotacaoForm}" method="post" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">UPM</label>
+                    <input type="text" class="form-control" th:field="*{upm}" placeholder="1 BPM"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nome/Sala</label>
+                    <input type="text" class="form-control" th:field="*{nome}" placeholder="CONS. ODONTO"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" class="form-control" th:field="*{cidade}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo</label>
+                    <select class="form-select" th:field="*{tipoLocal}">
+                        <option th:each="t : ${tiposLocal}" th:value="${t}" th:text="${t}"></option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button class="btn btn-success w-100" type="submit">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Listagem -->
+    <div class="card card-panel">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>UPM</th>
+                    <th>Nome</th>
+                    <th>Cidade</th>
+                    <th>Tipo</th>
+                    <th>Responsável atual</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="l : ${pagina.content}">
+                    <td th:text="${l.id}"></td>
+                    <td th:text="${l.upm}"></td>
+                    <td th:text="${l.nome}"></td>
+                    <td th:text="${l.cidade}"></td>
+                    <td><span class="badge bg-secondary" th:text="${l.tipoLocal}"></span></td>
+                    <td th:text="${l.responsavelAtualNome} ?: '—'"></td>
+                    <td class="text-end">
+                        <a class="btn btn-warning btn-xs"
+                           th:href="@{'/lotacoes/' + ${l.id} + '/editar'}">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form class="d-inline"
+                              th:action="@{'/lotacoes/' + ${l.id} + '/excluir'}"
+                              method="post"
+                              onsubmit="return confirm('Excluir esta lotação?');">
+                            <button class="btn btn-danger btn-xs">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${pagina.empty}">
+                    <td colspan="7" class="text-center text-muted">Nenhuma lotação cadastrada.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Paginação simples -->
+    <nav th:if="${pagina.totalPages > 1}" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/lotacoes(page=${pagina.number - 1}, size=${pagina.size})}">Anterior</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link"
+                      th:text="'Página ' + ${pagina.number + 1} + ' de ' + ${pagina.totalPages}"></span>
+            </li>
+            <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/lotacoes(page=${pagina.number + 1}, size=${pagina.size})}">Próxima</a>
+            </li>
+        </ul>
+    </nav>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<!--
+    Fragmentos compartilhados pelo layout.
+    Uso nas páginas:
+      <head th:replace="~{fragments/layout :: head('Título')}"></head>
+      <nav  th:replace="~{fragments/layout :: navbar}"></nav>
+      <div  th:replace="~{fragments/layout :: messages}"></div>
+-->
+
+<!-- ============================ HEAD ============================ -->
+<head th:fragment="head(titulo)">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title th:text="${titulo} ?: 'Gerenciador Patrimonial'">Gerenciador Patrimonial</title>
+
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet" crossorigin="anonymous"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+          rel="stylesheet"/>
+
+    <!-- CSS custom -->
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+
+<!-- ============================ NAVBAR ============================ -->
+<nav th:fragment="navbar" class="navbar navbar-expand-lg bg-dark navbar-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" th:href="@{/}">
+            <i class="bi bi-box-seam me-1"></i> Gerenciador Patrimonial
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="menu">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" th:href="@{/patrimonios}">Patrimônios</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/lotacoes}">Lotações</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/responsaveis}">Responsáveis</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/relatorios}">Relatórios</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/importacao}">Importação</a></li>
+            </ul>
+            <span class="navbar-text small">v0.0.1-SNAPSHOT · perfil: dev</span>
+        </div>
+    </div>
+</nav>
+
+<!-- ============================ FLASH MESSAGES ============================ -->
+<div th:fragment="messages">
+    <div th:if="${sucesso}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>
+        <span th:text="${sucesso}">Operação realizada.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${erro}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <span th:text="${erro}">Erro.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+
+<!-- ============================ SCRIPTS ============================ -->
+<div th:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            crossorigin="anonymous"></script>
+</div>
+</html>

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(./gradlew compileJava)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew compileJava --console=plain)"
+    ]
+  }
+}

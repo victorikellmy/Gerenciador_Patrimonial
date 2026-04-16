@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Inventário Completo')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-list-ul"></i> Inventário Completo
+            <span class="text-muted small" th:text="'(' + ${lista.size()} + ' itens)'"></span>
+        </h1>
+        <div>
+            <a class="btn btn-outline-secondary btn-sm" th:href="@{/relatorios}">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+            <a class="btn btn-outline-primary btn-sm"
+               th:href="@{/relatorios/inventario/download(formato='csv')}">
+                <i class="bi bi-filetype-csv"></i> CSV
+            </a>
+            <a class="btn btn-outline-success btn-sm"
+               th:href="@{/relatorios/inventario/download(formato='xlsx')}">
+                <i class="bi bi-filetype-xlsx"></i> Excel
+            </a>
+            <a class="btn btn-outline-danger btn-sm"
+               th:href="@{/relatorios/inventario/download(formato='pdf')}">
+                <i class="bi bi-filetype-pdf"></i> PDF
+            </a>
+        </div>
+    </div>
+
+    <div class="card card-panel">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 align-middle">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tombo</th>
+                    <th>Descrição</th>
+                    <th>Categoria</th>
+                    <th>UPM / Lotação</th>
+                    <th>Responsável</th>
+                    <th class="text-end">Valor</th>
+                    <th class="text-end">VCL</th>
+                    <th>Conservação</th>
+                    <th>Situação</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${lista}">
+                    <td th:text="${p.id}"></td>
+                    <td th:text="${p.numeroTombo} ?: '—'"></td>
+                    <td th:text="${p.descricao}"></td>
+                    <td th:text="${p.categoria} ?: '—'"></td>
+                    <td>
+                        <span class="text-muted small" th:text="${p.lotacao?.upm}"></span>
+                        <span th:text="${p.lotacao?.nome}"></span>
+                    </td>
+                    <td th:text="${p.responsavel?.nomeCompleto}"></td>
+                    <td class="text-end"
+                        th:text="${p.valorCompra != null} ? ${#numbers.formatDecimal(p.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                    <td class="text-end" th:with="calc=${depreciacaoService.calcular(p)}"
+                        th:text="${calc.valorContabilLiquido != null} ? ${#numbers.formatDecimal(calc.valorContabilLiquido, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                    <td>
+                        <span class="badge bg-info text-dark" th:text="${p.conservacao} ?: '—'"></span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="|badge-sit ${p.situacao}|"
+                              th:text="${p.situacao}"></span>
+                    </td>
+                </tr>
+                <tr th:if="${lista.isEmpty()}">
+                    <td colspan="10" class="text-center text-muted py-3">
+                        Nenhum patrimônio cadastrado ainda.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="small text-muted mt-2 mb-0">
+        Os cálculos de depreciação usam VUT (vida útil por categoria) × percentual
+        associado ao estado de conservação. Itens sem valor de compra, categoria ou
+        conservação aparecem com VCL "—".
+    </p>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

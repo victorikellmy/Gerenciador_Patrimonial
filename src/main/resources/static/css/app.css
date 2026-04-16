@@ -1,0 +1,38 @@
+/* =============================================================
+   Estilos custom do Gerenciador Patrimonial.
+   Mantém a UI enxuta — só sobrescritas/ajustes do Bootstrap.
+   ============================================================= */
+
+body {
+    background-color: #f5f7fa;
+}
+
+/* Cards padrão do sistema */
+.card-panel {
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Tabelas levemente mais claras */
+.table thead {
+    background-color: #f0f2f6;
+}
+
+/* Código/tombo monoespaçado */
+.tombo {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* Badges de situação */
+.badge-ATIVO      { background-color: #198754; }
+.badge-BAIXADO    { background-color: #6c757d; }
+.badge-MANUTENCAO { background-color: #fd7e14; }
+.badge-CAUTELADO  { background-color: #0dcaf0; color: #000; }
+.badge-EM_APURACAO{ background-color: #ffc107; color: #000; }
+
+/* Ações compactas */
+.btn-xs {
+    padding: 0.15rem 0.45rem;
+    font-size: 0.78rem;
+}

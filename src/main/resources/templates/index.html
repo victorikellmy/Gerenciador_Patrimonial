@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Dashboard</h1>
+        <div>
+            <a class="btn btn-outline-primary btn-sm" th:href="@{/relatorios}">
+                <i class="bi bi-file-earmark-bar-graph"></i> Relatórios
+            </a>
+            <a class="btn btn-success btn-sm" th:href="@{/patrimonios/novo}">
+                <i class="bi bi-plus-lg"></i> Novo patrimônio
+            </a>
+        </div>
+    </div>
+
+    <!-- ======================= KPIs ======================= -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-3 col-6">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Total de patrimônios</div>
+                    <div class="display-6" th:text="${m.totalPatrimonios}">0</div>
+                    <div class="small text-muted">
+                        <span th:text="${m.contagemPorSituacao['ATIVO']}">0</span> ativos ·
+                        <span th:text="${m.contagemPorSituacao['BAIXADO']}">0</span> baixados
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-panel h-100 bg-primary text-white">
+                <div class="card-body">
+                    <div class="small">Valor total (ativos)</div>
+                    <div class="h4 mb-0"
+                         th:text="'R$ ' + ${#numbers.formatDecimal(m.valorTotalAtivos, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
+                    <div class="small">Base de compra</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-panel h-100 bg-warning-subtle">
+                <div class="card-body">
+                    <div class="small text-muted">Depreciação acumulada</div>
+                    <div class="h4 mb-0"
+                         th:text="'R$ ' + ${#numbers.formatDecimal(m.depreciacaoAcumuladaTotal, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-panel h-100 bg-success-subtle">
+                <div class="card-body">
+                    <div class="small text-muted">Valor contábil líquido</div>
+                    <div class="h4 mb-0"
+                         th:text="'R$ ' + ${#numbers.formatDecimal(m.valorContabilLiquidoTotal, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================= Gráficos ======================= -->
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Distribuição por categoria</h6>
+                    <canvas id="chartCategoria" height="230"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Conservação (ativos)</h6>
+                    <canvas id="chartConservacao" height="230"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Top 10 UPMs por volume</h6>
+                    <canvas id="chartUpm" height="230"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================= Últimas movimentações ======================= -->
+    <div class="card card-panel">
+        <div class="card-body">
+            <h6 class="text-muted mb-3">
+                <i class="bi bi-arrow-left-right"></i> Últimas movimentações
+            </h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tombo</th>
+                        <th>Descrição</th>
+                        <th>De (lotação)</th>
+                        <th>Para (lotação)</th>
+                        <th>De (responsável)</th>
+                        <th>Para (responsável)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="mov : ${m.ultimasMovimentacoes}">
+                        <td class="small text-muted" th:text="${mov.dataMovimentacao}"></td>
+                        <td th:text="${mov.patrimonioTombo} ?: '—'"></td>
+                        <td th:text="${mov.patrimonioDescricao}"></td>
+                        <td th:text="${mov.deLotacao} ?: '—'"></td>
+                        <td th:text="${mov.paraLotacao} ?: '—'"></td>
+                        <td th:text="${mov.deResponsavel} ?: '—'"></td>
+                        <td th:text="${mov.paraResponsavel} ?: '—'"></td>
+                    </tr>
+                    <tr th:if="${m.ultimasMovimentacoes.isEmpty()}">
+                        <td colspan="7" class="text-center text-muted py-3">
+                            Ainda não há movimentações registradas.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<!-- ======================= Dados para Chart.js ======================= -->
+<script th:inline="javascript">
+    // Inline dos dados — evita endpoint extra. Thymeleaf serializa para JSON válido.
+    const dadosCategoria = {
+        labels: /*[[${m.porCategoria.![chave]}]]*/ [],
+        quantidades: /*[[${m.porCategoria.![quantidade]}]]*/ []
+    };
+    const dadosConservacao = {
+        labels: /*[[${m.porConservacao.![chave]}]]*/ [],
+        quantidades: /*[[${m.porConservacao.![quantidade]}]]*/ []
+    };
+    const dadosUpm = {
+        labels: /*[[${m.topUpms.![chave]}]]*/ [],
+        quantidades: /*[[${m.topUpms.![quantidade]}]]*/ []
+    };
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    const paleta = [
+        '#0d6efd', '#198754', '#ffc107', '#dc3545', '#6610f2',
+        '#20c997', '#fd7e14', '#0dcaf0', '#6f42c1', '#d63384'
+    ];
+
+    new Chart(document.getElementById('chartCategoria'), {
+        type: 'doughnut',
+        data: {
+            labels: dadosCategoria.labels,
+            datasets: [{ data: dadosCategoria.quantidades, backgroundColor: paleta }]
+        },
+        options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+    });
+
+    new Chart(document.getElementById('chartConservacao'), {
+        type: 'bar',
+        data: {
+            labels: dadosConservacao.labels,
+            datasets: [{ label: 'Quantidade', data: dadosConservacao.quantidades, backgroundColor: paleta[0] }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    new Chart(document.getElementById('chartUpm'), {
+        type: 'bar',
+        data: {
+            labels: dadosUpm.labels,
+            datasets: [{ label: 'Patrimônios', data: dadosUpm.quantidades, backgroundColor: paleta[1] }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+</script>
+</body>
+</html>

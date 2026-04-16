@@ -1,0 +1,59 @@
+plugins {
+    id 'java'
+    // Spring Boot 3.3.x — versão LTS estável (a 4.0.5 original não existe)
+    id 'org.springframework.boot' version '3.3.5'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.fundacao'
+version = '0.0.1-SNAPSHOT'
+description = 'Gerenciador_Patrimonial'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // --- Core Spring Boot ---
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-web'           // correto é "-web", não "-webmvc"
+    implementation 'org.springframework.boot:spring-boot-starter-validation'    // @Valid / @NotNull / @NotBlank
+
+    // --- Segurança (Sprint 5) ---
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'      // sec:authorize, sec:authentication
+
+    // --- Migrações de banco (Flyway) ---
+    implementation 'org.flywaydb:flyway-core'
+
+    // --- Leitura/Escrita de Excel (Sprint 2 + Sprint 4) ---
+    implementation 'org.apache.poi:poi-ooxml:5.3.0'
+
+    // --- Geração de PDF (Sprint 4) ---
+    // OpenPDF — fork LGPL do iText 4.x (não exige licença comercial).
+    implementation 'com.github.librepdf:openpdf:1.3.34'
+
+    // --- Lombok ---
+    compileOnly         'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // --- Dev / banco em memória ---
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    runtimeOnly     'com.h2database:h2'                 // perfil dev
+    runtimeOnly     'org.postgresql:postgresql'         // perfil prod
+
+    // --- Testes ---
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly    'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

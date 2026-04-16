@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Patrimônios')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">Patrimônios</h1>
+        <a class="btn btn-success" th:href="@{/patrimonios/novo}">
+            <i class="bi bi-plus-lg"></i> Novo
+        </a>
+    </div>
+
+    <!-- =============== Filtros =============== -->
+    <div class="card card-panel mb-3">
+        <div class="card-body">
+            <form th:action="@{/patrimonios}" method="get" class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Descrição contém</label>
+                    <input type="text" class="form-control form-control-sm"
+                           name="descricao" th:value="${filtro.descricao}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Nº Tombo</label>
+                    <input type="text" class="form-control form-control-sm"
+                           name="numeroTombo" th:value="${filtro.numeroTombo}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">UPM</label>
+                    <input type="text" class="form-control form-control-sm"
+                           name="upm" th:value="${filtro.upm}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Categoria</label>
+                    <input type="text" class="form-control form-control-sm"
+                           name="categoria" th:value="${filtro.categoria}"/>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small mb-1">Situação</label>
+                    <select class="form-select form-select-sm" name="situacao">
+                        <option value="">—</option>
+                        <option th:each="s : ${situacoes}"
+                                th:value="${s}"
+                                th:text="${s}"
+                                th:selected="${filtro.situacao != null and filtro.situacao.name() == s.name()}"></option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Conservação</label>
+                    <select class="form-select form-select-sm" name="conservacao">
+                        <option value="">—</option>
+                        <option th:each="c : ${conservacoes}"
+                                th:value="${c}"
+                                th:text="${c}"
+                                th:selected="${filtro.conservacao != null and filtro.conservacao.name() == c.name()}"></option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary btn-sm" type="submit">
+                        <i class="bi bi-search"></i> Filtrar
+                    </button>
+                    <a class="btn btn-secondary btn-sm" th:href="@{/patrimonios}">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- =============== Tabela =============== -->
+    <div class="card card-panel">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0 align-middle">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tombo</th>
+                    <th>Descrição</th>
+                    <th>Categoria</th>
+                    <th>Lotação</th>
+                    <th>Responsável</th>
+                    <th class="text-end">Valor</th>
+                    <th>Conservação</th>
+                    <th>Situação</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${pagina.content}">
+                    <td th:text="${p.id}"></td>
+                    <td th:text="${p.numeroTombo} ?: '—'"></td>
+                    <td th:text="${p.descricao}"></td>
+                    <td th:text="${p.categoria} ?: '—'"></td>
+                    <td>
+                        <span th:if="${p.lotacaoUpm}"
+                              class="text-muted small" th:text="${p.lotacaoUpm}"></span>
+                        <span th:text="${p.lotacaoNome} ?: '—'"></span>
+                    </td>
+                    <td th:text="${p.responsavelNome} ?: '—'"></td>
+                    <td class="text-end"
+                        th:text="${p.valorCompra != null} ? ${#numbers.formatDecimal(p.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                    <td>
+                        <span class="badge bg-info text-dark"
+                              th:text="${p.conservacao} ?: '—'"></span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="|badge-sit ${p.situacao}|"
+                              th:text="${p.situacao}"></span>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-warning btn-xs"
+                           th:href="@{'/patrimonios/' + ${p.id} + '/editar'}" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a class="btn btn-info btn-xs"
+                           th:href="@{'/patrimonios/' + ${p.id} + '/movimentar'}" title="Movimentar"
+                           th:if="${p.situacao.name() != 'BAIXADO'}">
+                            <i class="bi bi-arrow-left-right"></i>
+                        </a>
+                        <a class="btn btn-dark btn-xs"
+                           th:href="@{'/patrimonios/' + ${p.id} + '/baixa'}" title="Dar baixa"
+                           th:if="${p.situacao.name() != 'BAIXADO'}">
+                            <i class="bi bi-archive"></i>
+                        </a>
+                        <form class="d-inline"
+                              th:action="@{'/patrimonios/' + ${p.id} + '/excluir'}" method="post"
+                              onsubmit="return confirm('Excluir definitivamente este patrimônio? Esta ação é irreversível.');">
+                            <button class="btn btn-danger btn-xs" title="Excluir">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${pagina.empty}">
+                    <td colspan="10" class="text-center text-muted py-3">
+                        Nenhum patrimônio encontrado com os filtros aplicados.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- =============== Paginação =============== -->
+    <nav th:if="${pagina.totalPages > 1}" class="mt-3">
+        <ul class="pagination pagination-sm">
+            <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/patrimonios(
+                        page=${pagina.number - 1}, size=${pagina.size},
+                        descricao=${filtro.descricao}, numeroTombo=${filtro.numeroTombo},
+                        upm=${filtro.upm}, categoria=${filtro.categoria},
+                        situacao=${filtro.situacao}, conservacao=${filtro.conservacao})}">
+                    Anterior
+                </a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link"
+                      th:text="'Página ' + ${pagina.number + 1} + ' de ' + ${pagina.totalPages} + ' — ' + ${pagina.totalElements} + ' registros'"></span>
+            </li>
+            <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/patrimonios(
+                        page=${pagina.number + 1}, size=${pagina.size},
+                        descricao=${filtro.descricao}, numeroTombo=${filtro.numeroTombo},
+                        upm=${filtro.upm}, categoria=${filtro.categoria},
+                        situacao=${filtro.situacao}, conservacao=${filtro.conservacao})}">
+                    Próxima
+                </a>
+            </li>
+        </ul>
+    </nav>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

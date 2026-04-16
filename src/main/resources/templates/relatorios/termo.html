@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Termo de Responsabilidade')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-file-earmark-text"></i> Termo de Responsabilidade
+        </h1>
+        <a class="btn btn-outline-secondary btn-sm" th:href="@{/relatorios}">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+
+    <div class="alert alert-info small">
+        <i class="bi bi-info-circle"></i>
+        Selecione o responsável — será gerado um PDF listando todos os bens ativos
+        sob a guarda dele, pronto para impressão e assinatura.
+    </div>
+
+    <div class="card card-panel">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Matrícula</th>
+                        <th>Lotação</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="r : ${responsaveis}">
+                        <td th:text="${r.id}"></td>
+                        <td th:text="${r.nomeCompleto}"></td>
+                        <td th:text="${r.matricula} ?: '—'"></td>
+                        <td th:text="${r.lotacaoNome} ?: '—'"></td>
+                        <td class="text-end">
+                            <a class="btn btn-danger btn-sm"
+                               th:href="@{'/relatorios/termo-responsabilidade/' + ${r.id}}"
+                               target="_blank">
+                                <i class="bi bi-file-earmark-pdf"></i> Gerar PDF
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${responsaveis.isEmpty()}">
+                        <td colspan="5" class="text-center text-muted py-3">
+                            Nenhum responsável cadastrado.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

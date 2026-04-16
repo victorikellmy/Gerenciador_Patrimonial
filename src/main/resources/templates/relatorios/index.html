@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Relatórios')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <h1 class="h3 mb-4">
+        <i class="bi bi-file-earmark-bar-graph"></i> Relatórios
+    </h1>
+
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-list-ul text-primary"></i> Inventário completo
+                    </h5>
+                    <p class="card-text small text-muted">
+                        Listagem de todos os patrimônios (ativos + baixados) com depreciação,
+                        valor contábil líquido e dados de lotação/responsável.
+                    </p>
+                    <a class="btn btn-primary btn-sm" th:href="@{/relatorios/inventario}">
+                        <i class="bi bi-eye"></i> Visualizar
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-archive text-dark"></i> Baixas
+                    </h5>
+                    <p class="card-text small text-muted">
+                        Patrimônios baixados com data, motivo e último responsável.
+                        Útil para auditoria e conformidade contábil.
+                    </p>
+                    <a class="btn btn-primary btn-sm" th:href="@{/relatorios/baixas}">
+                        <i class="bi bi-eye"></i> Visualizar
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-file-earmark-pdf text-danger"></i> Termo de Responsabilidade
+                    </h5>
+                    <p class="card-text small text-muted">
+                        Gera documento PDF institucional para assinatura do servidor,
+                        com a relação de todos os bens ativos sob sua responsabilidade.
+                    </p>
+                    <a class="btn btn-primary btn-sm" th:href="@{/relatorios/termo-responsabilidade}">
+                        <i class="bi bi-file-earmark-text"></i> Gerar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

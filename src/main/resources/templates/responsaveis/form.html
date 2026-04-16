@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Editar Responsável')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <h1 class="h3 mb-3">Editar Responsável</h1>
+
+    <div class="card card-panel">
+        <div class="card-body">
+            <form th:action="@{'/responsaveis/' + ${id}}" th:object="${responsavelForm}" method="post">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nome completo</label>
+                        <input type="text" class="form-control" th:field="*{nomeCompleto}"/>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Matrícula</label>
+                        <input type="text" class="form-control" th:field="*{matricula}"/>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cidade</label>
+                        <input type="text" class="form-control" th:field="*{cidade}"/>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Lotação</label>
+                        <select class="form-select" th:field="*{lotacaoId}">
+                            <option value="">— nenhuma —</option>
+                            <option th:each="l : ${lotacoes}" th:value="${l.id}"
+                                    th:text="${l.upm} + ' / ' + ${l.nome}"></option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-save"></i> Salvar
+                    </button>
+                    <a class="btn btn-secondary" th:href="@{/responsaveis}">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
