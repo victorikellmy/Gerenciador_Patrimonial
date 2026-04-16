@@ -61,4 +61,20 @@ public final class Normalizadores {
         String s = raw.trim().replaceAll("\\s+", " ");
         return s.isEmpty() ? null : s;
     }
+
+    /**
+     * Normaliza número de tombo:
+     * <ul>
+     *   <li>Trim e remoção de espaços internos</li>
+     *   <li>Trata {@code "0"}, {@code "00"}, {@code "-"} e vazios como {@code null}
+     *       — são placeholders da planilha, não tombos reais</li>
+     * </ul>
+     * Evita colisões com a constraint UNIQUE de {@code numero_tombo}.
+     */
+    public static String normalizarTombo(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim().replaceAll("\\s+", "");
+        if (s.isEmpty() || s.equals("-") || s.matches("0+")) return null;
+        return s;
+    }
 }

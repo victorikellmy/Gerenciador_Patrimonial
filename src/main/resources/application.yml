@@ -23,8 +23,12 @@ app:
     tipo: LOCAL                 # LOCAL | S3 (futuro)
     pasta-raiz: ./uploads
   importacao:
-    habilitada: false           # seed Excel só quando explicitamente true
-    arquivo: ./data/patrimonio.xlsx
+    # Seed automático da planilha base no primeiro start.
+    # Idempotente: só roda se o banco estiver sem patrimônios.
+    habilitada: true
+    # Aceita "classpath:..." (padrão, usado em demo/apresentação)
+    # ou "file:./caminho/para/arquivo.xlsx" (produção com arquivo externo).
+    caminho: classpath:seed/patrimonio-inicial.xlsx
 
 # Logging mais verboso em dev (sobreposto no application-prod.yml)
 logging:

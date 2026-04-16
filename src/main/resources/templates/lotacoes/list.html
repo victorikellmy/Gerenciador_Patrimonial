@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
 <head th:replace="~{fragments/layout :: head('Lotações')}"></head>
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
@@ -71,7 +73,8 @@
                            th:href="@{'/lotacoes/' + ${l.id} + '/editar'}">
                             <i class="bi bi-pencil"></i>
                         </a>
-                        <form class="d-inline"
+                        <form sec:authorize="hasRole('ADMINISTRADOR')"
+                              class="d-inline"
                               th:action="@{'/lotacoes/' + ${l.id} + '/excluir'}"
                               method="post"
                               onsubmit="return confirm('Excluir esta lotação?');">

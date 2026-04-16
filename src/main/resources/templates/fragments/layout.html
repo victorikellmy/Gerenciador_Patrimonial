@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
 <!--
     Fragmentos compartilhados pelo layout.
     Uso nas páginas:
@@ -39,9 +41,42 @@
                 <li class="nav-item"><a class="nav-link" th:href="@{/lotacoes}">Lotações</a></li>
                 <li class="nav-item"><a class="nav-link" th:href="@{/responsaveis}">Responsáveis</a></li>
                 <li class="nav-item"><a class="nav-link" th:href="@{/relatorios}">Relatórios</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/importacao}">Importação</a></li>
+                <li class="nav-item" sec:authorize="hasRole('ADMINISTRADOR')">
+                    <a class="nav-link" th:href="@{/importacao}">Importação</a>
+                </li>
+                <li class="nav-item" sec:authorize="hasRole('ADMINISTRADOR')">
+                    <a class="nav-link" th:href="@{/usuarios}">
+                        <i class="bi bi-people"></i> Usuários
+                    </a>
+                </li>
             </ul>
-            <span class="navbar-text small">v0.0.1-SNAPSHOT · perfil: dev</span>
+
+            <!-- Menu do usuário -->
+            <ul class="navbar-nav" sec:authorize="isAuthenticated()">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button">
+                        <i class="bi bi-person-circle"></i>
+                        <span sec:authentication="name">usuário</span>
+                        <span class="badge bg-secondary ms-1"
+                              sec:authentication="principal.usuario.perfil"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" th:href="@{/minha-conta/senha}">
+                                <i class="bi bi-key"></i> Trocar senha
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form th:action="@{/logout}" method="post" class="px-2">
+                                <button class="btn btn-sm btn-outline-danger w-100" type="submit">
+                                    <i class="bi bi-box-arrow-right"></i> Sair
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
         </div>
     </div>
 </nav>

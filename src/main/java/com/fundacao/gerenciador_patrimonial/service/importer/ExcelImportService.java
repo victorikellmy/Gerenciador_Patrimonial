@@ -16,7 +16,10 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import jakarta.annotation.PostConstruct;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,13 +27,20 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Importador da planilha original "Planilha Parcial de Patrimônio.xlsx".
  *
- * <p>Mapeamento das colunas (baseado na análise feita):</p>
+ * <p>Estratégia de transação: <b>uma transação por linha</b>, via
+ * {@link TransactionTemplate} com propagation default. Uma linha ruim
+ * (constraint violation, dado inválido) só aborta a própria linha — as
+ * demais continuam. Isso é essencial em planilhas reais que chegam sujas.</p>
+ *
+ * <p>Mapeamento das colunas:</p>
  * <pre>
  *   A (0) Unidade (UPM)
  *   B (1) Responsável
@@ -40,7 +50,6 @@ import java.util.Map;
  *   F (5) Categoria
  *   G (6) Data de Aquisição
  *   H (7) Custo Original
- *   I..Q — derivadas, ignoradas
  *   J (9) Estado de Conservação
  *   R (17) NF
  * </pre>
@@ -65,23 +74,33 @@ public class ExcelImportService {
     private final LotacaoRepository lotacaoRepo;
     private final ResponsavelRepository responsavelRepo;
     private final PatrimonioRepository patrimonioRepo;
+    private final PlatformTransactionManager transactionManager;
+
+    /** Template inicializado após a injeção do {@link PlatformTransactionManager}. */
+    private TransactionTemplate txTemplate;
+
+    @PostConstruct
+    void initTxTemplate() {
+        this.txTemplate = new TransactionTemplate(transactionManager);
+    }
 
     /**
-     * Executa a importação. Cada patrimônio é persistido em uma savepoint;
-     * uma linha ruim não aborta as demais.
+     * Executa a importação. Cada linha é persistida em uma transação própria:
+     * uma linha ruim NÃO aborta as demais.
      *
      * @param inputStream stream do .xlsx (não é fechado aqui — responsabilidade do chamador)
      * @param nomeSheet   nome da aba; se {@code null}, usa a primeira
      */
-    @Transactional
     public ImportResult importar(InputStream inputStream, String nomeSheet) throws IOException {
         int total = 0, importados = 0, ignorados = 0;
         List<String> erros = new ArrayList<>();
 
-        // Caches locais — evitam ir ao banco para cada linha quando lotação/responsável repetem
-        Map<String, Lotacao> cacheLotacao = new HashMap<>();
-        Map<String, Responsavel> cacheResp = new HashMap<>();
-        int lotacoesCriadas = 0, responsaveisCriados = 0;
+        // Caches e controle de duplicatas entre linhas do mesmo import
+        Map<String, Long> cacheLotacaoId = new HashMap<>();    // chave "upm|nome" → id
+        Map<String, Long> cacheRespId    = new HashMap<>();    // nome → id
+        Set<String> tombosVistos         = new HashSet<>();    // evita tombo duplicado dentro da planilha
+        int[] lotacoesCriadas     = {0};
+        int[] responsaveisCriados = {0};
 
         try (Workbook wb = WorkbookFactory.create(inputStream)) {
             Sheet sheet = (nomeSheet != null) ? wb.getSheet(nomeSheet) : wb.getSheetAt(0);
@@ -95,37 +114,49 @@ public class ExcelImportService {
                 if (isLinhaVazia(row)) { ignorados++; continue; }
                 total++;
 
+                final int numeroLinha = row.getRowNum() + 1;
                 try {
-                    ResultadoLinha r = processarLinha(row, cacheLotacao, cacheResp);
-                    if (r.lotacaoCriada)     lotacoesCriadas++;
-                    if (r.responsavelCriado) responsaveisCriados++;
-                    importados++;
+                    ResultadoLinha r = txTemplate.execute(status ->
+                            processarLinha(row, cacheLotacaoId, cacheRespId, tombosVistos));
+                    if (r != null) {
+                        if (r.lotacaoCriada)     lotacoesCriadas[0]++;
+                        if (r.responsavelCriado) responsaveisCriados[0]++;
+                        if (r.ignorado) {
+                            ignorados++;
+                        } else {
+                            importados++;
+                        }
+                    }
                 } catch (Exception e) {
-                    erros.add("Linha %d: %s".formatted(row.getRowNum() + 1, e.getMessage()));
-                    log.warn("Falha na linha {}: {}", row.getRowNum() + 1, e.getMessage());
+                    erros.add("Linha %d: %s".formatted(numeroLinha, rootMessage(e)));
+                    log.warn("Falha na linha {}: {}", numeroLinha, rootMessage(e));
                 }
             }
         }
 
-        log.info("Importação concluída: {}/{} linhas. {} lotações e {} responsáveis novos.",
-                importados, total, lotacoesCriadas, responsaveisCriados);
-        return new ImportResult(total, importados, ignorados, erros, lotacoesCriadas, responsaveisCriados);
+        log.info("Importação concluída: {}/{} linhas importadas, {} ignoradas. {} lotações e {} responsáveis novos.",
+                importados, total, ignorados, lotacoesCriadas[0], responsaveisCriados[0]);
+        return new ImportResult(total, importados, ignorados, erros, lotacoesCriadas[0], responsaveisCriados[0]);
     }
 
     // =========================================================================
-    // Processamento de uma linha
+    // Processamento de uma linha (executado dentro de uma transação própria)
     // =========================================================================
 
-    /** Pequeno DTO interno para retornar flags de "criou novo registro". */
-    private record ResultadoLinha(boolean lotacaoCriada, boolean responsavelCriado) {}
+    /** DTO interno para retornar flags de "criou novo registro" e "ignorado". */
+    private record ResultadoLinha(boolean lotacaoCriada, boolean responsavelCriado, boolean ignorado) {
+        static ResultadoLinha ok(boolean loc, boolean resp) { return new ResultadoLinha(loc, resp, false); }
+        static ResultadoLinha skip() { return new ResultadoLinha(false, false, true); }
+    }
 
     private ResultadoLinha processarLinha(Row row,
-                                          Map<String, Lotacao> cacheLotacao,
-                                          Map<String, Responsavel> cacheResp) {
+                                          Map<String, Long> cacheLotacaoId,
+                                          Map<String, Long> cacheRespId,
+                                          Set<String> tombosVistos) {
         String upm       = Normalizadores.normalizarUpm(CellReader.lerString(row, COL_UPM));
         String sala      = Normalizadores.normalizarSala(CellReader.lerString(row, COL_SALA));
         String respNome  = Normalizadores.normalizarNome(CellReader.lerString(row, COL_RESP));
-        String tombo     = CellReader.lerString(row, COL_TOMBO);
+        String tombo     = Normalizadores.normalizarTombo(CellReader.lerString(row, COL_TOMBO));
         String descricao = CellReader.lerString(row, COL_DESCRICAO);
         String categoria = Normalizadores.normalizarNome(CellReader.lerString(row, COL_CATEGORIA));
         LocalDate data   = CellReader.lerData(row, COL_DATA_COMPRA);
@@ -143,22 +174,48 @@ public class ExcelImportService {
             throw new IllegalArgumentException("Responsável não informado.");
         }
 
+        // --- Deduplicação de tombo ---
+        if (tombo != null) {
+            if (!tombosVistos.add(tombo) || patrimonioRepo.findByNumeroTombo(tombo).isPresent()) {
+                log.debug("Tombo '{}' já presente — linha {} ignorada.", tombo, row.getRowNum() + 1);
+                return ResultadoLinha.skip();
+            }
+        }
+
         // --- Lotação (upsert com cache) ---
         String chaveLotacao = upm + "|" + sala;
-        boolean lotacaoCriada = !cacheLotacao.containsKey(chaveLotacao)
-                && lotacaoRepo.findByUpmAndNome(upm, sala).isEmpty();
-
-        Lotacao lotacao = cacheLotacao.computeIfAbsent(chaveLotacao, k ->
-                lotacaoRepo.findByUpmAndNome(upm, sala)
-                        .orElseGet(() -> lotacaoRepo.save(novaLotacao(upm, sala))));
+        boolean lotacaoCriada = false;
+        Long lotacaoId = cacheLotacaoId.get(chaveLotacao);
+        Lotacao lotacao;
+        if (lotacaoId == null) {
+            var existente = lotacaoRepo.findByUpmAndNome(upm, sala);
+            if (existente.isPresent()) {
+                lotacao = existente.get();
+            } else {
+                lotacao = lotacaoRepo.save(novaLotacao(upm, sala));
+                lotacaoCriada = true;
+            }
+            cacheLotacaoId.put(chaveLotacao, lotacao.getId());
+        } else {
+            lotacao = lotacaoRepo.getReferenceById(lotacaoId);
+        }
 
         // --- Responsável (upsert com cache) ---
-        boolean responsavelCriado = !cacheResp.containsKey(respNome)
-                && responsavelRepo.findByNomeCompleto(respNome).isEmpty();
-
-        Responsavel responsavel = cacheResp.computeIfAbsent(respNome, k ->
-                responsavelRepo.findByNomeCompleto(respNome)
-                        .orElseGet(() -> responsavelRepo.save(novoResponsavel(respNome, lotacao))));
+        boolean responsavelCriado = false;
+        Long respId = cacheRespId.get(respNome);
+        Responsavel responsavel;
+        if (respId == null) {
+            var existente = responsavelRepo.findByNomeCompleto(respNome);
+            if (existente.isPresent()) {
+                responsavel = existente.get();
+            } else {
+                responsavel = responsavelRepo.save(novoResponsavel(respNome, lotacao));
+                responsavelCriado = true;
+            }
+            cacheRespId.put(respNome, responsavel.getId());
+        } else {
+            responsavel = responsavelRepo.getReferenceById(respId);
+        }
 
         // --- Patrimônio ---
         Patrimonio patrimonio = Patrimonio.builder()
@@ -175,7 +232,7 @@ public class ExcelImportService {
         resolverConservacaoESituacao(patrimonio, consRaw);
         patrimonioRepo.save(patrimonio);
 
-        return new ResultadoLinha(lotacaoCriada, responsavelCriado);
+        return ResultadoLinha.ok(lotacaoCriada, responsavelCriado);
     }
 
     /**
@@ -215,5 +272,13 @@ public class ExcelImportService {
                 .lotacao(lotacao)
                 .ativo(true)
                 .build();
+    }
+
+    /** Extrai a mensagem mais útil da cadeia de causas (para log de erro). */
+    private String rootMessage(Throwable t) {
+        Throwable cur = t;
+        while (cur.getCause() != null && cur.getCause() != cur) cur = cur.getCause();
+        String msg = cur.getMessage();
+        return msg != null ? msg : cur.getClass().getSimpleName();
     }
 }

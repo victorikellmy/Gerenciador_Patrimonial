@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Trocar senha')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <h1 class="h3 mb-3">
+        <i class="bi bi-key"></i> Trocar minha senha
+    </h1>
+
+    <div class="card card-panel" style="max-width: 560px;">
+        <div class="card-body">
+            <div th:if="${erro}" class="alert alert-danger py-2 small">
+                <i class="bi bi-exclamation-triangle"></i> <span th:text="${erro}"></span>
+            </div>
+
+            <form th:action="@{/minha-conta/senha}" th:object="${trocarSenhaForm}" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Senha atual *</label>
+                    <input type="password" class="form-control" th:field="*{senhaAtual}"
+                           autocomplete="current-password"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('senhaAtual')}"
+                         th:errors="*{senhaAtual}"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Nova senha *</label>
+                    <input type="password" class="form-control" th:field="*{novaSenha}"
+                           autocomplete="new-password"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('novaSenha')}"
+                         th:errors="*{novaSenha}"></div>
+                    <small class="text-muted">Entre 6 e 60 caracteres.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Confirmação *</label>
+                    <input type="password" class="form-control" th:field="*{confirmacao}"
+                           autocomplete="new-password"/>
+                    <div class="text-danger small" th:if="${#fields.hasErrors('confirmacao')}"
+                         th:errors="*{confirmacao}"></div>
+                </div>
+
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-save"></i> Alterar
+                </button>
+                <a class="btn btn-secondary" th:href="@{/}">Cancelar</a>
+            </form>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
 <head th:replace="~{fragments/layout :: head('Patrimônios')}"></head>
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
@@ -121,12 +123,14 @@
                            th:if="${p.situacao.name() != 'BAIXADO'}">
                             <i class="bi bi-arrow-left-right"></i>
                         </a>
-                        <a class="btn btn-dark btn-xs"
+                        <a sec:authorize="hasRole('ADMINISTRADOR')"
+                           class="btn btn-dark btn-xs"
                            th:href="@{'/patrimonios/' + ${p.id} + '/baixa'}" title="Dar baixa"
                            th:if="${p.situacao.name() != 'BAIXADO'}">
                             <i class="bi bi-archive"></i>
                         </a>
-                        <form class="d-inline"
+                        <form sec:authorize="hasRole('ADMINISTRADOR')"
+                              class="d-inline"
                               th:action="@{'/patrimonios/' + ${p.id} + '/excluir'}" method="post"
                               onsubmit="return confirm('Excluir definitivamente este patrimônio? Esta ação é irreversível.');">
                             <button class="btn btn-danger btn-xs" title="Excluir">

@@ -83,7 +83,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/patrimonios/*/excluir").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/patrimonios/anexos/*/excluir").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/lotacoes/*/inativar").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/lotacoes/*/excluir").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/responsaveis/*/inativar").hasRole("ADMINISTRADOR")
 
                         // --- demais → autenticado ---
