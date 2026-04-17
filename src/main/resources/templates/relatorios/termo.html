@@ -4,60 +4,86 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container">
+<main class="container pb-5">
     <div th:replace="~{fragments/layout :: messages}"></div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-file-earmark-text"></i> Termo de Responsabilidade
-        </h1>
-        <a class="btn btn-outline-secondary btn-sm" th:href="@{/relatorios}">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/relatorios}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">
+                    <i class="bi bi-file-earmark-text me-2" style="color: var(--danger);"></i>
+                    Termo de Responsabilidade
+                </h1>
+                <div class="page-subtitle">
+                    Selecione o responsável para gerar o PDF.
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="alert alert-info small">
-        <i class="bi bi-info-circle"></i>
-        Selecione o responsável — será gerado um PDF listando todos os bens ativos
-        sob a guarda dele, pronto para impressão e assinatura.
+    <!-- ============================ INSTRUÇÕES ============================ -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle-fill" style="font-size: 1.1rem;"></i>
+        <div>
+            O documento lista <strong>todos os bens ativos</strong> sob a guarda do responsável
+            escolhido, já formatado para impressão e assinatura.
+        </div>
     </div>
 
-    <div class="card card-panel">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0 align-middle">
-                    <thead>
+    <!-- ============================ LISTAGEM ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div class="table-responsive" th:if="${!responsaveis.isEmpty()}">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Matrícula</th>
+                        <th>Responsável</th>
+                        <th style="width: 140px;">Matrícula</th>
                         <th>Lotação</th>
-                        <th class="text-end">Ações</th>
+                        <th class="text-end" style="width: 160px;">Ação</th>
                     </tr>
-                    </thead>
-                    <tbody>
+                </thead>
+                <tbody>
                     <tr th:each="r : ${responsaveis}">
-                        <td th:text="${r.id}"></td>
-                        <td th:text="${r.nomeCompleto}"></td>
-                        <td th:text="${r.matricula} ?: '—'"></td>
-                        <td th:text="${r.lotacaoNome} ?: '—'"></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="nav-avatar"
+                                     th:text="${#strings.toUpperCase(#strings.substring(r.nomeCompleto, 0, 1))}"></div>
+                                <div class="cell-stack">
+                                    <span class="cell-primary" th:text="${r.nomeCompleto}"></span>
+                                    <span class="cell-secondary">ID #<span th:text="${r.id}"></span></span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="chip-tombo" th:if="${r.matricula}" th:text="${r.matricula}"></span>
+                            <span class="text-muted" th:unless="${r.matricula}">—</span>
+                        </td>
+                        <td>
+                            <span th:text="${r.lotacaoNome} ?: '—'"
+                                  th:classappend="${r.lotacaoNome == null} ? 'text-muted'"></span>
+                        </td>
                         <td class="text-end">
-                            <a class="btn btn-danger btn-sm"
+                            <a class="btn btn-sm btn-primary"
                                th:href="@{'/relatorios/termo-responsabilidade/' + ${r.id}}"
                                target="_blank">
                                 <i class="bi bi-file-earmark-pdf"></i> Gerar PDF
                             </a>
                         </td>
                     </tr>
-                    <tr th:if="${responsaveis.isEmpty()}">
-                        <td colspan="5" class="text-center text-muted py-3">
-                            Nenhum responsável cadastrado.
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
+
+        <div th:if="${responsaveis.isEmpty()}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-person-badge',
+                'Nenhum responsável cadastrado',
+                'Cadastre responsáveis para poder gerar termos.',
+                @{/responsaveis}, 'Ir para responsáveis')}"></div>
     </div>
 </main>
 

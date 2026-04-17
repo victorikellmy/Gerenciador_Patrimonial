@@ -4,72 +4,128 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container">
+<main class="container pb-5">
     <div th:replace="~{fragments/layout :: messages}"></div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-archive"></i> Dar Baixa em Patrimônio
-        </h1>
-        <a class="btn btn-secondary" th:href="@{/patrimonios}">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
-    </div>
-
-    <div class="alert alert-warning">
-        <i class="bi bi-exclamation-triangle"></i>
-        Atenção: a baixa altera a situação do patrimônio para <strong>BAIXADO</strong>.
-        O bem continuará no histórico, mas não aparecerá nas listagens de ativos.
-    </div>
-
-    <!-- Resumo -->
-    <div class="card card-panel mb-3">
-        <div class="card-body small">
-            <div class="row g-2">
-                <div class="col-md-2">
-                    <strong>ID:</strong> <span th:text="${patrimonio.id}"></span>
-                </div>
-                <div class="col-md-3">
-                    <strong>Tombo:</strong> <span th:text="${patrimonio.numeroTombo} ?: '—'"></span>
-                </div>
-                <div class="col-md-7">
-                    <strong>Descrição:</strong> <span th:text="${patrimonio.descricao}"></span>
-                </div>
-                <div class="col-md-6">
-                    <strong>Lotação:</strong>
-                    <span th:text="${patrimonio.lotacaoUpm} + ' / ' + ${patrimonio.lotacaoNome}"
-                          th:if="${patrimonio.lotacaoNome}"></span>
-                    <span th:unless="${patrimonio.lotacaoNome}" class="text-muted">—</span>
-                </div>
-                <div class="col-md-6">
-                    <strong>Responsável:</strong>
-                    <span th:text="${patrimonio.responsavelNome}" th:if="${patrimonio.responsavelNome}"></span>
-                    <span th:unless="${patrimonio.responsavelNome}" class="text-muted">—</span>
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/patrimonios}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">
+                    <i class="bi bi-archive me-2" style="color: var(--danger);"></i>
+                    Dar baixa em patrimônio
+                </h1>
+                <div class="page-subtitle">
+                    Esta ação altera a situação do item para <strong>BAIXADO</strong>.
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Formulário -->
-    <div class="card card-panel">
-        <div class="card-body">
+    <!-- ============================ ALERTA DE AÇÃO DESTRUTIVA ============================ -->
+    <div class="alert alert-warning mb-4">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem;"></i>
+        <div>
+            <strong>Atenção — ação irreversível no dia a dia.</strong><br>
+            O bem continuará no histórico, mas não aparecerá mais nas listagens de ativos.
+            Registre um motivo claro para rastreabilidade futura.
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ============================ FORMULÁRIO ============================ -->
+        <div class="col-lg-8">
             <form th:action="@{'/patrimonios/' + ${patrimonio.id} + '/baixa'}"
                   th:object="${baixaForm}" method="post"
-                  onsubmit="return confirm('Confirma a baixa deste patrimônio?');">
+                  class="card card-panel" style="overflow: hidden;"
+                  data-confirm="Confirma a baixa deste patrimônio? Ele deixará de aparecer nas listagens de ativos."
+                  data-confirm-title="Confirmar baixa"
+                  data-confirm-variant="danger">
 
-                <div class="mb-3">
-                    <label class="form-label">Motivo da baixa *</label>
-                    <textarea class="form-control" rows="4" th:field="*{motivo}"
-                              placeholder="Descreva o motivo (ex.: obsolescência, perda, doação, sinistro)..."></textarea>
-                    <div class="text-danger small" th:if="${#fields.hasErrors('motivo')}"
-                         th:errors="*{motivo}"></div>
+                <!-- =============== SEÇÃO: MOTIVO =============== -->
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-journal-text',
+                        'Motivo da baixa',
+                        'Descreva a razão para registrar no histórico permanente.')}"></div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label required">Motivo</label>
+                            <textarea class="form-control" rows="5"
+                                      th:field="*{motivo}"
+                                      th:classappend="${#fields.hasErrors('motivo')} ? 'is-invalid'"
+                                      placeholder="Ex.: Obsolescência, perda, doação, sinistro, descarte técnico..."></textarea>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('motivo')}"
+                                 th:errors="*{motivo}"></div>
+                            <div class="text-muted small mt-2">
+                                <i class="bi bi-info-circle"></i>
+                                Seja específico — este texto aparecerá em auditorias futuras.
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <button class="btn btn-danger" type="submit">
-                    <i class="bi bi-archive-fill"></i> Confirmar baixa
-                </button>
-                <a class="btn btn-secondary" th:href="@{/patrimonios}">Cancelar</a>
+                <!-- =============== RODAPÉ STICKY =============== -->
+                <div class="sticky-actions">
+                    <span class="actions-hint">
+                        <i class="bi bi-shield-exclamation"></i>
+                        Requer confirmação antes de efetivar.
+                    </span>
+                    <a class="btn btn-secondary" th:href="@{/patrimonios}">Cancelar</a>
+                    <button class="btn btn-danger" type="submit">
+                        <i class="bi bi-archive-fill"></i> Confirmar baixa
+                    </button>
+                </div>
             </form>
+        </div>
+
+        <!-- ============================ SIDEBAR: ITEM ============================ -->
+        <div class="col-lg-4">
+            <div class="summary-card summary-sticky" style="border-left: 4px solid var(--danger);">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="form-section-icon"
+                         style="background: var(--danger-bg); color: var(--danger-fg);">
+                        <i class="bi bi-archive"></i>
+                    </div>
+                    <div>
+                        <div class="summary-label mb-0">Item a baixar</div>
+                        <div class="fw-semibold">Dados atuais</div>
+                    </div>
+                </div>
+
+                <div class="summary-label">Identificação</div>
+                <div class="summary-value" style="font-size: 0.875rem;">
+                    <span class="chip-tombo" th:text="${patrimonio.numeroTombo} ?: ('ID #' + ${patrimonio.id})"></span>
+                </div>
+
+                <div class="summary-label">Descrição</div>
+                <div class="summary-value" th:text="${patrimonio.descricao}" style="font-size: 0.875rem;"></div>
+
+                <div class="summary-label">Situação atual</div>
+                <div class="mb-3">
+                    <span class="badge badge-sit" th:classappend="${patrimonio.situacao}"
+                          th:text="${patrimonio.situacao}"></span>
+                    <i class="bi bi-arrow-right mx-2 text-muted"></i>
+                    <span class="badge badge-sit BAIXADO">BAIXADO</span>
+                </div>
+
+                <div class="summary-label">Lotação</div>
+                <div class="summary-value" style="font-size: 0.875rem;">
+                    <span th:if="${patrimonio.lotacaoNome}"
+                          th:text="${patrimonio.lotacaoUpm} + ' / ' + ${patrimonio.lotacaoNome}"></span>
+                    <span th:unless="${patrimonio.lotacaoNome}" class="text-muted">—</span>
+                </div>
+
+                <div class="summary-label">Responsável</div>
+                <div class="summary-value" style="font-size: 0.875rem;">
+                    <span th:text="${patrimonio.responsavelNome}" th:if="${patrimonio.responsavelNome}"></span>
+                    <span th:unless="${patrimonio.responsavelNome}" class="text-muted">—</span>
+                </div>
+            </div>
         </div>
     </div>
 </main>

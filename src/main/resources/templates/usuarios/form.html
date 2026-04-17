@@ -4,71 +4,122 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container">
+<main class="container pb-5">
     <div th:replace="~{fragments/layout :: messages}"></div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3 mb-0" th:text="${editando} ? 'Editar usuário' : 'Novo usuário'">Usuário</h1>
-        <a class="btn btn-secondary" th:href="@{/usuarios}">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
-    </div>
-
-    <div class="card card-panel" style="max-width: 720px;">
-        <div class="card-body">
-            <form th:action="${editando} ? @{'/usuarios/' + ${id}} : @{/usuarios}"
-                  th:object="${usuarioForm}" method="post">
-
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label">Nome completo *</label>
-                        <input type="text" class="form-control" th:field="*{nomeCompleto}"/>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('nomeCompleto')}"
-                             th:errors="*{nomeCompleto}"></div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Login *</label>
-                        <input type="text" class="form-control" th:field="*{login}"
-                               autocomplete="off"/>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('login')}"
-                             th:errors="*{login}"></div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">
-                            Senha <span th:if="${!editando}">*</span>
-                            <span th:if="${editando}" class="text-muted small">(deixe vazio para manter)</span>
-                        </label>
-                        <input type="password" class="form-control" th:field="*{senha}"
-                               autocomplete="new-password"/>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('senha')}"
-                             th:errors="*{senha}"></div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Perfil *</label>
-                        <select class="form-select" th:field="*{perfil}">
-                            <option th:each="p : ${perfis}" th:value="${p}" th:text="${p}"></option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">Ativo</label>
-                        <div class="form-check form-switch mt-2">
-                            <input class="form-check-input" type="checkbox" th:field="*{ativo}"/>
-                        </div>
-                    </div>
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/usuarios}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title" th:text="${editando} ? 'Editar usuário' : 'Novo usuário'">Usuário</h1>
+                <div class="page-subtitle" th:if="${editando}">
+                    <span>ID #</span><span th:text="${id}"></span>
                 </div>
-
-                <div class="mt-3">
-                    <button class="btn btn-primary" type="submit">
-                        <i class="bi bi-save"></i> Salvar
-                    </button>
-                    <a class="btn btn-secondary" th:href="@{/usuarios}">Cancelar</a>
+                <div class="page-subtitle" th:unless="${editando}">
+                    Crie um acesso ao sistema definindo perfil e credenciais.
                 </div>
-            </form>
+            </div>
         </div>
     </div>
+
+    <!-- ============================ FORMULÁRIO ============================ -->
+    <form th:action="${editando} ? @{'/usuarios/' + ${id}} : @{/usuarios}"
+          th:object="${usuarioForm}" method="post"
+          class="card card-panel" style="overflow: hidden; max-width: 880px;">
+
+        <!-- =============== SEÇÃO: IDENTIFICAÇÃO =============== -->
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-person',
+                'Identificação',
+                'Nome e login que será usado para autenticação.')}"></div>
+
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label required">Nome completo</label>
+                    <input type="text" class="form-control" th:field="*{nomeCompleto}"
+                           th:classappend="${#fields.hasErrors('nomeCompleto')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('nomeCompleto')}"
+                         th:errors="*{nomeCompleto}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">Login</label>
+                    <input type="text" class="form-control" th:field="*{login}"
+                           autocomplete="off"
+                           th:classappend="${#fields.hasErrors('login')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('login')}"
+                         th:errors="*{login}"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =============== SEÇÃO: SEGURANÇA =============== -->
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-shield-lock',
+                'Segurança',
+                ${editando} ? 'Deixe o campo senha vazio para manter a senha atual.' : 'Defina uma senha inicial para o usuário.')}"></div>
+
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label">
+                        Senha
+                        <span th:if="${!editando}" class="text-danger">*</span>
+                        <span th:if="${editando}" class="text-muted">(opcional)</span>
+                    </label>
+                    <input type="password" class="form-control" th:field="*{senha}"
+                           autocomplete="new-password"
+                           th:placeholder="${editando} ? 'Deixe vazio para não alterar' : 'Mínimo 6 caracteres'"
+                           th:classappend="${#fields.hasErrors('senha')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('senha')}"
+                         th:errors="*{senha}"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =============== SEÇÃO: PERFIL =============== -->
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-person-gear',
+                'Perfil e acesso',
+                'Define o que o usuário pode fazer no sistema.')}"></div>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label required">Perfil</label>
+                    <select class="form-select" th:field="*{perfil}">
+                        <option th:each="p : ${perfis}" th:value="${p}" th:text="${p}"></option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label d-block">Status</label>
+                    <div class="form-check form-switch"
+                         style="padding: var(--space-2) var(--space-3); background: var(--bg-muted); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <input class="form-check-input" type="checkbox" th:field="*{ativo}" id="ativoSwitch"/>
+                        <label class="form-check-label" for="ativoSwitch" style="margin-left: 4px;">
+                            Usuário ativo
+                            <span class="text-muted small d-block">Pode fazer login no sistema</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =============== RODAPÉ STICKY =============== -->
+        <div class="sticky-actions">
+            <span class="actions-hint">
+                <i class="bi bi-info-circle"></i> Campos com * são obrigatórios.
+            </span>
+            <a class="btn btn-secondary" th:href="@{/usuarios}">Cancelar</a>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check-lg"></i>
+                <span th:text="${editando} ? 'Salvar alterações' : 'Cadastrar usuário'"></span>
+            </button>
+        </div>
+    </form>
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>

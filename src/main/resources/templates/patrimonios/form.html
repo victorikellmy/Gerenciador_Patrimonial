@@ -4,190 +4,306 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container">
+<main class="container pb-5">
     <div th:replace="~{fragments/layout :: messages}"></div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3 mb-0" th:text="${editando} ? 'Editar Patrimônio' : 'Novo Patrimônio'">Patrimônio</h1>
-        <a class="btn btn-secondary" th:href="@{/patrimonios}">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
-    </div>
-
-    <!-- =============== Resumo (modo edição) =============== -->
-    <div th:if="${editando}" class="alert alert-light border d-flex flex-wrap gap-3 small">
-        <div><strong>ID:</strong> <span th:text="${patrimonio.id}"></span></div>
-        <div><strong>Situação:</strong>
-            <span class="badge"
-                  th:classappend="|badge-sit ${patrimonio.situacao}|"
-                  th:text="${patrimonio.situacao}"></span>
-        </div>
-        <div th:if="${patrimonio.vutAnos != null}">
-            <strong>VUT:</strong> <span th:text="${patrimonio.vutAnos} + ' anos'"></span>
-        </div>
-        <div th:if="${patrimonio.valorContabilLiquido != null}">
-            <strong>VCL:</strong>
-            <span th:text="${#numbers.formatDecimal(patrimonio.valorContabilLiquido, 1, 'POINT', 2, 'COMMA')}"></span>
-        </div>
-        <div th:if="${patrimonio.depreciacaoAcumulada != null}">
-            <strong>Depreciação acumulada:</strong>
-            <span th:text="${#numbers.formatDecimal(patrimonio.depreciacaoAcumulada, 1, 'POINT', 2, 'COMMA')}"></span>
-        </div>
-    </div>
-
-    <!-- =============== Formulário principal =============== -->
-    <div class="card card-panel">
-        <div class="card-body">
-            <form th:action="${editando} ? @{'/patrimonios/' + ${id}} : @{/patrimonios}"
-                  th:object="${patrimonioForm}" method="post">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Nº Tombo</label>
-                        <input type="text" class="form-control" th:field="*{numeroTombo}"/>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('numeroTombo')}"
-                             th:errors="*{numeroTombo}"></div>
-                    </div>
-                    <div class="col-md-9">
-                        <label class="form-label">Descrição *</label>
-                        <input type="text" class="form-control" th:field="*{descricao}"/>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('descricao')}"
-                             th:errors="*{descricao}"></div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Categoria</label>
-                        <input type="text" class="form-control" th:field="*{categoria}"
-                               placeholder="COMPUTADOR, MOVEIS, IMPRESSORA..."/>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Data de compra</label>
-                        <input type="date" class="form-control" th:field="*{dataCompra}"/>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Valor de compra</label>
-                        <input type="number" step="0.01" min="0"
-                               class="form-control" th:field="*{valorCompra}"/>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('valorCompra')}"
-                             th:errors="*{valorCompra}"></div>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Conservação</label>
-                        <select class="form-select" th:field="*{conservacao}">
-                            <option value="">—</option>
-                            <option th:each="c : ${conservacoes}"
-                                    th:value="${c}" th:text="${c}"></option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Nota Fiscal</label>
-                        <input type="text" class="form-control" th:field="*{notaFiscal}"/>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Lotação *</label>
-                        <select class="form-select" th:field="*{lotacaoId}">
-                            <option value="">— selecione —</option>
-                            <option th:each="l : ${lotacoes}"
-                                    th:value="${l.id}"
-                                    th:text="${l.upm} + ' / ' + ${l.nome}"></option>
-                        </select>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('lotacaoId')}"
-                             th:errors="*{lotacaoId}"></div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Responsável *</label>
-                        <select class="form-select" th:field="*{responsavelId}">
-                            <option value="">— selecione —</option>
-                            <option th:each="r : ${responsaveis}"
-                                    th:value="${r.id}"
-                                    th:text="${r.nomeCompleto}"></option>
-                        </select>
-                        <div class="text-danger small" th:if="${#fields.hasErrors('responsavelId')}"
-                             th:errors="*{responsavelId}"></div>
-                    </div>
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/patrimonios}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title" th:text="${editando} ? 'Editar Patrimônio' : 'Novo Patrimônio'">Patrimônio</h1>
+                <div class="page-subtitle" th:if="${editando}">
+                    <span>ID #</span><span th:text="${patrimonio.id}"></span>
+                    <span class="mx-1">·</span>
+                    Tombo <span th:text="${patrimonio.numeroTombo} ?: '—'"></span>
                 </div>
-
-                <div class="mt-3">
-                    <button class="btn btn-primary" type="submit">
-                        <i class="bi bi-save"></i> Salvar
-                    </button>
-                    <a class="btn btn-secondary" th:href="@{/patrimonios}">Cancelar</a>
+                <div class="page-subtitle" th:unless="${editando}">
+                    Preencha os dados abaixo para cadastrar um novo item.
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- =============== Anexos (só em modo edição) =============== -->
-    <div th:if="${editando}" class="card card-panel mt-4">
-        <div class="card-body">
-            <h5 class="card-title">
-                <i class="bi bi-paperclip"></i> Anexos
-            </h5>
-
-            <!-- Upload -->
-            <form th:action="@{'/patrimonios/' + ${id} + '/anexos'}"
-                  method="post" enctype="multipart/form-data" class="row g-2 align-items-end mb-3">
-                <div class="col-md-6">
-                    <label class="form-label small mb-1">Arquivo (PDF, JPG, PNG, WEBP — max 10MB)</label>
-                    <input type="file" class="form-control form-control-sm" name="arquivo" required/>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Tipo</label>
-                    <select class="form-select form-select-sm" name="tipo">
-                        <option value="">—</option>
-                        <option th:each="t : ${tiposAnexo}" th:value="${t}" th:text="${t}"></option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-success btn-sm w-100" type="submit">
-                        <i class="bi bi-upload"></i> Enviar
-                    </button>
-                </div>
-            </form>
-
-            <!-- Lista -->
-            <div class="table-responsive" th:if="${anexos != null and !anexos.isEmpty()}">
-                <table class="table table-sm table-hover mb-0">
-                    <thead>
-                    <tr>
-                        <th>Arquivo</th>
-                        <th>Tipo</th>
-                        <th>Tamanho</th>
-                        <th>Enviado em</th>
-                        <th class="text-end">Ações</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="a : ${anexos}">
-                        <td th:text="${a.nomeOriginal}"></td>
-                        <td>
-                            <span class="badge bg-secondary" th:text="${a.tipo} ?: '—'"></span>
-                        </td>
-                        <td th:text="${a.tamanhoBytes != null} ? ${#numbers.formatInteger(a.tamanhoBytes / 1024, 1)} + ' KB' : '—'"></td>
-                        <td th:text="${a.criadoEm != null} ? ${#temporals.format(a.criadoEm, 'dd/MM/yyyy HH:mm')} : '—'"></td>
-                        <td class="text-end text-nowrap">
-                            <a class="btn btn-primary btn-xs"
-                               th:href="@{'/api/anexos/' + ${a.id} + '/download'}"
-                               target="_blank" title="Baixar">
-                                <i class="bi bi-download"></i>
-                            </a>
-                            <form class="d-inline"
-                                  th:action="@{'/patrimonios/anexos/' + ${a.id} + '/excluir'}"
-                                  method="post"
-                                  onsubmit="return confirm('Remover este anexo?');">
-                                <input type="hidden" name="patrimonioId" th:value="${id}"/>
-                                <button class="btn btn-danger btn-xs" title="Remover">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
             </div>
-            <p class="text-muted small mb-0" th:if="${anexos == null or anexos.isEmpty()}">
-                Nenhum anexo cadastrado.
-            </p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ============================ COLUNA PRINCIPAL ============================ -->
+        <div th:class="${editando} ? 'col-lg-8' : 'col-12'">
+            <form th:action="${editando} ? @{'/patrimonios/' + ${id}} : @{/patrimonios}"
+                  th:object="${patrimonioForm}" method="post"
+                  class="card card-panel" style="overflow: hidden;">
+
+                <!-- =============== SEÇÃO: IDENTIFICAÇÃO =============== -->
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-tag',
+                        'Identificação',
+                        'Dados básicos para identificar o patrimônio.')}"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Nº Tombo</label>
+                            <input type="text" class="form-control"
+                                   th:field="*{numeroTombo}"
+                                   th:classappend="${#fields.hasErrors('numeroTombo')} ? 'is-invalid'"
+                                   placeholder="Ex: 12345"/>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('numeroTombo')}"
+                                 th:errors="*{numeroTombo}"></div>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label required">Descrição</label>
+                            <input type="text" class="form-control"
+                                   th:field="*{descricao}"
+                                   th:classappend="${#fields.hasErrors('descricao')} ? 'is-invalid'"
+                                   placeholder="Ex: Notebook Dell Latitude 5420"/>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('descricao')}"
+                                 th:errors="*{descricao}"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Categoria</label>
+                            <input type="text" class="form-control"
+                                   th:field="*{categoria}"
+                                   placeholder="COMPUTADOR, MOVEIS, IMPRESSORA..."/>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Nota Fiscal</label>
+                            <input type="text" class="form-control"
+                                   th:field="*{notaFiscal}"
+                                   placeholder="Número da NF"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =============== SEÇÃO: VALORES =============== -->
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-currency-dollar',
+                        'Valores e Conservação',
+                        'Informações financeiras e estado de conservação.')}"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Data de compra</label>
+                            <input type="date" class="form-control" th:field="*{dataCompra}"/>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Valor de compra (R$)</label>
+                            <input type="number" step="0.01" min="0"
+                                   class="form-control tabular-nums"
+                                   th:field="*{valorCompra}"
+                                   th:classappend="${#fields.hasErrors('valorCompra')} ? 'is-invalid'"
+                                   placeholder="0,00"/>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('valorCompra')}"
+                                 th:errors="*{valorCompra}"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Conservação</label>
+                            <select class="form-select" th:field="*{conservacao}">
+                                <option value="">— selecione —</option>
+                                <option th:each="c : ${conservacoes}"
+                                        th:value="${c}" th:text="${c}"></option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =============== SEÇÃO: ALOCAÇÃO =============== -->
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-geo-alt',
+                        'Alocação',
+                        'Onde o item está e quem é o responsável.')}"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">Lotação</label>
+                            <select class="form-select" th:field="*{lotacaoId}"
+                                    th:classappend="${#fields.hasErrors('lotacaoId')} ? 'is-invalid'">
+                                <option value="">— selecione —</option>
+                                <option th:each="l : ${lotacoes}"
+                                        th:value="${l.id}"
+                                        th:text="${l.upm} + ' / ' + ${l.nome}"></option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('lotacaoId')}"
+                                 th:errors="*{lotacaoId}"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">Responsável</label>
+                            <select class="form-select" th:field="*{responsavelId}"
+                                    th:classappend="${#fields.hasErrors('responsavelId')} ? 'is-invalid'">
+                                <option value="">— selecione —</option>
+                                <option th:each="r : ${responsaveis}"
+                                        th:value="${r.id}"
+                                        th:text="${r.nomeCompleto}"></option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('responsavelId')}"
+                                 th:errors="*{responsavelId}"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =============== RODAPÉ STICKY =============== -->
+                <div class="sticky-actions">
+                    <span class="actions-hint">
+                        <i class="bi bi-info-circle"></i> Campos com * são obrigatórios.
+                    </span>
+                    <a class="btn btn-secondary" th:href="@{/patrimonios}">Cancelar</a>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-check-lg"></i> <span th:text="${editando} ? 'Salvar alterações' : 'Cadastrar'"></span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- =============== ANEXOS (modo edição) =============== -->
+            <div th:if="${editando}" class="card card-panel mt-4">
+                <div class="card-body">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-paperclip',
+                        'Anexos',
+                        'Documentos, fotos e comprovantes deste patrimônio.')}"></div>
+
+                    <!-- Upload -->
+                    <form th:action="@{'/patrimonios/' + ${id} + '/anexos'}"
+                          method="post" enctype="multipart/form-data"
+                          class="row g-2 align-items-end mb-4 pt-2 border-top">
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                Arquivo
+                                <span class="text-muted">(PDF, JPG, PNG, WEBP — max 10MB)</span>
+                            </label>
+                            <input type="file" class="form-control" name="arquivo" required/>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" name="tipo">
+                                <option value="">—</option>
+                                <option th:each="t : ${tiposAnexo}" th:value="${t}" th:text="${t}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-success w-100" type="submit">
+                                <i class="bi bi-upload"></i> Enviar
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Lista de anexos -->
+                    <div class="table-responsive" th:if="${anexos != null and !anexos.isEmpty()}">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Arquivo</th>
+                                    <th>Tipo</th>
+                                    <th class="text-end">Tamanho</th>
+                                    <th>Enviado em</th>
+                                    <th class="text-end">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="a : ${anexos}">
+                                    <td>
+                                        <i class="bi bi-file-earmark text-muted me-2"></i>
+                                        <span th:text="${a.nomeOriginal}"></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-conservacao badge-plain"
+                                              th:if="${a.tipo}" th:text="${a.tipo}"></span>
+                                        <span class="text-muted" th:unless="${a.tipo}">—</span>
+                                    </td>
+                                    <td class="text-end tabular-nums"
+                                        th:text="${a.tamanhoBytes != null} ? ${#numbers.formatInteger(a.tamanhoBytes / 1024, 1)} + ' KB' : '—'"></td>
+                                    <td class="text-secondary small"
+                                        th:text="${a.criadoEm != null} ? ${#temporals.format(a.criadoEm, 'dd/MM/yyyy HH:mm')} : '—'"></td>
+                                    <td class="text-end text-nowrap">
+                                        <a class="btn btn-sm btn-secondary btn-icon"
+                                           th:href="@{'/api/anexos/' + ${a.id} + '/download'}"
+                                           target="_blank" title="Baixar">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <form class="d-inline"
+                                              th:action="@{'/patrimonios/anexos/' + ${a.id} + '/excluir'}"
+                                              method="post"
+                                              data-confirm="Remover este anexo permanentemente?"
+                                              data-confirm-title="Remover anexo"
+                                              data-confirm-variant="danger">
+                                            <input type="hidden" name="patrimonioId" th:value="${id}"/>
+                                            <button class="btn btn-sm btn-danger btn-icon" type="submit" title="Remover">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Empty state para anexos -->
+                    <div th:if="${anexos == null or anexos.isEmpty()}"
+                         th:replace="~{fragments/ui-kit :: empty-state(
+                            'bi-paperclip',
+                            'Sem anexos ainda',
+                            'Envie o primeiro documento usando o formulário acima.',
+                            null, null)}"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================ SIDEBAR DE RESUMO (edição) ============================ -->
+        <div th:if="${editando}" class="col-lg-4">
+            <div class="summary-card summary-sticky">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="form-section-icon">
+                        <i class="bi bi-info-lg"></i>
+                    </div>
+                    <div>
+                        <div class="summary-label mb-0">Resumo</div>
+                        <div class="fw-semibold">Informações do item</div>
+                    </div>
+                </div>
+
+                <div class="summary-label">Situação atual</div>
+                <div class="mb-3">
+                    <span class="badge badge-sit" th:classappend="${patrimonio.situacao}"
+                          th:text="${patrimonio.situacao}"></span>
+                </div>
+
+                <div th:if="${patrimonio.vutAnos != null}">
+                    <div class="summary-label">Vida útil (VUT)</div>
+                    <div class="summary-value">
+                        <span th:text="${patrimonio.vutAnos}"></span> anos
+                    </div>
+                </div>
+
+                <div th:if="${patrimonio.valorContabilLiquido != null}">
+                    <div class="summary-label">Valor contábil líquido (VCL)</div>
+                    <div class="summary-value">
+                        R$ <span th:text="${#numbers.formatDecimal(patrimonio.valorContabilLiquido, 1, 'POINT', 2, 'COMMA')}"></span>
+                    </div>
+                </div>
+
+                <div th:if="${patrimonio.depreciacaoAcumulada != null}">
+                    <div class="summary-label">Depreciação acumulada</div>
+                    <div class="summary-value">
+                        R$ <span th:text="${#numbers.formatDecimal(patrimonio.depreciacaoAcumulada, 1, 'POINT', 2, 'COMMA')}"></span>
+                    </div>
+                </div>
+
+                <hr class="my-3" style="border-color: var(--border);"/>
+
+                <div class="d-grid gap-2">
+                    <a th:if="${patrimonio.situacao.name() != 'BAIXADO'}"
+                       class="btn btn-secondary"
+                       th:href="@{'/patrimonios/' + ${id} + '/movimentar'}">
+                        <i class="bi bi-arrow-left-right"></i> Movimentar
+                    </a>
+                    <a th:if="${patrimonio.situacao.name() != 'BAIXADO'}"
+                       class="btn btn-outline-danger"
+                       th:href="@{'/patrimonios/' + ${id} + '/baixa'}">
+                        <i class="bi bi-archive"></i> Dar baixa
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </main>

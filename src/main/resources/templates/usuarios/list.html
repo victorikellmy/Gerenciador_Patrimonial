@@ -4,81 +4,123 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container">
+<main class="container pb-5">
     <div th:replace="~{fragments/layout :: messages}"></div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3 mb-0">
-            <i class="bi bi-people"></i> Usuários
-        </h1>
-        <a class="btn btn-success" th:href="@{/usuarios/novo}">
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <i class="bi bi-people me-2" style="color: var(--primary-600);"></i>
+                Usuários
+            </h1>
+            <div class="page-subtitle">
+                <span th:text="${pagina.totalElements}">0</span> usuário(s) com acesso ao sistema
+            </div>
+        </div>
+        <a class="btn btn-primary" th:href="@{/usuarios/novo}">
             <i class="bi bi-plus-lg"></i> Novo usuário
         </a>
     </div>
 
-    <div class="card card-panel">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
+    <!-- ============================ LISTAGEM ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div class="table-responsive" th:if="${!pagina.empty}">
+            <table class="table table-hover align-middle mb-0">
                 <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Login</th>
-                    <th>Perfil</th>
-                    <th>Status</th>
-                    <th>Criado em</th>
-                    <th class="text-end">Ações</th>
-                </tr>
+                    <tr>
+                        <th>Usuário</th>
+                        <th style="width: 160px;">Login</th>
+                        <th style="width: 160px;">Perfil</th>
+                        <th style="width: 100px;">Status</th>
+                        <th style="width: 170px;">Criado em</th>
+                        <th class="text-end" style="width: 60px;">Ações</th>
+                    </tr>
                 </thead>
                 <tbody>
-                <tr th:each="u : ${pagina.content}">
-                    <td th:text="${u.id}"></td>
-                    <td th:text="${u.nomeCompleto}"></td>
-                    <td><code th:text="${u.login}"></code></td>
-                    <td>
-                        <span class="badge"
-                              th:classappend="${u.perfil.name() == 'ADMINISTRADOR'} ? 'bg-danger' : 'bg-primary'"
-                              th:text="${u.perfil}"></span>
-                    </td>
-                    <td>
-                        <span class="badge" th:classappend="${u.ativo} ? 'bg-success' : 'bg-secondary'"
-                              th:text="${u.ativo} ? 'Ativo' : 'Inativo'"></span>
-                    </td>
-                    <td class="small text-muted"
-                        th:text="${u.criadoEm != null} ? ${#temporals.format(u.criadoEm, 'dd/MM/yyyy HH:mm')} : '—'"></td>
-                    <td class="text-end text-nowrap">
-                        <a class="btn btn-warning btn-xs"
-                           th:href="@{'/usuarios/' + ${u.id} + '/editar'}" title="Editar">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <form class="d-inline" th:if="${u.ativo}"
-                              th:action="@{'/usuarios/' + ${u.id} + '/inativar'}" method="post"
-                              onsubmit="return confirm('Inativar este usuário? Ele não poderá mais fazer login.');">
-                            <button class="btn btn-danger btn-xs" title="Inativar">
-                                <i class="bi bi-person-x"></i>
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                <tr th:if="${pagina.empty}">
-                    <td colspan="7" class="text-center text-muted py-3">Nenhum usuário.</td>
-                </tr>
+                    <tr th:each="u : ${pagina.content}">
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="nav-avatar"
+                                     th:text="${#strings.toUpperCase(#strings.substring(u.nomeCompleto, 0, 1))}"></div>
+                                <div class="cell-stack">
+                                    <span class="cell-primary" th:text="${u.nomeCompleto}"></span>
+                                    <span class="cell-secondary">ID #<span th:text="${u.id}"></span></span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="chip-tombo" th:text="${u.login}"></span>
+                        </td>
+                        <td>
+                            <span class="badge badge-sit badge-plain"
+                                  th:classappend="${u.perfil.name() == 'ADMINISTRADOR'} ? 'MANUTENCAO' : 'CAUTELADO'"
+                                  th:text="${u.perfil}"></span>
+                        </td>
+                        <td>
+                            <span class="badge badge-sit"
+                                  th:classappend="${u.ativo} ? 'ATIVO' : 'BAIXADO'"
+                                  th:text="${u.ativo} ? 'Ativo' : 'Inativo'"></span>
+                        </td>
+                        <td class="text-secondary small tabular-nums"
+                            th:text="${u.criadoEm != null} ? ${#temporals.format(u.criadoEm, 'dd/MM/yyyy HH:mm')} : '—'"></td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn-kebab" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false" title="Ações">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item"
+                                           th:href="@{'/usuarios/' + ${u.id} + '/editar'}">
+                                            <i class="bi bi-pencil"></i> Editar
+                                        </a>
+                                    </li>
+                                    <li th:if="${u.ativo}"><hr class="dropdown-divider"></li>
+                                    <li th:if="${u.ativo}">
+                                        <form th:action="@{'/usuarios/' + ${u.id} + '/inativar'}" method="post"
+                                              data-confirm="Inativar este usuário? Ele não poderá mais fazer login no sistema."
+                                              data-confirm-title="Inativar usuário"
+                                              data-confirm-variant="danger">
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="bi bi-person-x"></i> Inativar
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
+
+        <div th:if="${pagina.empty}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-people',
+                'Nenhum usuário cadastrado',
+                'Cadastre o primeiro usuário para começar a gerenciar acessos.',
+                @{/usuarios/novo},
+                'Cadastrar usuário')}"></div>
     </div>
 
-    <nav th:if="${pagina.totalPages > 1}" class="mt-3">
-        <ul class="pagination">
+    <!-- ============================ PAGINAÇÃO ============================ -->
+    <nav th:if="${pagina.totalPages > 1}" class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="small text-muted">
+            Página <strong th:text="${pagina.number + 1}"></strong> de
+            <strong th:text="${pagina.totalPages}"></strong>
+        </div>
+        <ul class="pagination mb-0">
             <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
-                <a class="page-link" th:href="@{/usuarios(page=${pagina.number - 1}, size=${pagina.size})}">Anterior</a>
-            </li>
-            <li class="page-item disabled">
-                <span class="page-link"
-                      th:text="'Página ' + ${pagina.number + 1} + ' de ' + ${pagina.totalPages}"></span>
+                <a class="page-link" th:href="@{/usuarios(page=${pagina.number - 1}, size=${pagina.size})}">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
             </li>
             <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
-                <a class="page-link" th:href="@{/usuarios(page=${pagina.number + 1}, size=${pagina.size})}">Próxima</a>
+                <a class="page-link" th:href="@{/usuarios(page=${pagina.number + 1}, size=${pagina.size})}">
+                    Próxima <i class="bi bi-chevron-right"></i>
+                </a>
             </li>
         </ul>
     </nav>

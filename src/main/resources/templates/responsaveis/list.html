@@ -6,19 +6,31 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container">
+<main class="container pb-5">
     <div th:replace="~{fragments/layout :: messages}"></div>
 
-    <h1 class="h3 mb-3">Responsáveis</h1>
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Responsáveis</h1>
+            <div class="page-subtitle">
+                <span th:text="${pagina.totalElements}">0</span> responsável(eis) cadastrado(s)
+            </div>
+        </div>
+    </div>
 
-    <!-- Cadastro rápido -->
-    <div class="card card-panel mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Novo Responsável</h5>
+    <!-- ============================ CADASTRO RÁPIDO ============================ -->
+    <div class="card card-panel mb-4" style="overflow: hidden;">
+        <div class="form-section" style="border-bottom: none;">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-person-plus',
+                'Novo responsável',
+                'Cadastre rapidamente uma pessoa responsável por patrimônios.')}"></div>
+
             <form th:action="@{/responsaveis}" th:object="${responsavelForm}" method="post" class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label">Nome completo</label>
-                    <input type="text" class="form-control" th:field="*{nomeCompleto}"/>
+                    <label class="form-label required">Nome completo</label>
+                    <input type="text" class="form-control" th:field="*{nomeCompleto}" placeholder="Nome completo"/>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Matrícula</label>
@@ -37,7 +49,7 @@
                     </select>
                 </div>
                 <div class="col-md-1 d-flex align-items-end">
-                    <button class="btn btn-success w-100" type="submit">
+                    <button class="btn btn-primary w-100" type="submit" title="Adicionar">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>
@@ -45,68 +57,104 @@
         </div>
     </div>
 
-    <!-- Listagem -->
-    <div class="card card-panel">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
+    <!-- ============================ LISTAGEM ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div class="table-responsive" th:if="${!pagina.empty}">
+            <table class="table table-hover align-middle mb-0">
                 <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Matrícula</th>
-                    <th>Lotação</th>
-                    <th>Ativo</th>
-                    <th class="text-end">Ações</th>
-                </tr>
+                    <tr>
+                        <th>Nome</th>
+                        <th style="width: 140px;">Matrícula</th>
+                        <th>Lotação</th>
+                        <th style="width: 100px;">Status</th>
+                        <th class="text-end" style="width: 60px;">Ações</th>
+                    </tr>
                 </thead>
                 <tbody>
-                <tr th:each="r : ${pagina.content}">
-                    <td th:text="${r.id}"></td>
-                    <td th:text="${r.nomeCompleto}"></td>
-                    <td th:text="${r.matricula} ?: '—'"></td>
-                    <td th:text="${r.lotacaoNome} ?: '—'"></td>
-                    <td>
-                        <span class="badge" th:classappend="${r.ativo} ? 'bg-success' : 'bg-secondary'"
-                              th:text="${r.ativo} ? 'Ativo' : 'Inativo'"></span>
-                    </td>
-                    <td class="text-end">
-                        <a class="btn btn-warning btn-xs"
-                           th:href="@{'/responsaveis/' + ${r.id} + '/editar'}">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <form sec:authorize="hasRole('ADMINISTRADOR')"
-                              class="d-inline"
-                              th:action="@{'/responsaveis/' + ${r.id} + '/inativar'}"
-                              method="post"
-                              onsubmit="return confirm('Inativar este responsável?');">
-                            <button class="btn btn-danger btn-xs">
-                                <i class="bi bi-person-x"></i>
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                <tr th:if="${pagina.empty}">
-                    <td colspan="6" class="text-center text-muted">Nenhum responsável cadastrado.</td>
-                </tr>
+                    <tr th:each="r : ${pagina.content}">
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="nav-avatar"
+                                     th:text="${#strings.toUpperCase(#strings.substring(r.nomeCompleto, 0, 1))}"></div>
+                                <div class="cell-stack">
+                                    <span class="cell-primary" th:text="${r.nomeCompleto}"></span>
+                                    <span class="cell-secondary">ID #<span th:text="${r.id}"></span></span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="chip-tombo" th:if="${r.matricula}" th:text="${r.matricula}"></span>
+                            <span class="text-muted" th:unless="${r.matricula}">—</span>
+                        </td>
+                        <td>
+                            <span th:text="${r.lotacaoNome} ?: '—'"
+                                  th:classappend="${r.lotacaoNome == null} ? 'text-muted'"></span>
+                        </td>
+                        <td>
+                            <span class="badge badge-sit"
+                                  th:classappend="${r.ativo} ? 'ATIVO' : 'BAIXADO'"
+                                  th:text="${r.ativo} ? 'Ativo' : 'Inativo'"></span>
+                        </td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn-kebab" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false" title="Ações">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item"
+                                           th:href="@{'/responsaveis/' + ${r.id} + '/editar'}">
+                                            <i class="bi bi-pencil"></i> Editar
+                                        </a>
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMINISTRADOR')" th:if="${r.ativo}">
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMINISTRADOR')" th:if="${r.ativo}">
+                                        <form th:action="@{'/responsaveis/' + ${r.id} + '/inativar'}" method="post"
+                                              data-confirm="Inativar este responsável? Ele não poderá mais ser vinculado a novos patrimônios."
+                                              data-confirm-title="Inativar responsável"
+                                              data-confirm-variant="danger">
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="bi bi-person-x"></i> Inativar
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
+
+        <div th:if="${pagina.empty}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-person-badge',
+                'Nenhum responsável cadastrado',
+                'Use o formulário acima para cadastrar o primeiro responsável.',
+                null, null)}"></div>
     </div>
 
-    <!-- Paginação -->
-    <nav th:if="${pagina.totalPages > 1}" class="mt-3">
-        <ul class="pagination">
+    <!-- ============================ PAGINAÇÃO ============================ -->
+    <nav th:if="${pagina.totalPages > 1}" class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="small text-muted">
+            Página <strong th:text="${pagina.number + 1}"></strong> de
+            <strong th:text="${pagina.totalPages}"></strong>
+        </div>
+        <ul class="pagination mb-0">
             <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
                 <a class="page-link"
-                   th:href="@{/responsaveis(page=${pagina.number - 1}, size=${pagina.size})}">Anterior</a>
-            </li>
-            <li class="page-item disabled">
-                <span class="page-link"
-                      th:text="'Página ' + ${pagina.number + 1} + ' de ' + ${pagina.totalPages}"></span>
+                   th:href="@{/responsaveis(page=${pagina.number - 1}, size=${pagina.size})}">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
             </li>
             <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
                 <a class="page-link"
-                   th:href="@{/responsaveis(page=${pagina.number + 1}, size=${pagina.size})}">Próxima</a>
+                   th:href="@{/responsaveis(page=${pagina.number + 1}, size=${pagina.size})}">
+                    Próxima <i class="bi bi-chevron-right"></i>
+                </a>
             </li>
         </ul>
     </nav>

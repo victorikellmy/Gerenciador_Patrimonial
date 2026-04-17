@@ -4,52 +4,92 @@
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<main class="container">
+<main class="container pb-5">
     <div th:replace="~{fragments/layout :: messages}"></div>
 
-    <h1 class="h3 mb-3">
-        <i class="bi bi-key"></i> Trocar minha senha
-    </h1>
-
-    <div class="card card-panel" style="max-width: 560px;">
-        <div class="card-body">
-            <div th:if="${erro}" class="alert alert-danger py-2 small">
-                <i class="bi bi-exclamation-triangle"></i> <span th:text="${erro}"></span>
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">
+                    <i class="bi bi-key-fill me-2" style="color: var(--primary-600);"></i>
+                    Trocar minha senha
+                </h1>
+                <div class="page-subtitle">
+                    Mantenha seu acesso seguro usando uma senha forte.
+                </div>
             </div>
-
-            <form th:action="@{/minha-conta/senha}" th:object="${trocarSenhaForm}" method="post">
-                <div class="mb-3">
-                    <label class="form-label">Senha atual *</label>
-                    <input type="password" class="form-control" th:field="*{senhaAtual}"
-                           autocomplete="current-password"/>
-                    <div class="text-danger small" th:if="${#fields.hasErrors('senhaAtual')}"
-                         th:errors="*{senhaAtual}"></div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Nova senha *</label>
-                    <input type="password" class="form-control" th:field="*{novaSenha}"
-                           autocomplete="new-password"/>
-                    <div class="text-danger small" th:if="${#fields.hasErrors('novaSenha')}"
-                         th:errors="*{novaSenha}"></div>
-                    <small class="text-muted">Entre 6 e 60 caracteres.</small>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Confirmação *</label>
-                    <input type="password" class="form-control" th:field="*{confirmacao}"
-                           autocomplete="new-password"/>
-                    <div class="text-danger small" th:if="${#fields.hasErrors('confirmacao')}"
-                         th:errors="*{confirmacao}"></div>
-                </div>
-
-                <button class="btn btn-primary" type="submit">
-                    <i class="bi bi-save"></i> Alterar
-                </button>
-                <a class="btn btn-secondary" th:href="@{/}">Cancelar</a>
-            </form>
         </div>
     </div>
+
+    <div th:if="${erro}" class="alert alert-danger mb-4" style="max-width: 680px;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span th:text="${erro}"></span>
+    </div>
+
+    <!-- ============================ FORMULÁRIO ============================ -->
+    <form th:action="@{/minha-conta/senha}" th:object="${trocarSenhaForm}" method="post"
+          class="card card-panel" style="overflow: hidden; max-width: 680px;">
+
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-shield-lock',
+                'Verificação',
+                'Informe sua senha atual para confirmar a identidade.')}"></div>
+
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label required">Senha atual</label>
+                    <input type="password" class="form-control" th:field="*{senhaAtual}"
+                           autocomplete="current-password"
+                           th:classappend="${#fields.hasErrors('senhaAtual')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('senhaAtual')}"
+                         th:errors="*{senhaAtual}"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-shield-check',
+                'Nova senha',
+                'Escolha uma senha entre 6 e 60 caracteres.')}"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required">Nova senha</label>
+                    <input type="password" class="form-control" th:field="*{novaSenha}"
+                           autocomplete="new-password"
+                           placeholder="Mínimo 6 caracteres"
+                           th:classappend="${#fields.hasErrors('novaSenha')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('novaSenha')}"
+                         th:errors="*{novaSenha}"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">Confirmação</label>
+                    <input type="password" class="form-control" th:field="*{confirmacao}"
+                           autocomplete="new-password"
+                           placeholder="Repita a nova senha"
+                           th:classappend="${#fields.hasErrors('confirmacao')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('confirmacao')}"
+                         th:errors="*{confirmacao}"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sticky-actions">
+            <span class="actions-hint">
+                <i class="bi bi-shield-check"></i> Sua senha é armazenada de forma criptografada.
+            </span>
+            <a class="btn btn-secondary" th:href="@{/}">Cancelar</a>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check-lg"></i> Alterar senha
+            </button>
+        </div>
+    </form>
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
