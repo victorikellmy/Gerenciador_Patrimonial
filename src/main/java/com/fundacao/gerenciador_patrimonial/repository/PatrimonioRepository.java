@@ -79,6 +79,26 @@ public interface PatrimonioRepository
            """)
     BigDecimal somarValorAtivos();
 
+    /** Soma de depreciação acumulada dos ativos (valor × %VUD), só quando categoria+conservação têm referência. */
+    @Query(value = """
+           select coalesce(sum(p.valor_compra * pc.percentual_vud), 0)
+           from patrimonio p
+           join percentual_conservacao pc on pc.conservacao = p.conservacao
+           join vida_util_categoria vuc on upper(vuc.categoria) = upper(p.categoria)
+           where p.situacao = 'ATIVO' and p.valor_compra is not null
+           """, nativeQuery = true)
+    BigDecimal somarDepreciacaoAtivos();
+
+    /** Soma de Valor Contábil Líquido (valor − depreciação) dos ativos. */
+    @Query(value = """
+           select coalesce(sum(p.valor_compra - (p.valor_compra * pc.percentual_vud)), 0)
+           from patrimonio p
+           join percentual_conservacao pc on pc.conservacao = p.conservacao
+           join vida_util_categoria vuc on upper(vuc.categoria) = upper(p.categoria)
+           where p.situacao = 'ATIVO' and p.valor_compra is not null
+           """, nativeQuery = true)
+    BigDecimal somarVclAtivos();
+
     /** Listagem completa para export — evita paginação. */
     @Query("""
            select p

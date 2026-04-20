@@ -12,7 +12,12 @@
       "Bash(ls src/main/java/com/fundacao/gerenciador_patrimonial/service/)",
       "Bash(find src/main/java -name \"*Importac*\" -o -name \"*Import*.java\")",
       "Bash(ls src/test/resources/)",
-      "Bash(ls src/test/java/com/fundacao/gerenciador_patrimonial/)"
+      "Bash(ls src/test/java/com/fundacao/gerenciador_patrimonial/)",
+      "Bash(./mvnw -q -DskipTests compile)",
+      "Bash(./gradlew.bat -q compileJava)",
+      "Bash(./gradlew.bat compileJava)",
+      "Bash(./gradlew.bat --rerun-tasks compileJava)",
+      "Bash(./gradlew.bat clean *)"
     ]
   }
 }

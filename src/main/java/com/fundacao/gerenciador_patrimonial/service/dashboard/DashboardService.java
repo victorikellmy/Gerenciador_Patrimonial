@@ -1,7 +1,6 @@
 package com.fundacao.gerenciador_patrimonial.service.dashboard;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Movimentacao;
-import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio;
 import com.fundacao.gerenciador_patrimonial.dto.response.AgrupamentoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.DashboardMetrics;
@@ -9,14 +8,13 @@ import com.fundacao.gerenciador_patrimonial.repository.LotacaoRepository;
 import com.fundacao.gerenciador_patrimonial.repository.MovimentacaoRepository;
 import com.fundacao.gerenciador_patrimonial.repository.PatrimonioRepository;
 import com.fundacao.gerenciador_patrimonial.repository.ResponsavelRepository;
-import com.fundacao.gerenciador_patrimonial.service.DepreciacaoService;
-import com.fundacao.gerenciador_patrimonial.service.DepreciacaoService.CalculoDepreciacao;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,10 +23,8 @@ import java.util.Map;
 /**
  * Consolida números e agrupamentos para o dashboard.
  *
- * <p>As agregações baratas são feitas por consultas SQL (GROUP BY).
- * Já a soma de VCL/depreciação acumulada precisa percorrer os ativos
- * porque depende de {@link DepreciacaoService} (combina categoria +
- * conservação). Carregamos os ativos com fetch-join para evitar N+1.</p>
+ * <p>Todas as agregações são feitas por consultas SQL — não carregamos
+ * entidades individuais de {@code Patrimonio} no caminho do dashboard.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -36,12 +32,12 @@ public class DashboardService {
 
     private static final DateTimeFormatter FMT_DATA_HORA =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final int SCALE_MOEDA = 2;
 
     private final PatrimonioRepository patrimonioRepo;
     private final LotacaoRepository lotacaoRepo;
     private final ResponsavelRepository responsavelRepo;
     private final MovimentacaoRepository movimentacaoRepo;
-    private final DepreciacaoService depreciacaoService;
 
     @Transactional(readOnly = true)
     public DashboardMetrics carregar() {
@@ -78,23 +74,10 @@ public class DashboardService {
                         (BigDecimal) row[2]))
                 .toList();
 
-        // ----------------- soma de valores + depreciação -----------------
-        BigDecimal valorTotal   = BigDecimal.ZERO;
-        BigDecimal depAcumTotal = BigDecimal.ZERO;
-        BigDecimal vclTotal     = BigDecimal.ZERO;
-
-        List<Patrimonio> ativos = patrimonioRepo.listarTudoParaRelatorio().stream()
-                .filter(p -> p.getSituacao() == SituacaoPatrimonio.ATIVO)
-                .toList();
-
-        for (Patrimonio p : ativos) {
-            if (p.getValorCompra() != null) valorTotal = valorTotal.add(p.getValorCompra());
-            CalculoDepreciacao calc = depreciacaoService.calcular(p);
-            if (calc.depreciacaoAcumulada() != null)
-                depAcumTotal = depAcumTotal.add(calc.depreciacaoAcumulada());
-            if (calc.valorContabilLiquido() != null)
-                vclTotal = vclTotal.add(calc.valorContabilLiquido());
-        }
+        // ----------------- soma de valores + depreciação (3 agregações SQL) -----------------
+        BigDecimal valorTotal   = patrimonioRepo.somarValorAtivos();
+        BigDecimal depAcumTotal = patrimonioRepo.somarDepreciacaoAtivos();
+        BigDecimal vclTotal     = patrimonioRepo.somarVclAtivos();
 
         // ----------------- últimas movimentações -----------------
         List<DashboardMetrics.MovimentacaoResumo> ultimas = movimentacaoRepo
@@ -116,6 +99,13 @@ public class DashboardService {
                 topUpms,
                 ultimas
         );
+    }
+
+    private static BigDecimal aoBigDecimal(Object v) {
+        if (v == null) return BigDecimal.ZERO.setScale(SCALE_MOEDA, RoundingMode.HALF_UP);
+        BigDecimal bd = (v instanceof BigDecimal) ? (BigDecimal) v
+                : new BigDecimal(v.toString());
+        return bd.setScale(SCALE_MOEDA, RoundingMode.HALF_UP);
     }
 
     private DashboardMetrics.MovimentacaoResumo resumirMovimentacao(Movimentacao m) {

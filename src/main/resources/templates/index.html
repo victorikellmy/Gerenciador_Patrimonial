@@ -361,7 +361,7 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false }, tooltip: tooltipStyle() },
                 scales: {
-                    x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: gridStyle() },
+                    x: { beginAtZero: true, ticks: { precision: 0 }, grid: gridStyle() },
                     y: { grid: { display: false } }
                 }
             }
@@ -384,7 +384,7 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false }, tooltip: tooltipStyle() },
                 scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: gridStyle() },
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: gridStyle() },
                     x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 0 } }
                 }
             }

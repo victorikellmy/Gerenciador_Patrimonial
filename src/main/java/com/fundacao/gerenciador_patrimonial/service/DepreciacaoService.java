@@ -1,13 +1,19 @@
 package com.fundacao.gerenciador_patrimonial.service;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
+import com.fundacao.gerenciador_patrimonial.domain.enums.Conservacao;
 import com.fundacao.gerenciador_patrimonial.repository.PercentualConservacaoRepository;
 import com.fundacao.gerenciador_patrimonial.repository.VidaUtilCategoriaRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Calcula depreciação e métricas contábeis a partir do estado do patrimônio.
@@ -24,6 +30,20 @@ public class DepreciacaoService {
 
     private final VidaUtilCategoriaRepository vutRepo;
     private final PercentualConservacaoRepository pcRepo;
+
+    // Tabelas de referência populadas por Flyway (V2__seed_reference_data) e imutáveis em runtime.
+    // Carregadas uma vez no startup para evitar N+1 ao iterar patrimônios (dashboard, relatórios).
+    private final Map<String, Integer> vutPorCategoria = new ConcurrentHashMap<>();
+    private final Map<Conservacao, BigDecimal> vudPorConservacao = new ConcurrentHashMap<>();
+
+    @PostConstruct
+    void preloadReferencias() {
+        vutRepo.findAll().forEach(v ->
+                vutPorCategoria.put(v.getCategoria().toUpperCase(Locale.ROOT), v.getVutAnos()));
+        vudPorConservacao.putAll(pcRepo.findAll().stream()
+                .collect(Collectors.toMap(c -> c.getConservacao(), c -> c.getPercentualVud(),
+                        (a, b) -> a)));
+    }
 
     /**
      * Resultado dos cálculos. Todos os valores em R$ ou anos.
@@ -52,13 +72,8 @@ public class DepreciacaoService {
             return CalculoDepreciacao.vazio();
         }
 
-        Integer vut = vutRepo.findByCategoriaIgnoreCase(p.getCategoria())
-                .map(v -> v.getVutAnos())
-                .orElse(null);
-
-        BigDecimal vudPct = pcRepo.findByConservacao(p.getConservacao())
-                .map(c -> c.getPercentualVud())
-                .orElse(null);
+        Integer vut = vutPorCategoria.get(p.getCategoria().toUpperCase(Locale.ROOT));
+        BigDecimal vudPct = vudPorConservacao.get(p.getConservacao());
 
         if (vut == null || vudPct == null) {
             return CalculoDepreciacao.vazio();
