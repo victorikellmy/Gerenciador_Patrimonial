@@ -127,7 +127,9 @@
                     <div class="chart-skeleton" data-chart-skeleton>
                         <div class="skeleton skeleton-circle" style="width: 160px; height: 160px; margin: 20px auto;"></div>
                     </div>
-                    <canvas id="chartCategoria" height="230" style="display:none"></canvas>
+                    <div class="chart-box" style="position:relative; height:260px; display:none" data-chart-box>
+                        <canvas id="chartCategoria"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -149,7 +151,9 @@
                             <span class="skeleton skeleton-text" style="height: 14px; width: 35%"></span>
                         </div>
                     </div>
-                    <canvas id="chartConservacao" height="230" style="display:none"></canvas>
+                    <div class="chart-box" style="position:relative; height:260px; display:none" data-chart-box>
+                        <canvas id="chartConservacao"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -173,7 +177,9 @@
                             <span class="skeleton" style="width: 14%; height: 70%; border-radius: 4px;"></span>
                         </div>
                     </div>
-                    <canvas id="chartUpm" height="230" style="display:none"></canvas>
+                    <div class="chart-box" style="position:relative; height:260px; display:none" data-chart-box>
+                        <canvas id="chartUpm"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -314,9 +320,9 @@
 
     // Inicializa gráficos (pequeno delay para exibir skeleton)
     const renderCharts = () => {
-        // Remove skeletons
+        // Remove skeletons e exibe contêineres de gráfico
         document.querySelectorAll('[data-chart-skeleton]').forEach(el => el.remove());
-        document.querySelectorAll('canvas').forEach(c => c.style.display = '');
+        document.querySelectorAll('[data-chart-box]').forEach(el => el.style.display = '');
 
         const chartCat = new Chart(document.getElementById('chartCategoria'), {
             type: 'doughnut',
