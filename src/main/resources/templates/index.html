@@ -127,7 +127,9 @@
                     <div class="chart-skeleton" data-chart-skeleton>
                         <div class="skeleton skeleton-circle" style="width: 160px; height: 160px; margin: 20px auto;"></div>
                     </div>
-                    <canvas id="chartCategoria" height="230" style="display:none"></canvas>
+                    <div class="chart-canvas-wrap" style="position: relative; height: 260px;">
+                        <canvas id="chartCategoria" style="display:none"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -149,7 +151,9 @@
                             <span class="skeleton skeleton-text" style="height: 14px; width: 35%"></span>
                         </div>
                     </div>
-                    <canvas id="chartConservacao" height="230" style="display:none"></canvas>
+                    <div class="chart-canvas-wrap" style="position: relative; height: 260px;">
+                        <canvas id="chartConservacao" style="display:none"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -173,7 +177,9 @@
                             <span class="skeleton" style="width: 14%; height: 70%; border-radius: 4px;"></span>
                         </div>
                     </div>
-                    <canvas id="chartUpm" height="230" style="display:none"></canvas>
+                    <div class="chart-canvas-wrap" style="position: relative; height: 260px;">
+                        <canvas id="chartUpm" style="display:none"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -260,7 +266,8 @@
     };
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
+        onerror="console.warn('CDN do Chart.js indisponível — dashboard seguirá sem gráficos.');"></script>
 <script>
 (function() {
     // Paleta alinhada ao design system — azul corporativo
@@ -282,14 +289,14 @@
         };
     };
 
-    // Opções globais
+    // Opções globais (só aplica se Chart.js já estiver carregado)
     const applyGlobalOptions = () => {
+        if (typeof Chart === 'undefined') return;
         const c = getThemeColors();
         Chart.defaults.font.family = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
         Chart.defaults.font.size = 12;
         Chart.defaults.color = c.text;
     };
-    applyGlobalOptions();
 
     const tooltipStyle = () => {
         const c = getThemeColors();
@@ -312,13 +319,35 @@
         drawBorder: false
     });
 
-    // Inicializa gráficos (pequeno delay para exibir skeleton)
-    const renderCharts = () => {
-        // Remove skeletons
+    // Helper: cria Chart com try/catch para não travar os demais se um falhar.
+    const safeChart = (ctx, config) => {
+        if (!ctx || typeof Chart === 'undefined') return null;
+        try {
+            return new Chart(ctx, config);
+        } catch (err) {
+            console.error('Falha ao renderizar gráfico', ctx && ctx.id, err);
+            return null;
+        }
+    };
+
+    // Remove skeletons SEMPRE — mesmo que o Chart.js não tenha carregado.
+    // Isso garante que a página nunca fique travada em estado de loading.
+    const hideSkeletons = () => {
         document.querySelectorAll('[data-chart-skeleton]').forEach(el => el.remove());
         document.querySelectorAll('canvas').forEach(c => c.style.display = '');
+    };
 
-        const chartCat = new Chart(document.getElementById('chartCategoria'), {
+    // Inicializa gráficos (pequeno delay para exibir skeleton)
+    const renderCharts = () => {
+        hideSkeletons();
+        applyGlobalOptions();
+
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js não carregou — pulando renderização dos gráficos.');
+            return;
+        }
+
+        const chartCat = safeChart(document.getElementById('chartCategoria'), {
             type: 'doughnut',
             data: {
                 labels: dadosCategoria.labels,
@@ -343,7 +372,7 @@
             }
         });
 
-        const chartCons = new Chart(document.getElementById('chartConservacao'), {
+        const chartCons = safeChart(document.getElementById('chartConservacao'), {
             type: 'bar',
             data: {
                 labels: dadosConservacao.labels,
@@ -367,7 +396,7 @@
             }
         });
 
-        const chartUpm = new Chart(document.getElementById('chartUpm'), {
+        const chartUpm = safeChart(document.getElementById('chartUpm'), {
             type: 'bar',
             data: {
                 labels: dadosUpm.labels,
@@ -390,10 +419,10 @@
             }
         });
 
-        // Re-renderiza ao trocar tema
+        // Re-renderiza ao trocar tema (ignora charts que não foram criados)
         const observer = new MutationObserver(() => {
             applyGlobalOptions();
-            [chartCat, chartCons, chartUpm].forEach(ch => {
+            [chartCat, chartCons, chartUpm].filter(Boolean).forEach(ch => {
                 ch.options.plugins.tooltip = tooltipStyle();
                 if (ch.options.scales) {
                     Object.values(ch.options.scales).forEach(s => {
@@ -415,6 +444,9 @@
     } else {
         setTimeout(renderCharts, 250);
     }
+
+    // Rede de segurança: se algo travar, remove skeletons em 3s.
+    setTimeout(hideSkeletons, 3000);
 })();
 </script>
 </body>

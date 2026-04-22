@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,7 +31,6 @@ public class DashboardService {
 
     private static final DateTimeFormatter FMT_DATA_HORA =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final int SCALE_MOEDA = 2;
 
     private final PatrimonioRepository patrimonioRepo;
     private final LotacaoRepository lotacaoRepo;
@@ -99,13 +97,6 @@ public class DashboardService {
                 topUpms,
                 ultimas
         );
-    }
-
-    private static BigDecimal aoBigDecimal(Object v) {
-        if (v == null) return BigDecimal.ZERO.setScale(SCALE_MOEDA, RoundingMode.HALF_UP);
-        BigDecimal bd = (v instanceof BigDecimal) ? (BigDecimal) v
-                : new BigDecimal(v.toString());
-        return bd.setScale(SCALE_MOEDA, RoundingMode.HALF_UP);
     }
 
     private DashboardMetrics.MovimentacaoResumo resumirMovimentacao(Movimentacao m) {
