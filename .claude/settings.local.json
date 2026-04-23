@@ -17,7 +17,20 @@
       "Bash(./gradlew.bat -q compileJava)",
       "Bash(./gradlew.bat compileJava)",
       "Bash(./gradlew.bat --rerun-tasks compileJava)",
-      "Bash(./gradlew.bat clean *)"
+      "Bash(./gradlew.bat clean *)",
+      "Read(//c/Users/Fa Saude/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/d7d53617-618b-402b-990e-78df45ebbd90/a2a5b466-ab2e-4f21-b4ed-0a23b0956283/skills/xlsx/**)",
+      "Bash(python -c \"from openpyxl import load_workbook; wb = load_workbook\\(r'C:\\\\Users\\\\Fa Saude\\\\Downloads\\\\Planilha Parcial de Patrimônio \\(1\\).xlsx'\\); [print\\(f'Sheet: {s}, dims: {wb[s].dimensions}'\\) for s in wb.sheetnames]\")",
+      "Bash(./scripts/extract-text \"C:\\\\Users\\\\Fa Saude\\\\Downloads\\\\Planilha Parcial de Patrimônio \\(1\\).xlsx\")",
+      "Bash(python \"C:\\\\Users\\\\Fa Saude\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\d7d53617-618b-402b-990e-78df45ebbd90\\\\a2a5b466-ab2e-4f21-b4ed-0a23b0956283\\\\skills\\\\xlsx\\\\scripts\\\\recalc.py\" \"C:\\\\Users\\\\Fa Saude\\\\Downloads\\\\Planilha Patrimonio Refatorada.xlsx\" 120)",
+      "Bash(python '/c/Users/Fa Saude/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/d7d53617-618b-402b-990e-78df45ebbd90/a2a5b466-ab2e-4f21-b4ed-0a23b0956283/skills/xlsx/scripts/recalc.py' '/c/Users/Fa Saude/Downloads/Planilha Patrimonio Refatorada.xlsx' 120)",
+      "Bash(cp \"/c/Users/Fa Saude/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/d7d53617-618b-402b-990e-78df45ebbd90/a2a5b466-ab2e-4f21-b4ed-0a23b0956283/skills/xlsx/scripts/recalc.py\" /tmp/recalc.py)",
+      "Bash(cp -r \"/c/Users/Fa Saude/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/d7d53617-618b-402b-990e-78df45ebbd90/a2a5b466-ab2e-4f21-b4ed-0a23b0956283/skills/xlsx/scripts/office\" /tmp/office)",
+      "Bash(cp \"/c/Users/Fa Saude/Downloads/Planilha Patrimonio Refatorada.xlsx\" /tmp/out.xlsx)",
+      "Bash(python /tmp/recalc.py /tmp/out.xlsx 120)",
+      "Bash(python)",
+      "Bash(./gradlew clean *)",
+      "Bash(unzip -p 'C:/Users/Fa Saude/IdeaProjects/Gerenciador_Patrimonial/build/libs/Gerenciador_Patrimonial-0.0.1-SNAPSHOT.jar' META-INF/MANIFEST.MF)",
+      "Bash(./gradlew bootJar)"
     ]
   }
 }
