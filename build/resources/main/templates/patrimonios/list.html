@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Patrimônios')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Patrimônios</h1>
+            <div class="page-subtitle">
+                <span th:text="${pagina.totalElements}">0</span> registro(s) no total
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-secondary" th:href="@{/relatorios}">
+                <i class="bi bi-file-earmark-bar-graph"></i> Relatórios
+            </a>
+            <a class="btn btn-primary" th:href="@{/patrimonios/novo}">
+                <i class="bi bi-plus-lg"></i> Novo patrimônio
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================ CARD PRINCIPAL ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+
+        <!-- =============== TOOLBAR (busca + filtros) =============== -->
+        <form th:action="@{/patrimonios}" method="get" id="filterForm">
+            <div class="toolbar">
+                <div class="input-icon search-input">
+                    <input type="text" class="form-control"
+                           name="descricao"
+                           th:value="${filtro.descricao}"
+                           placeholder="Buscar por descrição..."
+                           autocomplete="off"/>
+                    <i class="bi bi-search"></i>
+                </div>
+
+                <!-- Filtros avançados já usam form="filterForm" e são submetidos juntos
+                     mesmo com o painel colapsado. Não duplicar via hidden aqui — dois
+                     campos com o mesmo name fazem o Spring concatenar valores com vírgula. -->
+
+                <div class="toolbar-spacer"></div>
+
+                <button type="button" class="btn btn-secondary"
+                        data-bs-toggle="collapse" data-bs-target="#filtrosAvancados"
+                        aria-expanded="false" aria-controls="filtrosAvancados">
+                    <i class="bi bi-funnel"></i> Filtros
+                    <span class="badge badge-plain ms-1"
+                          th:if="${(filtro.numeroTombo != null and !filtro.numeroTombo.isEmpty())
+                                or (filtro.upm != null and !filtro.upm.isEmpty())
+                                or (filtro.categoria != null and !filtro.categoria.isEmpty())
+                                or filtro.situacao != null
+                                or filtro.conservacao != null}"
+                          style="background: var(--primary-600); color: white; padding: 1px 7px;">●</span>
+                </button>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </div>
+
+            <!-- =============== FILTROS AVANÇADOS (colapsáveis) =============== -->
+            <div class="collapse"
+                 id="filtrosAvancados"
+                 th:classappend="${(filtro.numeroTombo != null and !filtro.numeroTombo.isEmpty())
+                               or (filtro.upm != null and !filtro.upm.isEmpty())
+                               or (filtro.categoria != null and !filtro.categoria.isEmpty())
+                               or filtro.situacao != null
+                               or filtro.conservacao != null} ? 'show'">
+                <div class="filter-panel">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Nº Tombo</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   form="filterForm" name="numeroTombo"
+                                   th:value="${filtro.numeroTombo}"
+                                   onchange="document.querySelector('#filterForm input[type=hidden][name=numeroTombo]').value=this.value"/>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">UPM</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   form="filterForm" name="upm"
+                                   th:value="${filtro.upm}"
+                                   onchange="document.querySelector('#filterForm input[type=hidden][name=upm]').value=this.value"/>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Categoria</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   form="filterForm" name="categoria"
+                                   th:value="${filtro.categoria}"
+                                   onchange="document.querySelector('#filterForm input[type=hidden][name=categoria]').value=this.value"/>
+                        </div>
+                        <div class="col-md-3"></div>
+                        <div class="col-md-3">
+                            <label class="form-label">Situação</label>
+                            <select class="form-select form-select-sm"
+                                    form="filterForm" name="situacao"
+                                    onchange="document.querySelector('#filterForm input[type=hidden][name=situacao]').value=this.value">
+                                <option value="">Todas</option>
+                                <option th:each="s : ${situacoes}"
+                                        th:value="${s}"
+                                        th:text="${s}"
+                                        th:selected="${filtro.situacao != null and filtro.situacao.name() == s.name()}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Conservação</label>
+                            <select class="form-select form-select-sm"
+                                    form="filterForm" name="conservacao"
+                                    onchange="document.querySelector('#filterForm input[type=hidden][name=conservacao]').value=this.value">
+                                <option value="">Todas</option>
+                                <option th:each="c : ${conservacoes}"
+                                        th:value="${c}"
+                                        th:text="${c}"
+                                        th:selected="${filtro.conservacao != null and filtro.conservacao.name() == c.name()}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <a class="btn btn-secondary btn-sm" th:href="@{/patrimonios}">
+                                <i class="bi bi-x-circle"></i> Limpar filtros
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- =============== CHIPS DE FILTROS ATIVOS =============== -->
+        <div class="px-4 pt-3 filter-chips"
+             th:if="${(filtro.descricao != null and !filtro.descricao.isEmpty())
+                   or (filtro.numeroTombo != null and !filtro.numeroTombo.isEmpty())
+                   or (filtro.upm != null and !filtro.upm.isEmpty())
+                   or (filtro.categoria != null and !filtro.categoria.isEmpty())
+                   or filtro.situacao != null
+                   or filtro.conservacao != null}">
+
+            <span th:if="${filtro.descricao != null and !filtro.descricao.isEmpty()}"
+                  th:replace="~{fragments/ui-kit :: filter-chip('Descrição', ${filtro.descricao},
+                               @{/patrimonios(numeroTombo=${filtro.numeroTombo},upm=${filtro.upm},categoria=${filtro.categoria},situacao=${filtro.situacao},conservacao=${filtro.conservacao})})}"></span>
+            <span th:if="${filtro.numeroTombo != null and !filtro.numeroTombo.isEmpty()}"
+                  th:replace="~{fragments/ui-kit :: filter-chip('Tombo', ${filtro.numeroTombo},
+                               @{/patrimonios(descricao=${filtro.descricao},upm=${filtro.upm},categoria=${filtro.categoria},situacao=${filtro.situacao},conservacao=${filtro.conservacao})})}"></span>
+            <span th:if="${filtro.upm != null and !filtro.upm.isEmpty()}"
+                  th:replace="~{fragments/ui-kit :: filter-chip('UPM', ${filtro.upm},
+                               @{/patrimonios(descricao=${filtro.descricao},numeroTombo=${filtro.numeroTombo},categoria=${filtro.categoria},situacao=${filtro.situacao},conservacao=${filtro.conservacao})})}"></span>
+            <span th:if="${filtro.categoria != null and !filtro.categoria.isEmpty()}"
+                  th:replace="~{fragments/ui-kit :: filter-chip('Categoria', ${filtro.categoria},
+                               @{/patrimonios(descricao=${filtro.descricao},numeroTombo=${filtro.numeroTombo},upm=${filtro.upm},situacao=${filtro.situacao},conservacao=${filtro.conservacao})})}"></span>
+            <span th:if="${filtro.situacao != null}"
+                  th:replace="~{fragments/ui-kit :: filter-chip('Situação', ${filtro.situacao},
+                               @{/patrimonios(descricao=${filtro.descricao},numeroTombo=${filtro.numeroTombo},upm=${filtro.upm},categoria=${filtro.categoria},conservacao=${filtro.conservacao})})}"></span>
+            <span th:if="${filtro.conservacao != null}"
+                  th:replace="~{fragments/ui-kit :: filter-chip('Conservação', ${filtro.conservacao},
+                               @{/patrimonios(descricao=${filtro.descricao},numeroTombo=${filtro.numeroTombo},upm=${filtro.upm},categoria=${filtro.categoria},situacao=${filtro.situacao})})}"></span>
+        </div>
+
+        <!-- =============== TABELA (desktop) =============== -->
+        <div class="desktop-table">
+            <div class="table-responsive" th:if="${!pagina.empty}">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">Tombo</th>
+                            <th>Descrição</th>
+                            <th>Categoria</th>
+                            <th>Lotação</th>
+                            <th>Responsável</th>
+                            <th class="text-end">Valor (R$)</th>
+                            <th>Conservação</th>
+                            <th>Situação</th>
+                            <th class="text-end" style="width: 60px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="p : ${pagina.content}">
+                            <td>
+                                <span class="chip-tombo"
+                                      th:text="${p.numeroTombo} ?: '—'">—</span>
+                            </td>
+                            <td>
+                                <div class="cell-stack">
+                                    <span class="cell-primary" th:text="${p.descricao}">Descrição</span>
+                                    <span class="cell-secondary">ID #<span th:text="${p.id}"></span></span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-secondary" th:text="${p.categoria} ?: '—'"></span>
+                            </td>
+                            <td>
+                                <div class="cell-stack" th:if="${p.lotacaoNome}">
+                                    <span class="cell-primary" th:text="${p.lotacaoNome}"></span>
+                                    <span class="cell-secondary" th:if="${p.lotacaoUpm}" th:text="${p.lotacaoUpm}"></span>
+                                </div>
+                                <span class="text-muted" th:unless="${p.lotacaoNome}">—</span>
+                            </td>
+                            <td>
+                                <span th:text="${p.responsavelNome} ?: '—'"
+                                      th:classappend="${p.responsavelNome == null} ? 'text-muted'"></span>
+                            </td>
+                            <td class="text-end tabular-nums"
+                                th:text="${p.valorCompra != null} ? ${#numbers.formatDecimal(p.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'">—</td>
+                            <td>
+                                <span class="badge badge-conservacao badge-plain"
+                                      th:if="${p.conservacao}" th:text="${p.conservacao}"></span>
+                                <span class="text-muted" th:unless="${p.conservacao}">—</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-sit" th:classappend="${p.situacao}"
+                                      th:text="${p.situacao}"></span>
+                            </td>
+                            <td class="text-end">
+                                <div class="dropdown">
+                                    <button class="btn-kebab" type="button"
+                                            data-bs-toggle="dropdown" aria-expanded="false"
+                                            title="Ações">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <a class="dropdown-item"
+                                               th:href="@{'/patrimonios/' + ${p.id} + '/editar'}">
+                                                <i class="bi bi-pencil"></i> Editar
+                                            </a>
+                                        </li>
+                                        <li th:if="${p.situacao.name() != 'BAIXADO'}">
+                                            <a class="dropdown-item"
+                                               th:href="@{'/patrimonios/' + ${p.id} + '/movimentar'}">
+                                                <i class="bi bi-arrow-left-right"></i> Movimentar
+                                            </a>
+                                        </li>
+                                        <li sec:authorize="hasRole('ADMINISTRADOR')"
+                                            th:if="${p.situacao.name() != 'BAIXADO'}">
+                                            <a class="dropdown-item"
+                                               th:href="@{'/patrimonios/' + ${p.id} + '/baixa'}">
+                                                <i class="bi bi-archive"></i> Dar baixa
+                                            </a>
+                                        </li>
+                                        <li sec:authorize="hasRole('ADMINISTRADOR')"><hr class="dropdown-divider"></li>
+                                        <li sec:authorize="hasRole('ADMINISTRADOR')">
+                                            <form th:action="@{'/patrimonios/' + ${p.id} + '/excluir'}" method="post"
+                                                  data-confirm="Excluir definitivamente este patrimônio? Esta ação é irreversível."
+                                                  data-confirm-title="Excluir patrimônio"
+                                                  data-confirm-variant="danger">
+                                                <button type="submit" class="dropdown-item text-danger">
+                                                    <i class="bi bi-trash"></i> Excluir
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty state -->
+            <div th:if="${pagina.empty}"
+                 th:replace="~{fragments/ui-kit :: empty-state(
+                    'bi-inbox',
+                    'Nenhum patrimônio encontrado',
+                    'Tente ajustar os filtros ou cadastre um novo item.',
+                    @{/patrimonios/novo},
+                    'Cadastrar patrimônio')}"></div>
+        </div>
+
+        <!-- =============== CARDS (mobile) =============== -->
+        <div class="mobile-cards" th:if="${!pagina.empty}">
+            <div th:each="p : ${pagina.content}" class="asset-card">
+                <div class="asset-card-header">
+                    <div>
+                        <div class="asset-card-title" th:text="${p.descricao}">Descrição</div>
+                        <span class="chip-tombo mt-1"
+                              th:text="${p.numeroTombo} ?: ('ID #' + ${p.id})"></span>
+                    </div>
+                    <span class="badge badge-sit" th:classappend="${p.situacao}"
+                          th:text="${p.situacao}"></span>
+                </div>
+                <div class="asset-card-meta">
+                    <div>
+                        <div class="asset-card-meta-label">Categoria</div>
+                        <div th:text="${p.categoria} ?: '—'"></div>
+                    </div>
+                    <div>
+                        <div class="asset-card-meta-label">Valor</div>
+                        <div class="tabular-nums"
+                             th:text="${p.valorCompra != null} ? 'R$ ' + ${#numbers.formatDecimal(p.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'"></div>
+                    </div>
+                    <div>
+                        <div class="asset-card-meta-label">Lotação</div>
+                        <div th:text="${p.lotacaoNome} ?: '—'"></div>
+                    </div>
+                    <div>
+                        <div class="asset-card-meta-label">Responsável</div>
+                        <div th:text="${p.responsavelNome} ?: '—'"></div>
+                    </div>
+                </div>
+                <div class="asset-card-footer">
+                    <span class="badge badge-conservacao badge-plain"
+                          th:if="${p.conservacao}" th:text="${p.conservacao}"></span>
+                    <span th:unless="${p.conservacao}"></span>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-secondary" type="button"
+                                data-bs-toggle="dropdown">
+                            Ações <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" th:href="@{'/patrimonios/' + ${p.id} + '/editar'}">
+                                <i class="bi bi-pencil"></i> Editar</a></li>
+                            <li th:if="${p.situacao.name() != 'BAIXADO'}">
+                                <a class="dropdown-item" th:href="@{'/patrimonios/' + ${p.id} + '/movimentar'}">
+                                    <i class="bi bi-arrow-left-right"></i> Movimentar</a>
+                            </li>
+                            <li sec:authorize="hasRole('ADMINISTRADOR')"
+                                th:if="${p.situacao.name() != 'BAIXADO'}">
+                                <a class="dropdown-item" th:href="@{'/patrimonios/' + ${p.id} + '/baixa'}">
+                                    <i class="bi bi-archive"></i> Dar baixa</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =============== PAGINAÇÃO =============== -->
+    <nav th:if="${pagina.totalPages > 1}" class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="small text-muted">
+            Página <strong th:text="${pagina.number + 1}"></strong> de
+            <strong th:text="${pagina.totalPages}"></strong> ·
+            <span th:text="${pagina.totalElements}"></span> registros
+        </div>
+        <ul class="pagination mb-0">
+            <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/patrimonios(
+                        page=${pagina.number - 1}, size=${pagina.size},
+                        descricao=${filtro.descricao}, numeroTombo=${filtro.numeroTombo},
+                        upm=${filtro.upm}, categoria=${filtro.categoria},
+                        situacao=${filtro.situacao}, conservacao=${filtro.conservacao})}">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
+            </li>
+            <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/patrimonios(
+                        page=${pagina.number + 1}, size=${pagina.size},
+                        descricao=${filtro.descricao}, numeroTombo=${filtro.numeroTombo},
+                        upm=${filtro.upm}, categoria=${filtro.categoria},
+                        situacao=${filtro.situacao}, conservacao=${filtro.conservacao})}">
+                    Próxima <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

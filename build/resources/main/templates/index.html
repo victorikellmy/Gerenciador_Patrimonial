@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Dashboard</h1>
+            <div class="page-subtitle">Visão geral do patrimônio da instituição</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-secondary" th:href="@{/relatorios}">
+                <i class="bi bi-file-earmark-bar-graph"></i> Relatórios
+            </a>
+            <a class="btn btn-primary" th:href="@{/patrimonios/novo}">
+                <i class="bi bi-plus-lg"></i> Novo patrimônio
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================ KPIs ============================ -->
+    <div class="row g-3 mb-4">
+        <!-- Total -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-panel card-hover h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="kpi-icon kpi-icon-primary">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="kpi-label">Total de patrimônios</div>
+                            <div class="kpi-value tabular-nums" th:text="${m.totalPatrimonios}">0</div>
+                            <div class="kpi-delta">
+                                <span class="badge badge-sit ATIVO badge-plain"
+                                      th:text="${m.contagemPorSituacao['ATIVO']} + ' ativos'">0 ativos</span>
+                                <span class="badge badge-sit BAIXADO badge-plain"
+                                      th:text="${m.contagemPorSituacao['BAIXADO']} + ' baixados'">0 baixados</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Valor total ativos -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-panel card-hover h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="kpi-icon kpi-icon-success">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="kpi-label">Valor total (ativos)</div>
+                            <div class="kpi-value tabular-nums">
+                                <span class="kpi-currency">R$</span>
+                                <span th:text="${#numbers.formatDecimal(m.valorTotalAtivos, 1, 'POINT', 2, 'COMMA')}">0,00</span>
+                            </div>
+                            <div class="kpi-delta text-muted">Base de compra</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Depreciação acumulada -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-panel card-hover h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="kpi-icon kpi-icon-warning">
+                            <i class="bi bi-graph-down-arrow"></i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="kpi-label">Depreciação acumulada</div>
+                            <div class="kpi-value tabular-nums">
+                                <span class="kpi-currency">R$</span>
+                                <span th:text="${#numbers.formatDecimal(m.depreciacaoAcumuladaTotal, 1, 'POINT', 2, 'COMMA')}">0,00</span>
+                            </div>
+                            <div class="kpi-delta text-muted">Perda acumulada</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VCL total -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-panel card-hover h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="kpi-icon kpi-icon-info">
+                            <i class="bi bi-bank"></i>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="kpi-label">Valor contábil líquido</div>
+                            <div class="kpi-value tabular-nums">
+                                <span class="kpi-currency">R$</span>
+                                <span th:text="${#numbers.formatDecimal(m.valorContabilLiquidoTotal, 1, 'POINT', 2, 'COMMA')}">0,00</span>
+                            </div>
+                            <div class="kpi-delta text-muted">Valor atual estimado</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ GRÁFICOS ============================ -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Distribuição por categoria</div>
+                            <div class="chart-subtitle">Quantidade de itens por tipo</div>
+                        </div>
+                        <i class="bi bi-pie-chart-fill chart-header-icon"></i>
+                    </div>
+                    <div class="chart-skeleton" data-chart-skeleton>
+                        <div class="skeleton skeleton-circle" style="width: 160px; height: 160px; margin: 20px auto;"></div>
+                    </div>
+                    <div class="chart-canvas-wrap" style="position: relative; height: 260px;">
+                        <canvas id="chartCategoria" style="display:none"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Conservação</div>
+                            <div class="chart-subtitle">Estado dos itens ativos</div>
+                        </div>
+                        <i class="bi bi-bar-chart-fill chart-header-icon"></i>
+                    </div>
+                    <div class="chart-skeleton" data-chart-skeleton>
+                        <div class="d-flex flex-column gap-2 mt-3">
+                            <span class="skeleton skeleton-text" style="height: 14px; width: 85%"></span>
+                            <span class="skeleton skeleton-text" style="height: 14px; width: 70%"></span>
+                            <span class="skeleton skeleton-text" style="height: 14px; width: 50%"></span>
+                            <span class="skeleton skeleton-text" style="height: 14px; width: 35%"></span>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap" style="position: relative; height: 260px;">
+                        <canvas id="chartConservacao" style="display:none"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">Top 10 UPMs</div>
+                            <div class="chart-subtitle">Maior volume de patrimônios</div>
+                        </div>
+                        <i class="bi bi-building-fill chart-header-icon"></i>
+                    </div>
+                    <div class="chart-skeleton" data-chart-skeleton>
+                        <div class="d-flex align-items-end justify-content-around mt-3" style="height: 180px;">
+                            <span class="skeleton" style="width: 14%; height: 60%; border-radius: 4px;"></span>
+                            <span class="skeleton" style="width: 14%; height: 80%; border-radius: 4px;"></span>
+                            <span class="skeleton" style="width: 14%; height: 45%; border-radius: 4px;"></span>
+                            <span class="skeleton" style="width: 14%; height: 90%; border-radius: 4px;"></span>
+                            <span class="skeleton" style="width: 14%; height: 55%; border-radius: 4px;"></span>
+                            <span class="skeleton" style="width: 14%; height: 70%; border-radius: 4px;"></span>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap" style="position: relative; height: 260px;">
+                        <canvas id="chartUpm" style="display:none"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ ÚLTIMAS MOVIMENTAÇÕES ============================ -->
+    <div class="card card-panel">
+        <div class="card-body pb-0">
+            <div class="chart-header mb-0">
+                <div>
+                    <div class="chart-title">
+                        <i class="bi bi-arrow-left-right me-2"></i>
+                        Últimas movimentações
+                    </div>
+                    <div class="chart-subtitle">Histórico recente de mudanças de lotação e responsável</div>
+                </div>
+                <a class="btn btn-secondary btn-sm" th:href="@{/patrimonios}">
+                    Ver todos <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${!m.ultimasMovimentacoes.isEmpty()}" class="table-responsive mt-2">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tombo</th>
+                        <th>Descrição</th>
+                        <th>Lotação (de → para)</th>
+                        <th>Responsável (de → para)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="mov : ${m.ultimasMovimentacoes}">
+                        <td class="text-secondary tabular-nums" th:text="${mov.dataMovimentacao}"></td>
+                        <td>
+                            <span class="chip-tombo" th:text="${mov.patrimonioTombo} ?: '—'">—</span>
+                        </td>
+                        <td class="fw-medium" th:text="${mov.patrimonioDescricao}"></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="text-muted" th:text="${mov.deLotacao} ?: '—'"></span>
+                                <i class="bi bi-arrow-right text-muted small"></i>
+                                <span th:text="${mov.paraLotacao} ?: '—'"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="text-muted" th:text="${mov.deResponsavel} ?: '—'"></span>
+                                <i class="bi bi-arrow-right text-muted small"></i>
+                                <span th:text="${mov.paraResponsavel} ?: '—'"></span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${m.ultimasMovimentacoes.isEmpty()}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-arrow-left-right',
+                'Sem movimentações',
+                'Ainda não há movimentações registradas no sistema.',
+                null, null)}"></div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<!-- ======================= Dados para Chart.js ======================= -->
+<script th:inline="javascript">
+    const dadosCategoria = {
+        labels: /*[[${m.porCategoria.![chave]}]]*/ [],
+        quantidades: /*[[${m.porCategoria.![quantidade]}]]*/ []
+    };
+    const dadosConservacao = {
+        labels: /*[[${m.porConservacao.![chave]}]]*/ [],
+        quantidades: /*[[${m.porConservacao.![quantidade]}]]*/ []
+    };
+    const dadosUpm = {
+        labels: /*[[${m.topUpms.![chave]}]]*/ [],
+        quantidades: /*[[${m.topUpms.![quantidade]}]]*/ []
+    };
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
+        onerror="console.warn('CDN do Chart.js indisponível — dashboard seguirá sem gráficos.');"></script>
+<script>
+(function() {
+    // Paleta alinhada ao design system — azul corporativo
+    const paleta = [
+        '#175a8a', '#2776ad', '#4593c9', '#7eb4d7',
+        '#10b981', '#f59e0b', '#ef4444', '#06b6d4',
+        '#8b5cf6', '#ec4899'
+    ];
+
+    // Cor do texto/grid conforme tema
+    const getThemeColors = () => {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        return {
+            text: dark ? '#cbd5e1' : '#475569',
+            grid: dark ? '#233150' : '#e2e8f0',
+            tooltipBg: dark ? '#111a2e' : '#ffffff',
+            tooltipBorder: dark ? '#233150' : '#e2e8f0',
+            tooltipText: dark ? '#f1f5f9' : '#0f172a'
+        };
+    };
+
+    // Opções globais (só aplica se Chart.js já estiver carregado)
+    const applyGlobalOptions = () => {
+        if (typeof Chart === 'undefined') return;
+        const c = getThemeColors();
+        Chart.defaults.font.family = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        Chart.defaults.font.size = 12;
+        Chart.defaults.color = c.text;
+    };
+
+    const tooltipStyle = () => {
+        const c = getThemeColors();
+        return {
+            backgroundColor: c.tooltipBg,
+            titleColor: c.tooltipText,
+            bodyColor: c.tooltipText,
+            borderColor: c.tooltipBorder,
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 8,
+            titleFont: { weight: '600', size: 12 },
+            bodyFont: { size: 12 },
+            boxPadding: 6
+        };
+    };
+
+    const gridStyle = () => ({
+        color: getThemeColors().grid,
+        drawBorder: false
+    });
+
+    // Helper: cria Chart com try/catch para não travar os demais se um falhar.
+    const safeChart = (ctx, config) => {
+        if (!ctx || typeof Chart === 'undefined') return null;
+        try {
+            return new Chart(ctx, config);
+        } catch (err) {
+            console.error('Falha ao renderizar gráfico', ctx && ctx.id, err);
+            return null;
+        }
+    };
+
+    // Remove skeletons SEMPRE — mesmo que o Chart.js não tenha carregado.
+    // Isso garante que a página nunca fique travada em estado de loading.
+    const hideSkeletons = () => {
+        document.querySelectorAll('[data-chart-skeleton]').forEach(el => el.remove());
+        document.querySelectorAll('canvas').forEach(c => c.style.display = '');
+    };
+
+    // Inicializa gráficos (pequeno delay para exibir skeleton)
+    const renderCharts = () => {
+        hideSkeletons();
+        applyGlobalOptions();
+
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js não carregou — pulando renderização dos gráficos.');
+            return;
+        }
+
+        const chartCat = safeChart(document.getElementById('chartCategoria'), {
+            type: 'doughnut',
+            data: {
+                labels: dadosCategoria.labels,
+                datasets: [{
+                    data: dadosCategoria.quantidades,
+                    backgroundColor: paleta,
+                    borderWidth: 2,
+                    borderColor: getThemeColors().tooltipBg
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, boxHeight: 10, padding: 12, usePointStyle: true, pointStyle: 'circle' }
+                    },
+                    tooltip: tooltipStyle()
+                }
+            }
+        });
+
+        const chartCons = safeChart(document.getElementById('chartConservacao'), {
+            type: 'bar',
+            data: {
+                labels: dadosConservacao.labels,
+                datasets: [{
+                    label: 'Quantidade',
+                    data: dadosConservacao.quantidades,
+                    backgroundColor: paleta[0],
+                    borderRadius: 6,
+                    maxBarThickness: 28
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: tooltipStyle() },
+                scales: {
+                    x: { beginAtZero: true, ticks: { precision: 0 }, grid: gridStyle() },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+
+        const chartUpm = safeChart(document.getElementById('chartUpm'), {
+            type: 'bar',
+            data: {
+                labels: dadosUpm.labels,
+                datasets: [{
+                    label: 'Patrimônios',
+                    data: dadosUpm.quantidades,
+                    backgroundColor: paleta[1],
+                    borderRadius: 6,
+                    maxBarThickness: 36
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: tooltipStyle() },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: gridStyle() },
+                    x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 0 } }
+                }
+            }
+        });
+
+        // Re-renderiza ao trocar tema (ignora charts que não foram criados)
+        const observer = new MutationObserver(() => {
+            applyGlobalOptions();
+            [chartCat, chartCons, chartUpm].filter(Boolean).forEach(ch => {
+                ch.options.plugins.tooltip = tooltipStyle();
+                if (ch.options.scales) {
+                    Object.values(ch.options.scales).forEach(s => {
+                        if (s.grid && s.grid.color !== undefined) s.grid.color = getThemeColors().grid;
+                    });
+                }
+                if (ch.config.type === 'doughnut') {
+                    ch.data.datasets[0].borderColor = getThemeColors().tooltipBg;
+                }
+                ch.update();
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    };
+
+    // Pequeno delay para mostrar skeleton + perceber que carregou
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(renderCharts, 250));
+    } else {
+        setTimeout(renderCharts, 250);
+    }
+
+    // Rede de segurança: se algo travar, remove skeletons em 3s.
+    setTimeout(hideSkeletons, 3000);
+})();
+</script>
+</body>
+</html>

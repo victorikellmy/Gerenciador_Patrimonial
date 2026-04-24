@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Relatórios')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <i class="bi bi-file-earmark-bar-graph me-2" style="color: var(--primary-600);"></i>
+                Relatórios
+            </h1>
+            <div class="page-subtitle">
+                Exportações e documentos para auditoria, conformidade e gestão.
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ CARDS DE RELATÓRIOS ============================ -->
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4">
+            <a th:href="@{/relatorios/inventario}"
+               class="card card-panel card-hover h-100 text-decoration-none" style="display: block;">
+                <div class="card-body">
+                    <div class="kpi-icon kpi-icon-primary mb-3">
+                        <i class="bi bi-list-ul"></i>
+                    </div>
+                    <h3 class="card-title">Inventário completo</h3>
+                    <p class="text-secondary small mb-3">
+                        Listagem de todos os patrimônios (ativos + baixados) com depreciação,
+                        valor contábil líquido e dados de lotação/responsável.
+                    </p>
+                    <div class="d-flex align-items-center gap-2" style="color: var(--primary-600); font-weight: 500; font-size: 0.875rem;">
+                        Abrir relatório <i class="bi bi-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <a th:href="@{/relatorios/baixas}"
+               class="card card-panel card-hover h-100 text-decoration-none" style="display: block;">
+                <div class="card-body">
+                    <div class="kpi-icon kpi-icon-warning mb-3">
+                        <i class="bi bi-archive"></i>
+                    </div>
+                    <h3 class="card-title">Baixas</h3>
+                    <p class="text-secondary small mb-3">
+                        Patrimônios baixados com data, motivo e último responsável.
+                        Útil para auditoria e conformidade contábil.
+                    </p>
+                    <div class="d-flex align-items-center gap-2" style="color: var(--primary-600); font-weight: 500; font-size: 0.875rem;">
+                        Abrir relatório <i class="bi bi-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <a th:href="@{/relatorios/termo-responsabilidade}"
+               class="card card-panel card-hover h-100 text-decoration-none" style="display: block;">
+                <div class="card-body">
+                    <div class="kpi-icon kpi-icon-danger mb-3">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </div>
+                    <h3 class="card-title">Termo de Responsabilidade</h3>
+                    <p class="text-secondary small mb-3">
+                        Gera PDF institucional para assinatura do servidor, com a relação
+                        de todos os bens ativos sob sua responsabilidade.
+                    </p>
+                    <div class="d-flex align-items-center gap-2" style="color: var(--primary-600); font-weight: 500; font-size: 0.875rem;">
+                        Gerar termo <i class="bi bi-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Editar Lotação')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/lotacoes}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">Editar Lotação</h1>
+                <div class="page-subtitle">
+                    <span>ID #</span><span th:text="${id}"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ FORMULÁRIO ============================ -->
+    <form th:action="@{'/lotacoes/' + ${id}}" th:object="${lotacaoForm}" method="post"
+          class="card card-panel" style="overflow: hidden; max-width: 880px;">
+
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-building',
+                'Dados da lotação',
+                'Identificação e localização do local.')}"></div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label required">UPM</label>
+                    <input type="text" class="form-control" th:field="*{upm}" placeholder="Ex: 1 BPM"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">Nome / Sala</label>
+                    <input type="text" class="form-control" th:field="*{nome}" placeholder="Ex: CONS. ODONTO"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" class="form-control" th:field="*{cidade}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo</label>
+                    <select class="form-select" th:field="*{tipoLocal}">
+                        <option th:each="t : ${tiposLocal}" th:value="${t}" th:text="${t}"></option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="sticky-actions">
+            <span class="actions-hint">
+                <i class="bi bi-info-circle"></i> Campos com * são obrigatórios.
+            </span>
+            <a class="btn btn-secondary" th:href="@{/lotacoes}">Cancelar</a>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check-lg"></i> Salvar alterações
+            </button>
+        </div>
+    </form>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

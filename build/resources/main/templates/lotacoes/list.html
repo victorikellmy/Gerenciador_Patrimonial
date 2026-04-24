@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Lotações')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Lotações</h1>
+            <div class="page-subtitle">
+                <span th:text="${pagina.totalElements}">0</span> lotação(ões) cadastrada(s)
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ CADASTRO RÁPIDO ============================ -->
+    <div class="card card-panel mb-4" style="overflow: hidden;">
+        <div class="form-section" style="border-bottom: none;">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-plus-circle',
+                'Nova lotação',
+                'Cadastre rapidamente uma UPM, sala ou local.')}"></div>
+
+            <form th:action="@{/lotacoes}" th:object="${lotacaoForm}" method="post" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label required">UPM</label>
+                    <input type="text" class="form-control" th:field="*{upm}" placeholder="Ex: 1 BPM"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">Nome / Sala</label>
+                    <input type="text" class="form-control" th:field="*{nome}" placeholder="Ex: CONS. ODONTO"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" class="form-control" th:field="*{cidade}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Tipo</label>
+                    <select class="form-select" th:field="*{tipoLocal}">
+                        <option th:each="t : ${tiposLocal}" th:value="${t}" th:text="${t}"></option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" type="submit" title="Adicionar">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================ LISTAGEM ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div class="table-responsive" th:if="${!pagina.empty}">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">UPM</th>
+                        <th>Nome / Sala</th>
+                        <th>Cidade</th>
+                        <th>Tipo</th>
+                        <th>Responsável atual</th>
+                        <th class="text-end" style="width: 60px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${pagina.content}">
+                        <td><span class="chip-tombo" th:text="${l.upm}"></span></td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary" th:text="${l.nome}"></span>
+                                <span class="cell-secondary">ID #<span th:text="${l.id}"></span></span>
+                            </div>
+                        </td>
+                        <td class="text-secondary" th:text="${l.cidade} ?: '—'"></td>
+                        <td>
+                            <span class="badge badge-conservacao badge-plain"
+                                  th:text="${l.tipoLocal}"></span>
+                        </td>
+                        <td>
+                            <span th:text="${l.responsavelAtualNome} ?: '—'"
+                                  th:classappend="${l.responsavelAtualNome == null} ? 'text-muted'"></span>
+                        </td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn-kebab" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false" title="Ações">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item"
+                                           th:href="@{'/lotacoes/' + ${l.id} + '/editar'}">
+                                            <i class="bi bi-pencil"></i> Editar
+                                        </a>
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMINISTRADOR')">
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li sec:authorize="hasRole('ADMINISTRADOR')">
+                                        <form th:action="@{'/lotacoes/' + ${l.id} + '/excluir'}" method="post"
+                                              data-confirm="Excluir esta lotação? Esta ação não poderá ser desfeita."
+                                              data-confirm-title="Excluir lotação"
+                                              data-confirm-variant="danger">
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="bi bi-trash"></i> Excluir
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${pagina.empty}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-building',
+                'Nenhuma lotação cadastrada',
+                'Use o formulário acima para cadastrar a primeira lotação.',
+                null, null)}"></div>
+    </div>
+
+    <!-- ============================ PAGINAÇÃO ============================ -->
+    <nav th:if="${pagina.totalPages > 1}" class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="small text-muted">
+            Página <strong th:text="${pagina.number + 1}"></strong> de
+            <strong th:text="${pagina.totalPages}"></strong>
+        </div>
+        <ul class="pagination mb-0">
+            <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/lotacoes(page=${pagina.number - 1}, size=${pagina.size})}">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
+            </li>
+            <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/lotacoes(page=${pagina.number + 1}, size=${pagina.size})}">
+                    Próxima <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

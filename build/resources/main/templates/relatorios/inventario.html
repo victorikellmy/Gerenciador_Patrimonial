@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Inventário Completo')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/relatorios}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">
+                    <i class="bi bi-list-ul me-2" style="color: var(--primary-600);"></i>
+                    Inventário completo
+                </h1>
+                <div class="page-subtitle">
+                    <span th:text="${lista.size()}">0</span> item(ns) — inclui ativos e baixados.
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-secondary"
+               th:href="@{/relatorios/inventario/download(formato='csv')}">
+                <i class="bi bi-filetype-csv"></i> CSV
+            </a>
+            <a class="btn btn-secondary"
+               th:href="@{/relatorios/inventario/download(formato='xlsx')}">
+                <i class="bi bi-filetype-xlsx"></i> Excel
+            </a>
+            <a class="btn btn-primary"
+               th:href="@{/relatorios/inventario/download(formato='pdf')}">
+                <i class="bi bi-filetype-pdf"></i> PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================ TABELA ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div class="table-responsive" th:if="${!lista.isEmpty()}">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Tombo</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Lotação</th>
+                        <th>Responsável</th>
+                        <th class="text-end">Valor (R$)</th>
+                        <th class="text-end">VCL (R$)</th>
+                        <th>Conservação</th>
+                        <th>Situação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${lista}">
+                        <td>
+                            <span class="chip-tombo" th:text="${p.numeroTombo} ?: '—'">—</span>
+                        </td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary" th:text="${p.descricao}"></span>
+                                <span class="cell-secondary">ID #<span th:text="${p.id}"></span></span>
+                            </div>
+                        </td>
+                        <td class="text-secondary" th:text="${p.categoria} ?: '—'"></td>
+                        <td>
+                            <div class="cell-stack" th:if="${p.lotacao}">
+                                <span class="cell-primary" th:text="${p.lotacao.nome}"></span>
+                                <span class="cell-secondary" th:text="${p.lotacao.upm}"></span>
+                            </div>
+                            <span class="text-muted" th:unless="${p.lotacao}">—</span>
+                        </td>
+                        <td>
+                            <span th:text="${p.responsavel?.nomeCompleto} ?: '—'"
+                                  th:classappend="${p.responsavel == null} ? 'text-muted'"></span>
+                        </td>
+                        <td class="text-end tabular-nums"
+                            th:text="${p.valorCompra != null} ? ${#numbers.formatDecimal(p.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                        <td class="text-end tabular-nums" th:with="calc=${depreciacaoService.calcular(p)}"
+                            th:text="${calc.valorContabilLiquido != null} ? ${#numbers.formatDecimal(calc.valorContabilLiquido, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                        <td>
+                            <span class="badge badge-conservacao badge-plain"
+                                  th:if="${p.conservacao}" th:text="${p.conservacao}"></span>
+                            <span class="text-muted" th:unless="${p.conservacao}">—</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-sit" th:classappend="${p.situacao}"
+                                  th:text="${p.situacao}"></span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${lista.isEmpty()}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-inbox',
+                'Nenhum patrimônio cadastrado',
+                'Cadastre itens para gerar relatórios de inventário.',
+                @{/patrimonios/novo}, 'Cadastrar patrimônio')}"></div>
+    </div>
+
+    <!-- ============================ NOTA ============================ -->
+    <div class="alert alert-info mt-3" style="font-size: 0.8125rem;">
+        <i class="bi bi-info-circle"></i>
+        <div>
+            Os cálculos de depreciação usam VUT (vida útil por categoria) × percentual
+            associado ao estado de conservação. Itens sem valor de compra, categoria ou
+            conservação aparecem com VCL "—".
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

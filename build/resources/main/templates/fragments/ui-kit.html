@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<!--
+    UI Kit — Claude Design
+    Fragmentos visuais reutilizáveis:
+      ~{fragments/ui-kit :: skeleton-rows(cols, rows)}
+      ~{fragments/ui-kit :: empty-state(icon, title, desc, ctaHref, ctaLabel)}
+      ~{fragments/ui-kit :: filter-chip(label, valor, removeHref)}
+      ~{fragments/ui-kit :: section-header(icon, title, desc)}
+-->
+<body>
+
+<!-- ========================================================
+     SKELETON ROWS — linhas fantasma para tabelas
+     Params:
+       cols: nº de colunas (default 6)
+       rows: nº de linhas fantasma (default 6)
+     ======================================================== -->
+<tbody th:fragment="skeleton-rows(cols, rows)" class="skeleton-rows">
+    <tr th:each="r : ${#numbers.sequence(1, rows ?: 6)}">
+        <td th:each="c : ${#numbers.sequence(1, cols ?: 6)}">
+            <span class="skeleton skeleton-text"
+                  th:style="'width:' + ${60 + (c * 7) % 40} + '%'"></span>
+        </td>
+    </tr>
+</tbody>
+
+<!-- ========================================================
+     EMPTY STATE — estado vazio ilustrado
+     ======================================================== -->
+<div th:fragment="empty-state(icon, title, desc, ctaHref, ctaLabel)" class="empty-state">
+    <div class="empty-state-icon">
+        <i th:class="'bi ' + (${icon} ?: 'bi-inbox')"></i>
+    </div>
+    <div class="empty-state-title" th:text="${title} ?: 'Nada por aqui'">Nada por aqui</div>
+    <div class="empty-state-desc" th:text="${desc} ?: 'Nenhum registro encontrado.'"></div>
+    <a th:if="${ctaHref != null}" th:href="${ctaHref}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> <span th:text="${ctaLabel} ?: 'Cadastrar'"></span>
+    </a>
+</div>
+
+<!-- ========================================================
+     FILTER CHIP — chip removível para filtro ativo
+     ======================================================== -->
+<span th:fragment="filter-chip(label, valor, removeHref)" class="filter-chip">
+    <span class="chip-label" th:text="${label} + ':'">Filtro:</span>
+    <strong th:text="${valor}">valor</strong>
+    <a th:if="${removeHref != null}" th:href="${removeHref}" title="Remover filtro">
+        <i class="bi bi-x-lg"></i>
+    </a>
+</span>
+
+<!-- ========================================================
+     SECTION HEADER — cabeçalho de seção de formulário
+     ======================================================== -->
+<div th:fragment="section-header(icon, title, desc)" class="form-section-header">
+    <div class="form-section-icon">
+        <i th:class="'bi ' + (${icon} ?: 'bi-card-list')"></i>
+    </div>
+    <div>
+        <h3 class="form-section-title" th:text="${title}">Seção</h3>
+        <div class="form-section-desc" th:if="${desc != null}" th:text="${desc}"></div>
+    </div>
+</div>
+
+<!-- ========================================================
+     SKELETON CARD — card fantasma (usado em dashboards)
+     ======================================================== -->
+<div th:fragment="skeleton-card" class="card card-panel">
+    <div class="card-body">
+        <span class="skeleton skeleton-text-sm mb-2" style="width: 40%"></span>
+        <span class="skeleton skeleton-text-lg mb-3" style="width: 70%"></span>
+        <span class="skeleton skeleton-text-sm" style="width: 55%"></span>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Movimentar Patrimônio')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/patrimonios}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">
+                    <i class="bi bi-arrow-left-right me-2" style="color: var(--primary-600);"></i>
+                    Movimentar Patrimônio
+                </h1>
+                <div class="page-subtitle">
+                    Transfira o item para outra lotação e/ou responsável.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ============================ FORMULÁRIO ============================ -->
+        <div class="col-lg-8">
+            <form th:action="@{'/patrimonios/' + ${patrimonio.id} + '/movimentar'}"
+                  th:object="${movimentacaoForm}" method="post"
+                  class="card card-panel" style="overflow: hidden;">
+
+                <!-- =============== SEÇÃO: DESTINO =============== -->
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-geo-alt-fill',
+                        'Destino da movimentação',
+                        'Preencha ao menos um dos campos. Os não preenchidos mantêm o valor atual.')}"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nova lotação</label>
+                            <select class="form-select" th:field="*{novaLotacaoId}">
+                                <option value="">— manter atual —</option>
+                                <option th:each="l : ${lotacoes}"
+                                        th:value="${l.id}"
+                                        th:text="${l.upm} + ' / ' + ${l.nome}"></option>
+                            </select>
+                            <div class="text-muted small mt-2" th:if="${patrimonio.lotacaoNome}">
+                                <i class="bi bi-info-circle"></i> Atual:
+                                <strong th:text="${patrimonio.lotacaoUpm} + ' / ' + ${patrimonio.lotacaoNome}"></strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Novo responsável</label>
+                            <select class="form-select" th:field="*{novoResponsavelId}">
+                                <option value="">— manter atual —</option>
+                                <option th:each="r : ${responsaveis}"
+                                        th:value="${r.id}"
+                                        th:text="${r.nomeCompleto}"></option>
+                            </select>
+                            <div class="text-muted small mt-2" th:if="${patrimonio.responsavelNome}">
+                                <i class="bi bi-info-circle"></i> Atual:
+                                <strong th:text="${patrimonio.responsavelNome}"></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =============== SEÇÃO: JUSTIFICATIVA =============== -->
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-journal-text',
+                        'Justificativa',
+                        'Registre o motivo desta movimentação para o histórico.')}"></div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Observação</label>
+                            <textarea class="form-control" rows="4"
+                                      th:field="*{observacao}"
+                                      placeholder="Motivo da movimentação, nº de processo, etc."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =============== RODAPÉ STICKY =============== -->
+                <div class="sticky-actions">
+                    <span class="actions-hint">
+                        <i class="bi bi-info-circle"></i> A alteração ficará registrada no histórico.
+                    </span>
+                    <a class="btn btn-secondary" th:href="@{/patrimonios}">Cancelar</a>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-check-lg"></i> Confirmar movimentação
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================ SIDEBAR: ITEM ATUAL ============================ -->
+        <div class="col-lg-4">
+            <div class="summary-card summary-sticky">
+                <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="form-section-icon">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <div>
+                        <div class="summary-label mb-0">Item</div>
+                        <div class="fw-semibold">Dados atuais</div>
+                    </div>
+                </div>
+
+                <div class="summary-label">Identificação</div>
+                <div class="summary-value" style="font-size: 0.875rem;">
+                    <span class="chip-tombo" th:text="${patrimonio.numeroTombo} ?: ('ID #' + ${patrimonio.id})"></span>
+                </div>
+
+                <div class="summary-label">Descrição</div>
+                <div class="summary-value" th:text="${patrimonio.descricao}" style="font-size: 0.875rem;"></div>
+
+                <div class="summary-label">Lotação atual</div>
+                <div class="summary-value" style="font-size: 0.875rem;">
+                    <span th:if="${patrimonio.lotacaoNome}"
+                          th:text="${patrimonio.lotacaoUpm} + ' / ' + ${patrimonio.lotacaoNome}"></span>
+                    <span th:unless="${patrimonio.lotacaoNome}" class="text-muted">—</span>
+                </div>
+
+                <div class="summary-label">Responsável atual</div>
+                <div class="summary-value" style="font-size: 0.875rem;">
+                    <span th:text="${patrimonio.responsavelNome}" th:if="${patrimonio.responsavelNome}"></span>
+                    <span th:unless="${patrimonio.responsavelNome}" class="text-muted">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

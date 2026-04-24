@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Importação de Patrimônio')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <i class="bi bi-file-earmark-excel me-2" style="color: var(--primary-600);"></i>
+                Importação de Patrimônio
+            </h1>
+            <div class="page-subtitle">
+                Carregue uma planilha <code>.xlsx</code> para cadastrar itens em lote.
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ INSTRUÇÕES ============================ -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle-fill" style="font-size: 1.1rem;"></i>
+        <div>
+            <strong>Como funciona:</strong>
+            a carga cria automaticamente as lotações e responsáveis que ainda não existirem.
+            Linhas com erro aparecem listadas abaixo sem interromper a importação.
+        </div>
+    </div>
+
+    <!-- ============================ FORMULÁRIO DE UPLOAD ============================ -->
+    <form th:action="@{/importacao}" method="post" enctype="multipart/form-data"
+          class="card card-panel mb-4" style="overflow: hidden;">
+
+        <div class="form-section" style="border-bottom: none;">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-upload',
+                'Nova importação',
+                'Selecione o arquivo e identifique a aba a processar.')}"></div>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-md-7">
+                    <label class="form-label required">Arquivo .xlsx</label>
+                    <input type="file" class="form-control" name="arquivo"
+                           accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                           required/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Aba (sheet)</label>
+                    <input type="text" class="form-control" name="sheet"
+                           placeholder="val est cons"/>
+                    <small class="text-muted d-block mt-1">Deixe em branco para usar <code>val est cons</code>.</small>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="bi bi-upload"></i> Importar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- ============================ RESULTADO ============================ -->
+    <div th:if="${resultado != null}" class="card card-panel">
+        <div class="card-body">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">
+                        <i class="bi bi-check2-circle me-2" style="color: var(--success);"></i>
+                        Resultado da última importação
+                    </div>
+                    <div class="chart-subtitle">
+                        Arquivo: <strong th:text="${arquivoNome}"></strong> ·
+                        Aba: <strong th:text="${sheetUsada}"></strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== KPIs =============== -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3 col-6">
+                    <div class="card card-panel h-100">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="kpi-icon kpi-icon-primary">
+                                    <i class="bi bi-list-ol"></i>
+                                </div>
+                                <div>
+                                    <div class="kpi-label">Total lidas</div>
+                                    <div class="kpi-value tabular-nums" th:text="${resultado.total}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-panel h-100">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="kpi-icon kpi-icon-success">
+                                    <i class="bi bi-check-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="kpi-label">Importadas</div>
+                                    <div class="kpi-value tabular-nums" th:text="${resultado.importados}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-panel h-100">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="kpi-icon kpi-icon-warning">
+                                    <i class="bi bi-dash-circle"></i>
+                                </div>
+                                <div>
+                                    <div class="kpi-label">Ignoradas</div>
+                                    <div class="kpi-value tabular-nums" th:text="${resultado.ignorados}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-panel h-100">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="kpi-icon kpi-icon-danger">
+                                    <i class="bi bi-x-circle"></i>
+                                </div>
+                                <div>
+                                    <div class="kpi-label">Com erro</div>
+                                    <div class="kpi-value tabular-nums" th:text="${resultado.erros.size()}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== Entidades criadas =============== -->
+            <div class="row g-2 mb-4">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-2 p-3"
+                         style="background: var(--bg-muted); border-radius: var(--radius-sm);">
+                        <i class="bi bi-building" style="color: var(--primary-600);"></i>
+                        <span class="text-muted">Lotações criadas:</span>
+                        <strong class="tabular-nums" th:text="${resultado.lotacoesCriadas}">0</strong>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-2 p-3"
+                         style="background: var(--bg-muted); border-radius: var(--radius-sm);">
+                        <i class="bi bi-person-plus" style="color: var(--primary-600);"></i>
+                        <span class="text-muted">Responsáveis criados:</span>
+                        <strong class="tabular-nums" th:text="${resultado.responsaveisCriados}">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== Lista de erros =============== -->
+            <div th:if="${!resultado.erros.isEmpty()}">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-exclamation-triangle-fill" style="color: var(--danger);"></i>
+                    <strong>Erros encontrados:</strong>
+                    <span class="badge badge-sit BAIXADO" th:text="${resultado.erros.size()}"></span>
+                </div>
+                <div class="table-responsive" style="max-height: 360px;">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">#</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="err, iter : ${resultado.erros}">
+                                <td class="text-muted tabular-nums" th:text="${iter.count}"></td>
+                                <td th:text="${err}"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

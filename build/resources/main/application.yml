@@ -1,0 +1,37 @@
+# =============================================================================
+# Configuração padrão — valores comuns a todos os perfis.
+# Para trocar de perfil: -Dspring.profiles.active=dev | prod
+# =============================================================================
+spring:
+  application:
+    name: Gerenciador_Patrimonial
+  profiles:
+    active: dev                 # default: desenvolvimento com H2
+  jpa:
+    open-in-view: false         # boa prática: não manter sessão aberta na view
+    properties:
+      hibernate:
+        format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 10MB       # limite por arquivo anexado
+      max-request-size: 25MB    # limite do request inteiro (múltiplos anexos)
+
+# Pastas de upload (Sprint 3 — StorageService local)
+app:
+  storage:
+    tipo: LOCAL                 # LOCAL | S3 (futuro)
+    pasta-raiz: ./uploads
+  importacao:
+    # Seed automático da planilha base no primeiro start.
+    # Idempotente: só roda se o banco estiver sem patrimônios.
+    habilitada: true
+    # Aceita "classpath:..." (padrão, usado em demo/apresentação)
+    # ou "file:./caminho/para/arquivo.xlsx" (produção com arquivo externo).
+    caminho: classpath:seed/patrimonio-inicial.xlsx
+
+# Logging mais verboso em dev (sobreposto no application-prod.yml)
+logging:
+  level:
+    root: INFO
+    com.fundacao.gerenciador_patrimonial: DEBUG
