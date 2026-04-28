@@ -15,6 +15,10 @@ java {
     }
 }
 
+// Sobrepõe a versão de Flyway gerenciada pelo Spring Boot 3.3.5 (vem < 10.20).
+// Flyway 10.20+ suporta PostgreSQL 17 e a partir da linha 10 o driver PG é módulo separado.
+ext['flyway.version'] = '10.20.1'
+
 repositories {
     mavenCentral()
 }
@@ -32,6 +36,7 @@ dependencies {
 
     // --- Migrações de banco (Flyway) ---
     implementation 'org.flywaydb:flyway-core'
+    runtimeOnly    'org.flywaydb:flyway-database-postgresql'   // obrigatório no Flyway 10+ para PG
 
     // --- Leitura/Escrita de Excel (Sprint 2 + Sprint 4) ---
     implementation 'org.apache.poi:poi-ooxml:5.3.0'

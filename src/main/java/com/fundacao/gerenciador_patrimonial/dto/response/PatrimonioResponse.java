@@ -34,11 +34,17 @@ public record PatrimonioResponse(
         LocalDate dataBaixa,
         String motivoBaixa,
 
-        // --- Métricas derivadas ---
+        // --- Métricas derivadas (calculadas em tempo real a cada leitura) ---
         Integer vutAnos,
+        BigDecimal percentualVud,
+        BigDecimal vudAnos,
+        BigDecimal vurAnos,
         BigDecimal depreciacaoAcumulada,
         BigDecimal valorContabilLiquido,
-        BigDecimal depreciacaoAnual
+        BigDecimal valorRecuperavel,
+        BigDecimal depreciacaoAnual,
+        LocalDate  dataReferencia,
+        boolean    calculoLegado
 ) {
     public static PatrimonioResponse from(Patrimonio p, CalculoDepreciacao calc) {
         return new PatrimonioResponse(
@@ -59,9 +65,15 @@ public record PatrimonioResponse(
                 p.getDataBaixa(),
                 p.getMotivoBaixa(),
                 calc.vutAnos(),
+                calc.percentualVud(),
+                calc.vudAnos(),
+                calc.vurAnos(),
                 calc.depreciacaoAcumulada(),
                 calc.valorContabilLiquido(),
-                calc.depreciacaoAnual()
+                calc.valorContabilLiquido(),
+                calc.depreciacaoAnual(),
+                calc.dataReferencia(),
+                calc.calculoLegado()
         );
     }
 }

@@ -22,6 +22,9 @@ public interface PatrimonioRepository
     /** Listagem paginada por situação. */
     Page<Patrimonio> findBySituacao(SituacaoPatrimonio situacao, Pageable pageable);
 
+    /** Listagem completa por situação — usada por agregações que precisam iterar (ex.: dashboard). */
+    List<Patrimonio> findBySituacao(SituacaoPatrimonio situacao);
+
     // =========================================================================
     // Agregações para Dashboard / Relatórios (Sprint 4)
     //
@@ -71,33 +74,13 @@ public interface PatrimonioRepository
            """)
     List<Object[]> agruparPorUpm(Pageable pageable);
 
-    /** Soma do valor de compra dos ativos. */
+    /** Soma do valor de compra (custo de reposição) dos ativos. */
     @Query("""
            select coalesce(sum(p.valorCompra), 0)
            from Patrimonio p
            where p.situacao = com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio.ATIVO
            """)
     BigDecimal somarValorAtivos();
-
-    /** Soma de depreciação acumulada dos ativos (valor × %VUD), só quando categoria+conservação têm referência. */
-    @Query(value = """
-           select coalesce(sum(p.valor_compra * pc.percentual_vud), 0)
-           from patrimonio p
-           join percentual_conservacao pc on pc.conservacao = p.conservacao
-           join vida_util_categoria vuc on upper(vuc.categoria) = upper(p.categoria)
-           where p.situacao = 'ATIVO' and p.valor_compra is not null
-           """, nativeQuery = true)
-    BigDecimal somarDepreciacaoAtivos();
-
-    /** Soma de Valor Contábil Líquido (valor − depreciação) dos ativos. */
-    @Query(value = """
-           select coalesce(sum(p.valor_compra - (p.valor_compra * pc.percentual_vud)), 0)
-           from patrimonio p
-           join percentual_conservacao pc on pc.conservacao = p.conservacao
-           join vida_util_categoria vuc on upper(vuc.categoria) = upper(p.categoria)
-           where p.situacao = 'ATIVO' and p.valor_compra is not null
-           """, nativeQuery = true)
-    BigDecimal somarVclAtivos();
 
     /** Listagem completa para export — evita paginação. */
     @Query("""

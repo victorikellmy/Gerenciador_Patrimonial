@@ -22,6 +22,8 @@ public record PatrimonioRequest(
 
         @Size(max = 60) String categoria,
 
+        @NotNull(message = "Data de aquisição é obrigatória")
+        @PastOrPresent(message = "Data de aquisição não pode ser futura")
         LocalDate dataCompra,
 
         @PositiveOrZero(message = "Valor de compra não pode ser negativo")

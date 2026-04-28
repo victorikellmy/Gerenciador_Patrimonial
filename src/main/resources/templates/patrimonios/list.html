@@ -42,12 +42,9 @@
                     <i class="bi bi-search"></i>
                 </div>
 
-                <!-- Campos ocultos preservam filtros da query ao digitar na busca -->
-                <input type="hidden" name="numeroTombo" th:value="${filtro.numeroTombo}"/>
-                <input type="hidden" name="upm"         th:value="${filtro.upm}"/>
-                <input type="hidden" name="categoria"   th:value="${filtro.categoria}"/>
-                <input type="hidden" name="situacao"    th:value="${filtro.situacao}"/>
-                <input type="hidden" name="conservacao" th:value="${filtro.conservacao}"/>
+                <!-- Filtros avançados já usam form="filterForm" e são submetidos juntos
+                     mesmo com o painel colapsado. Não duplicar via hidden aqui — dois
+                     campos com o mesmo name fazem o Spring concatenar valores com vírgula. -->
 
                 <div class="toolbar-spacer"></div>
 
@@ -176,6 +173,8 @@
                             <th>Lotação</th>
                             <th>Responsável</th>
                             <th class="text-end">Valor (R$)</th>
+                            <th class="text-end" title="Valor contábil líquido — recalculado em tempo real a partir da data de aquisição">VCL (R$)</th>
+                            <th class="text-end" title="Percentual depreciado">% Dep.</th>
                             <th>Conservação</th>
                             <th>Situação</th>
                             <th class="text-end" style="width: 60px;">Ações</th>
@@ -189,7 +188,12 @@
                             </td>
                             <td>
                                 <div class="cell-stack">
-                                    <span class="cell-primary" th:text="${p.descricao}">Descrição</span>
+                                    <span class="cell-primary">
+                                        <span th:text="${p.descricao}">Descrição</span>
+                                        <i th:if="${p.calculoLegado}"
+                                           class="bi bi-clock-history text-secondary ms-1"
+                                           title="Cálculo legado por estado de conservação (sem data de aquisição). Atualize a data para usar cálculo em tempo real."></i>
+                                    </span>
                                     <span class="cell-secondary">ID #<span th:text="${p.id}"></span></span>
                                 </div>
                             </td>
@@ -209,6 +213,10 @@
                             </td>
                             <td class="text-end tabular-nums"
                                 th:text="${p.valorCompra != null} ? ${#numbers.formatDecimal(p.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'">—</td>
+                            <td class="text-end tabular-nums"
+                                th:text="${p.valorContabilLiquido != null} ? ${#numbers.formatDecimal(p.valorContabilLiquido, 1, 'POINT', 2, 'COMMA')} : '—'">—</td>
+                            <td class="text-end tabular-nums"
+                                th:text="${p.percentualVud != null} ? ${#numbers.formatDecimal(p.percentualVud * 100, 1, 'POINT', 1, 'COMMA') + '%'} : '—'">—</td>
                             <td>
                                 <span class="badge badge-conservacao badge-plain"
                                       th:if="${p.conservacao}" th:text="${p.conservacao}"></span>
@@ -297,6 +305,16 @@
                              th:text="${p.valorCompra != null} ? 'R$ ' + ${#numbers.formatDecimal(p.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'"></div>
                     </div>
                     <div>
+                        <div class="asset-card-meta-label">VCL</div>
+                        <div class="tabular-nums"
+                             th:text="${p.valorContabilLiquido != null} ? 'R$ ' + ${#numbers.formatDecimal(p.valorContabilLiquido, 1, 'POINT', 2, 'COMMA')} : '—'"></div>
+                    </div>
+                    <div>
+                        <div class="asset-card-meta-label">% Depreciado</div>
+                        <div class="tabular-nums"
+                             th:text="${p.percentualVud != null} ? ${#numbers.formatDecimal(p.percentualVud * 100, 1, 'POINT', 1, 'COMMA') + '%'} : '—'"></div>
+                    </div>
+                    <div>
                         <div class="asset-card-meta-label">Lotação</div>
                         <div th:text="${p.lotacaoNome} ?: '—'"></div>
                     </div>
@@ -304,6 +322,10 @@
                         <div class="asset-card-meta-label">Responsável</div>
                         <div th:text="${p.responsavelNome} ?: '—'"></div>
                     </div>
+                </div>
+                <div th:if="${p.calculoLegado}" class="alert alert-secondary py-1 px-2 small mb-2 mt-1">
+                    <i class="bi bi-clock-history"></i>
+                    Cálculo legado (% por conservação) — sem data de aquisição.
                 </div>
                 <div class="asset-card-footer">
                     <span class="badge badge-conservacao badge-plain"

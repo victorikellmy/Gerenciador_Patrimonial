@@ -10,7 +10,10 @@ import java.math.BigDecimal;
  * Tabela de referência: percentual de Vida Útil Decorrida (VUD)
  * associado a cada estado de conservação.
  *
- * <p>Valores oriundos da aba {@code val est cons} da planilha original.</p>
+ * <p>Usada exclusivamente pela estratégia <b>legada</b> de depreciação
+ * — quando o patrimônio não possui {@code dataCompra}. Patrimônios com
+ * data de aquisição preenchida usam a estratégia time-based e não
+ * consultam esta tabela.</p>
  */
 @Entity
 @Table(name = "percentual_conservacao")
@@ -27,7 +30,7 @@ public class PercentualConservacao {
     @Column(nullable = false, unique = true, length = 30)
     private Conservacao conservacao;
 
-    /** Ex.: 0.4000 para "BOM / REGULAR". */
+    /** Ex.: 0.4000 para "BOM_REGULAR". */
     @Column(name = "percentual_vud", nullable = false, precision = 5, scale = 4)
     private BigDecimal percentualVud;
 

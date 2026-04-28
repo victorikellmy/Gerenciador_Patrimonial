@@ -84,8 +84,14 @@
 
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label">Data de compra</label>
-                            <input type="date" class="form-control" th:field="*{dataCompra}"/>
+                            <label class="form-label">Data de aquisição <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control"
+                                   th:field="*{dataCompra}"
+                                   th:max="${#dates.format(#dates.createNow(),'yyyy-MM-dd')}"
+                                   th:classappend="${#fields.hasErrors('dataCompra')} ? 'is-invalid'"
+                                   required/>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('dataCompra')}"
+                                 th:errors="*{dataCompra}"></div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Valor de compra (R$)</label>
@@ -268,10 +274,51 @@
                           th:text="${patrimonio.situacao}"></span>
                 </div>
 
+                <div th:if="${patrimonio.calculoLegado}"
+                     class="alert alert-secondary py-2 px-2 small mb-3">
+                    <i class="bi bi-clock-history"></i>
+                    <strong>Cálculo legado.</strong>
+                    Este patrimônio não tem data de aquisição, então a depreciação
+                    está sendo calculada pelo <em>percentual por estado de conservação</em>
+                    (regra original do sistema). Preencha a data de aquisição para
+                    passar a usar o cálculo em tempo real.
+                </div>
+
                 <div th:if="${patrimonio.vutAnos != null}">
                     <div class="summary-label">Vida útil (VUT)</div>
                     <div class="summary-value">
                         <span th:text="${patrimonio.vutAnos}"></span> anos
+                    </div>
+                </div>
+
+                <div th:if="${patrimonio.vudAnos != null}">
+                    <div class="summary-label">Vida útil decorrida (VUD)</div>
+                    <div class="summary-value">
+                        <span th:text="${#numbers.formatDecimal(patrimonio.vudAnos, 1, 'POINT', 2, 'COMMA')}"></span> anos
+                        <small class="text-secondary"
+                               th:if="${patrimonio.percentualVud != null}"
+                               th:text="'(' + ${#numbers.formatDecimal(patrimonio.percentualVud * 100, 1, 'POINT', 1, 'COMMA')} + '%)'"></small>
+                    </div>
+                </div>
+
+                <div th:if="${patrimonio.vurAnos != null}">
+                    <div class="summary-label">Vida útil remanescente (VUR)</div>
+                    <div class="summary-value">
+                        <span th:text="${#numbers.formatDecimal(patrimonio.vurAnos, 1, 'POINT', 2, 'COMMA')}"></span> anos
+                    </div>
+                </div>
+
+                <div th:if="${patrimonio.depreciacaoAnual != null and patrimonio.depreciacaoAnual.signum() > 0}">
+                    <div class="summary-label">Depreciação anual</div>
+                    <div class="summary-value">
+                        R$ <span th:text="${#numbers.formatDecimal(patrimonio.depreciacaoAnual, 1, 'POINT', 2, 'COMMA')}"></span>
+                    </div>
+                </div>
+
+                <div th:if="${patrimonio.depreciacaoAcumulada != null}">
+                    <div class="summary-label">Depreciação acumulada</div>
+                    <div class="summary-value">
+                        R$ <span th:text="${#numbers.formatDecimal(patrimonio.depreciacaoAcumulada, 1, 'POINT', 2, 'COMMA')}"></span>
                     </div>
                 </div>
 
@@ -282,11 +329,18 @@
                     </div>
                 </div>
 
-                <div th:if="${patrimonio.depreciacaoAcumulada != null}">
-                    <div class="summary-label">Depreciação acumulada</div>
+                <div th:if="${patrimonio.valorRecuperavel != null}">
+                    <div class="summary-label">Valor recuperável</div>
                     <div class="summary-value">
-                        R$ <span th:text="${#numbers.formatDecimal(patrimonio.depreciacaoAcumulada, 1, 'POINT', 2, 'COMMA')}"></span>
+                        R$ <span th:text="${#numbers.formatDecimal(patrimonio.valorRecuperavel, 1, 'POINT', 2, 'COMMA')}"></span>
                     </div>
+                </div>
+
+                <div th:if="${patrimonio.dataReferencia != null and !patrimonio.calculoLegado}"
+                     class="text-secondary small mt-2">
+                    <i class="bi bi-calendar-event"></i>
+                    Cálculo em tempo real desde
+                    <span th:text="${#temporals.format(patrimonio.dataReferencia,'dd/MM/yyyy')}"></span>
                 </div>
 
                 <hr class="my-3" style="border-color: var(--border);"/>
