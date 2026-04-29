@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Entrar · Gerenciador Patrimonial</title>
 
+    <!-- Favicon institucional -->
+    <link rel="icon" type="image/png" th:href="@{/images/logo-color-vert.png}"/>
+    <link rel="apple-touch-icon" th:href="@{/images/logo-color-vert.png}"/>
+
     <!-- Google Fonts: Inter + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -50,27 +54,30 @@
             margin-bottom: var(--space-6);
         }
         .brand-logo {
-            width: 64px;
-            height: 64px;
             margin: 0 auto var(--space-4);
-            background: linear-gradient(135deg, var(--primary-400), var(--primary-700));
-            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 10px 30px rgba(23,90,138,0.35);
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.25));
         }
-        .brand-logo i { font-size: 1.75rem; color: #fff; }
+        .brand-logo img {
+            height: 110px;
+            width: auto;
+            max-width: 280px;
+        }
         .brand-title {
-            font-size: 1.25rem;
-            font-weight: 700;
+            font-size: 1.05rem;
+            font-weight: 600;
             color: #fff;
-            letter-spacing: -0.02em;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
             margin-bottom: var(--space-1);
         }
         .brand-sub {
-            color: rgba(255,255,255,0.7);
-            font-size: 0.8125rem;
+            color: rgba(255,255,255,0.65);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
         .login-card {
             background: var(--bg-surface);
@@ -107,10 +114,10 @@
 <div class="login-wrapper">
     <div class="brand-block">
         <div class="brand-logo">
-            <i class="bi bi-box-seam"></i>
+            <img th:src="@{/images/logo-white.png}" alt="Fundação Pró-Tocantins"/>
         </div>
         <div class="brand-title">Gerenciador Patrimonial</div>
-        <div class="brand-sub">Fundação Pró-Tocantins</div>
+        <div class="brand-sub">Sistema de Gestão de Bens</div>
     </div>
 
     <div class="login-card">

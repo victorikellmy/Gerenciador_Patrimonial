@@ -3,7 +3,7 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       lang="pt-BR">
 <!--
-    Fragmentos compartilhados pelo layout — Claude Design.
+    Fragmentos compartilhados pelo layout — Claude Design (Sidebar Edition).
     Uso nas páginas:
       <head th:replace="~{fragments/layout :: head('Título')}"></head>
       <nav  th:replace="~{fragments/layout :: navbar}"></nav>
@@ -16,6 +16,10 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title th:text="${titulo} ?: 'Gerenciador Patrimonial'">Gerenciador Patrimonial</title>
+
+    <!-- Favicon institucional -->
+    <link rel="icon" type="image/png" th:href="@{/images/logo-color-vert.png}"/>
+    <link rel="apple-touch-icon" th:href="@{/images/logo-color-vert.png}"/>
 
     <!-- Google Fonts: Inter + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -38,99 +42,157 @@
             var stored = localStorage.getItem('gp-theme');
             var prefers = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', stored || prefers);
+
+            var sidebar = localStorage.getItem('gp-sidebar');
+            if (sidebar === 'collapsed') {
+                document.documentElement.classList.add('sidebar-collapsed');
+            }
         })();
     </script>
 </head>
 
-<!-- ============================ NAVBAR ============================ -->
-<nav th:fragment="navbar" class="navbar navbar-expand-lg">
-    <div class="container-fluid">
-        <a class="navbar-brand" th:href="@{/}">
-            <i class="bi bi-box-seam"></i>
-            <span>Gerenciador Patrimonial</span>
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="menu">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0" data-nav-auto-active>
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/patrimonios}" data-nav-match="/patrimonios">
-                        <i class="bi bi-grid-3x3-gap"></i> Patrimônios
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/lotacoes}" data-nav-match="/lotacoes">
-                        <i class="bi bi-building"></i> Lotações
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/responsaveis}" data-nav-match="/responsaveis">
-                        <i class="bi bi-person-badge"></i> Responsáveis
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/relatorios}" data-nav-match="/relatorios">
-                        <i class="bi bi-file-earmark-bar-graph"></i> Relatórios
-                    </a>
-                </li>
-                <li class="nav-item" sec:authorize="hasRole('ADMINISTRADOR')">
-                    <a class="nav-link" th:href="@{/importacao}" data-nav-match="/importacao">
-                        <i class="bi bi-upload"></i> Importação
-                    </a>
-                </li>
-                <li class="nav-item" sec:authorize="hasRole('ADMINISTRADOR')">
-                    <a class="nav-link" th:href="@{/usuarios}" data-nav-match="/usuarios">
-                        <i class="bi bi-people"></i> Usuários
-                    </a>
-                </li>
-            </ul>
+<!-- ============================ APP SHELL (sidebar + topbar) ============================ -->
+<th:block th:fragment="navbar">
+    <!-- Sidebar institucional -->
+    <aside class="app-sidebar" id="appSidebar" aria-label="Navegação principal">
+        <div class="sidebar-brand">
+            <a class="sidebar-brand-link" th:href="@{/}">
+                <img th:src="@{/images/logo-color.png}" alt="Fundação Pró-Tocantins"
+                     class="sidebar-brand-logo sidebar-brand-logo-light"/>
+                <img th:src="@{/images/logo-white.png}" alt="Fundação Pró-Tocantins"
+                     class="sidebar-brand-logo sidebar-brand-logo-dark"/>
+                <span class="sidebar-brand-mark-collapsed" aria-hidden="true">
+                    <i class="bi bi-box-seam"></i>
+                </span>
+                <span class="sidebar-brand-text">
+                    <span class="sidebar-brand-title">Patrimônio</span>
+                </span>
+            </a>
+            <button type="button" class="sidebar-collapse-btn d-none d-lg-inline-flex"
+                    id="sidebarCollapseBtn"
+                    title="Recolher menu" aria-label="Recolher menu">
+                <i class="bi bi-chevron-double-left"></i>
+            </button>
+        </div>
 
-            <!-- Ações à direita: tema + usuário -->
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="theme-toggle" id="themeToggleBtn"
-                        title="Alternar tema claro/escuro" aria-label="Alternar tema">
-                    <i class="bi bi-moon-stars" id="themeIconDark"></i>
-                    <i class="bi bi-sun" id="themeIconLight" style="display:none"></i>
-                </button>
+        <nav class="sidebar-nav" data-nav-auto-active>
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Visão geral</div>
+                <a class="sidebar-link" th:href="@{/}" data-nav-match="/" data-nav-exact>
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="sidebar-link-label">Dashboard</span>
+                </a>
+            </div>
 
-                <ul class="navbar-nav" sec:authorize="isAuthenticated()">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-                           data-bs-toggle="dropdown" role="button">
-                            <span class="nav-avatar"
-                                  sec:authentication="name"
-                                  th:text="${#strings.toUpperCase(#strings.substring(#authentication.name, 0, 1))}">U</span>
-                            <div class="d-none d-md-flex flex-column text-start lh-sm">
-                                <span class="small fw-semibold" sec:authentication="name">usuário</span>
-                                <span class="small text-muted" sec:authentication="principal.usuario.perfil"></span>
-                            </div>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li class="px-3 py-2 border-bottom">
-                                <div class="small fw-semibold" sec:authentication="name">usuário</div>
-                                <div class="small text-muted" sec:authentication="principal.usuario.perfil"></div>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" th:href="@{/minha-conta/senha}">
-                                    <i class="bi bi-key"></i> Trocar senha
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form th:action="@{/logout}" method="post" class="px-1">
-                                    <button class="dropdown-item text-danger" type="submit">
-                                        <i class="bi bi-box-arrow-right"></i> Sair
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Operacional</div>
+                <a class="sidebar-link" th:href="@{/patrimonios}" data-nav-match="/patrimonios">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                    <span class="sidebar-link-label">Patrimônios</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/lotacoes}" data-nav-match="/lotacoes">
+                    <i class="bi bi-building"></i>
+                    <span class="sidebar-link-label">Lotações</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/responsaveis}" data-nav-match="/responsaveis">
+                    <i class="bi bi-person-badge"></i>
+                    <span class="sidebar-link-label">Responsáveis</span>
+                </a>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Análises</div>
+                <a class="sidebar-link" th:href="@{/relatorios}" data-nav-match="/relatorios">
+                    <i class="bi bi-file-earmark-bar-graph"></i>
+                    <span class="sidebar-link-label">Relatórios</span>
+                </a>
+            </div>
+
+            <div class="sidebar-section" sec:authorize="hasRole('ADMINISTRADOR')">
+                <div class="sidebar-section-title">Administração</div>
+                <a class="sidebar-link" th:href="@{/importacao}" data-nav-match="/importacao">
+                    <i class="bi bi-upload"></i>
+                    <span class="sidebar-link-label">Importação</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/usuarios}" data-nav-match="/usuarios">
+                    <i class="bi bi-people"></i>
+                    <span class="sidebar-link-label">Usuários</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer" sec:authorize="isAuthenticated()">
+            <div class="sidebar-user">
+                <span class="nav-avatar"
+                      sec:authentication="name"
+                      th:text="${#strings.toUpperCase(#strings.substring(#authentication.name, 0, 1))}">U</span>
+                <div class="sidebar-user-info">
+                    <span class="sidebar-user-name" sec:authentication="name">usuário</span>
+                    <span class="sidebar-user-role" sec:authentication="principal.usuario.perfil">PERFIL</span>
+                </div>
             </div>
         </div>
-    </div>
-</nav>
+    </aside>
+
+    <!-- Backdrop para mobile drawer -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
+    <!-- Topbar fina -->
+    <header class="app-topbar">
+        <button type="button" class="topbar-icon-btn d-lg-none" id="sidebarOpenBtn"
+                aria-label="Abrir menu" title="Abrir menu">
+            <i class="bi bi-list"></i>
+        </button>
+        <button type="button" class="topbar-icon-btn d-none d-lg-inline-flex" id="sidebarToggleBtn"
+                aria-label="Alternar menu" title="Alternar menu">
+            <i class="bi bi-layout-sidebar"></i>
+        </button>
+
+        <!-- Breadcrumb dinâmico (preenchido por JS) -->
+        <div class="topbar-breadcrumb" id="topbarBreadcrumb" aria-hidden="true"></div>
+
+        <div class="topbar-spacer"></div>
+
+        <button type="button" class="topbar-icon-btn theme-toggle" id="themeToggleBtn"
+                title="Alternar tema claro/escuro" aria-label="Alternar tema">
+            <i class="bi bi-moon-stars" id="themeIconDark"></i>
+            <i class="bi bi-sun" id="themeIconLight" style="display:none"></i>
+        </button>
+
+        <div class="topbar-divider d-none d-md-block"></div>
+
+        <div class="dropdown" sec:authorize="isAuthenticated()">
+            <button type="button" class="topbar-user-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="nav-avatar"
+                      sec:authentication="name"
+                      th:text="${#strings.toUpperCase(#strings.substring(#authentication.name, 0, 1))}">U</span>
+                <span class="d-none d-md-flex flex-column text-start lh-sm">
+                    <span class="small fw-semibold" sec:authentication="name">usuário</span>
+                    <span class="topbar-user-role" sec:authentication="principal.usuario.perfil"></span>
+                </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li class="px-3 py-2 border-bottom">
+                    <div class="small fw-semibold" sec:authentication="name">usuário</div>
+                    <div class="small text-muted" sec:authentication="principal.usuario.perfil"></div>
+                </li>
+                <li>
+                    <a class="dropdown-item" th:href="@{/minha-conta/senha}">
+                        <i class="bi bi-key"></i> Trocar senha
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form th:action="@{/logout}" method="post" class="px-1">
+                        <button class="dropdown-item text-danger" type="submit">
+                            <i class="bi bi-box-arrow-right"></i> Sair
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </header>
+</th:block>
 
 <!-- ============================ FLASH MESSAGES (toasts) ============================ -->
 <div th:fragment="messages">
@@ -185,7 +247,7 @@
             });
         })();
 
-        // ---------- Navbar: rota ativa ----------
+        // ---------- Sidebar: rota ativa ----------
         (function() {
             const container = document.querySelector('[data-nav-auto-active]');
             if (!container) return;
@@ -195,15 +257,73 @@
             let bestLen = -1;
             links.forEach((a) => {
                 const match = a.getAttribute('data-nav-match');
+                const exact = a.hasAttribute('data-nav-exact');
                 if (!match) return;
-                if (path === match || path.startsWith(match + '/') || (match !== '/' && path.startsWith(match))) {
-                    if (match.length > bestLen) {
-                        best = a;
-                        bestLen = match.length;
-                    }
+                const isMatch = exact
+                    ? path === match
+                    : (path === match || path.startsWith(match + '/') || (match !== '/' && path.startsWith(match)));
+                if (isMatch && match.length > bestLen) {
+                    best = a;
+                    bestLen = match.length;
                 }
             });
             if (best) best.classList.add('active');
+
+            // Breadcrumb auto a partir do link ativo
+            const bc = document.getElementById('topbarBreadcrumb');
+            if (bc && best) {
+                const section = best.closest('.sidebar-section');
+                const sectionTitle = section?.querySelector('.sidebar-section-title')?.textContent?.trim();
+                const linkLabel = best.querySelector('.sidebar-link-label')?.textContent?.trim();
+                if (sectionTitle && linkLabel) {
+                    bc.innerHTML =
+                        `<span class="bc-item">${sectionTitle}</span>` +
+                        `<i class="bi bi-chevron-right bc-sep"></i>` +
+                        `<span class="bc-item bc-current">${linkLabel}</span>`;
+                    bc.setAttribute('aria-hidden', 'false');
+                }
+            }
+        })();
+
+        // ---------- Sidebar: collapse desktop + drawer mobile ----------
+        (function() {
+            const root = document.documentElement;
+            const sidebar = document.getElementById('appSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const openBtn = document.getElementById('sidebarOpenBtn');
+            const toggleBtn = document.getElementById('sidebarToggleBtn');
+            const collapseBtn = document.getElementById('sidebarCollapseBtn');
+
+            const toggleCollapsed = () => {
+                root.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('gp-sidebar',
+                    root.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
+            };
+
+            const openMobile = () => {
+                sidebar?.classList.add('is-open');
+                backdrop?.classList.add('is-visible');
+                document.body.style.overflow = 'hidden';
+            };
+            const closeMobile = () => {
+                sidebar?.classList.remove('is-open');
+                backdrop?.classList.remove('is-visible');
+                document.body.style.overflow = '';
+            };
+
+            openBtn?.addEventListener('click', openMobile);
+            backdrop?.addEventListener('click', closeMobile);
+            toggleBtn?.addEventListener('click', toggleCollapsed);
+            collapseBtn?.addEventListener('click', toggleCollapsed);
+
+            // Esc fecha o drawer
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && sidebar?.classList.contains('is-open')) closeMobile();
+            });
+            // Resize: garante reset
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 992) closeMobile();
+            });
         })();
 
         // ---------- Toasts: auto-hide + fechar ----------
