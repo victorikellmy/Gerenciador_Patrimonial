@@ -1,0 +1,68 @@
+# =============================================================================
+# docker-compose para o servidor de aplicação 192.168.1.25.
+#
+# Pré-requisitos no host:
+#   - Pacote nfs-common (Debian/Ubuntu) ou nfs-utils (RHEL/Alma) instalado.
+#   - O servidor de armazenamento 192.168.1.35 deve exportar /srv/patrimonio/uploads
+#     com permissão de leitura/escrita para 192.168.1.25 (ver guia de NFS abaixo).
+#
+# O volume `uploads_nfs` é montado dinamicamente via driver local com opções NFS,
+# evitando depender de mount manual em /etc/fstab — o compose sobe e desce o
+# mount junto com a stack.
+# =============================================================================
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: patrimonial-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-patrimonial}
+      POSTGRES_USER:     ${DB_USER:-patrimonial}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD em .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER:-patrimonial}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  app:
+    build: .
+    image: gerenciador-patrimonial:latest
+    container_name: patrimonial-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL:      jdbc:postgresql://db:5432/${DB_NAME:-patrimonial}
+      DB_USER:     ${DB_USER:-patrimonial}
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_STORAGE_PASTA_RAIZ: /uploads
+      JAVA_OPTS: "-Xms512m -Xmx1g"
+    volumes:
+      # Anexos vão para o servidor de armazenamento via NFS.
+      - uploads_nfs:/uploads
+    ports:
+      - "80:8080"
+    networks: [internal]
+
+volumes:
+  pgdata:
+
+  uploads_nfs:
+    driver: local
+    driver_opts:
+      type: nfs
+      # Endereço do servidor de armazenamento + caminho exportado.
+      # rw, vers=4 são compatíveis com a maioria dos NFSv4 modernos.
+      # soft + timeo=30 evitam travar a aplicação caso o NFS caia momentaneamente.
+      o: "addr=192.168.1.35,rw,nfsvers=4,soft,timeo=30,retrans=2"
+      device: ":/srv/patrimonio/uploads"
+
+networks:
+  internal:
+    driver: bridge
