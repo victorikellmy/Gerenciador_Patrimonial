@@ -50,6 +50,10 @@ public class Patrimonio {
     @Column(length = 60)
     private String categoria;
 
+    /** Subcategoria — refinamento abaixo de categoria (Computadores, Mesas, Cadeiras, Ar condicionado). */
+    @Column(length = 60)
+    private String subcategoria;
+
     /** Data de aquisição (pode ser nula — maior parte da planilha original não tem). */
     @Column(name = "data_compra")
     private LocalDate dataCompra;
@@ -68,6 +72,21 @@ public class Patrimonio {
 
     @Column(name = "nota_fiscal", length = 60)
     private String notaFiscal;
+
+    /** Valor recuperável estimado (entrada do laudo de impairment). */
+    @Column(name = "valor_recuperavel", precision = 19, scale = 2)
+    private BigDecimal valorRecuperavel;
+
+    /** Texto-conclusão do teste de impairment (ex.: "NÃO HÁ PERDA..."). */
+    @Column(name = "conclusao_impairment", length = 255)
+    private String conclusaoImpairment;
+
+    @Column(name = "observacao", length = 1000)
+    private String observacao;
+
+    /** URL de referência de mercado usada para estimar valor recuperável. */
+    @Column(name = "link_referencia", length = 2000)
+    private String linkReferencia;
 
     // --- Soft delete (baixa) ---
     @Column(name = "data_baixa")

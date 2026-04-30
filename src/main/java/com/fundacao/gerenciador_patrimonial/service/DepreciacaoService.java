@@ -74,13 +74,21 @@ public class DepreciacaoService {
             BigDecimal vurAnos,
             BigDecimal depreciacaoAcumulada,
             BigDecimal valorContabilLiquido,
+            BigDecimal valorRecuperavel,      // copiado do patrimônio (insumo do laudo)
+            BigDecimal perdaImpairment,       // max(0, VCL − valorRecuperavel) quando há laudo
             BigDecimal depreciacaoAnual,
             LocalDate  dataReferencia,        // base usada no cálculo TEMPO; null no legado
             boolean    calculoLegado          // true ⇒ usou % por conservação (sem dataCompra)
     ) {
         public static CalculoDepreciacao vazio() {
-            return new CalculoDepreciacao(null, null, null, null, ZERO, ZERO, ZERO, null, false);
+            return new CalculoDepreciacao(null, null, null, null, ZERO, ZERO, null, null, ZERO, null, false);
         }
+    }
+
+    private static BigDecimal calcularPerdaImpairment(BigDecimal vcl, BigDecimal valorRecuperavel) {
+        if (valorRecuperavel == null || vcl == null) return null;
+        BigDecimal perda = vcl.subtract(valorRecuperavel);
+        return perda.signum() > 0 ? perda.setScale(SCALE_VALOR, RoundingMode.HALF_UP) : ZERO;
     }
 
     /** Cálculo usando "hoje" como data de referência. */
@@ -134,8 +142,9 @@ public class DepreciacaoService {
         BigDecimal vcl = valor.subtract(deprAcum).setScale(SCALE_VALOR, RoundingMode.HALF_UP);
 
         return new CalculoDepreciacao(
-                vut, pctVud, vudAnos, vurAnos, deprAcum, vcl, deprAno,
-                p.getDataCompra(), false);
+                vut, pctVud, vudAnos, vurAnos, deprAcum, vcl,
+                p.getValorRecuperavel(), calcularPerdaImpairment(vcl, p.getValorRecuperavel()),
+                deprAno, p.getDataCompra(), false);
     }
 
     // =========================================================================
@@ -161,7 +170,8 @@ public class DepreciacaoService {
         BigDecimal deprAno  = valor.divide(vutBd, SCALE_VALOR, RoundingMode.HALF_UP);
 
         return new CalculoDepreciacao(
-                vut, pctVud, vudAnos, vurAnos, deprAcum, vcl, deprAno,
-                null, true);
+                vut, pctVud, vudAnos, vurAnos, deprAcum, vcl,
+                p.getValorRecuperavel(), calcularPerdaImpairment(vcl, p.getValorRecuperavel()),
+                deprAno, null, true);
     }
 }

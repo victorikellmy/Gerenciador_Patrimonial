@@ -32,6 +32,7 @@
         <div th:class="${editando} ? 'col-lg-8' : 'col-12'">
             <form th:action="${editando} ? @{'/patrimonios/' + ${id}} : @{/patrimonios}"
                   th:object="${patrimonioForm}" method="post"
+                  th:enctype="${editando} ? 'application/x-www-form-urlencoded' : 'multipart/form-data'"
                   class="card card-panel" style="overflow: hidden;">
 
                 <!-- =============== SEÇÃO: IDENTIFICAÇÃO =============== -->
@@ -60,13 +61,23 @@
                             <div class="invalid-feedback" th:if="${#fields.hasErrors('descricao')}"
                                  th:errors="*{descricao}"></div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">Categoria</label>
-                            <input type="text" class="form-control"
-                                   th:field="*{categoria}"
-                                   placeholder="COMPUTADOR, MOVEIS, IMPRESSORA..."/>
+                            <select class="form-select" th:field="*{categoria}">
+                                <option value="">— selecione —</option>
+                                <option th:each="cat : ${categorias}"
+                                        th:value="${cat}" th:text="${cat}"></option>
+                            </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <label class="form-label">Subcategoria</label>
+                            <select class="form-select" th:field="*{subcategoria}">
+                                <option value="">— selecione —</option>
+                                <option th:each="sc : ${subcategorias}"
+                                        th:value="${sc}" th:text="${sc}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Nota Fiscal</label>
                             <input type="text" class="form-control"
                                    th:field="*{notaFiscal}"
@@ -145,6 +156,33 @@
                             </select>
                             <div class="invalid-feedback" th:if="${#fields.hasErrors('responsavelId')}"
                                  th:errors="*{responsavelId}"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =============== SEÇÃO: ANEXOS (somente na criação) =============== -->
+                <div class="form-section" th:unless="${editando}">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-paperclip',
+                        'Anexos (opcional)',
+                        'Envie nota fiscal, fotos ou outros documentos junto com o cadastro.')}"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">
+                                Arquivos
+                                <span class="text-muted">(PDF, JPG, PNG, WEBP — múltiplos)</span>
+                            </label>
+                            <input type="file" class="form-control"
+                                   name="anexos" multiple
+                                   accept=".pdf,.jpg,.jpeg,.png,.webp"/>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" name="tipoAnexo">
+                                <option value="">— selecione —</option>
+                                <option th:each="t : ${tiposAnexo}" th:value="${t}" th:text="${t}"></option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -346,6 +384,10 @@
                 <hr class="my-3" style="border-color: var(--border);"/>
 
                 <div class="d-grid gap-2">
+                    <a class="btn btn-secondary"
+                       th:href="@{'/patrimonios/' + ${id} + '/historico'}">
+                        <i class="bi bi-clock-history"></i> Histórico
+                    </a>
                     <a th:if="${patrimonio.situacao.name() != 'BAIXADO'}"
                        class="btn btn-secondary"
                        th:href="@{'/patrimonios/' + ${id} + '/movimentar'}">

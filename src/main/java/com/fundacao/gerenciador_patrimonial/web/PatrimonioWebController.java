@@ -8,8 +8,11 @@ import com.fundacao.gerenciador_patrimonial.dto.request.FiltroPatrimonio;
 import com.fundacao.gerenciador_patrimonial.dto.request.MovimentacaoRequest;
 import com.fundacao.gerenciador_patrimonial.dto.request.PatrimonioRequest;
 import com.fundacao.gerenciador_patrimonial.dto.response.LotacaoResponse;
+import com.fundacao.gerenciador_patrimonial.dto.response.MovimentacaoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.PatrimonioResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.ResponsavelResponse;
+import com.fundacao.gerenciador_patrimonial.repository.LotacaoRepository;
+import com.fundacao.gerenciador_patrimonial.repository.PatrimonioRepository;
 import com.fundacao.gerenciador_patrimonial.service.AnexoService;
 import com.fundacao.gerenciador_patrimonial.service.LotacaoService;
 import com.fundacao.gerenciador_patrimonial.service.PatrimonioService;
@@ -34,10 +37,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PatrimonioWebController {
 
+    /** Subcategorias temporárias — quando houver tabela de domínio, mover para repositório. */
+    private static final List<String> SUBCATEGORIAS = List.of(
+            "Computadores", "Mesas", "Cadeiras", "Ar condicionado");
+
     private final PatrimonioService patrimonioService;
     private final LotacaoService lotacaoService;
     private final ResponsavelService responsavelService;
     private final AnexoService anexoService;
+    private final LotacaoRepository lotacaoRepository;
+    private final PatrimonioRepository patrimonioRepository;
 
     // =========================================================================
     // Listagem com filtros
@@ -55,6 +64,8 @@ public class PatrimonioWebController {
         model.addAttribute("filtro", filtro);
         model.addAttribute("situacoes", SituacaoPatrimonio.values());
         model.addAttribute("conservacoes", Conservacao.values());
+        model.addAttribute("upms", lotacaoRepository.findDistinctUpms());
+        model.addAttribute("categorias", patrimonioRepository.findDistinctCategorias());
         return "patrimonios/list";
     }
 
@@ -66,7 +77,8 @@ public class PatrimonioWebController {
     public String novoForm(Model model) {
         if (!model.containsAttribute("patrimonioForm")) {
             model.addAttribute("patrimonioForm",
-                    new PatrimonioRequest(null, "", null, null, null, null, null, null, null));
+                    new PatrimonioRequest(null, "", null, null, null, null, null, null,
+                            null, null, null, null, null, null));
         }
         prepararListasAuxiliares(model);
         model.addAttribute("editando", false);
@@ -77,6 +89,8 @@ public class PatrimonioWebController {
     @PostMapping
     public String criar(@Valid @ModelAttribute("patrimonioForm") PatrimonioRequest request,
                         BindingResult binding,
+                        @RequestParam(value = "anexos", required = false) MultipartFile[] anexos,
+                        @RequestParam(value = "tipoAnexo", required = false) TipoAnexo tipoAnexo,
                         RedirectAttributes redirect,
                         Model model) {
         if (binding.hasErrors()) {
@@ -86,19 +100,42 @@ public class PatrimonioWebController {
         }
         try {
             PatrimonioResponse criado = patrimonioService.criar(request);
-            redirect.addFlashAttribute("sucesso", "Patrimônio criado (ID " + criado.id() + ").");
+            int anexados = anexarArquivos(criado.id(), anexos, tipoAnexo);
+            redirect.addFlashAttribute("sucesso",
+                    "Patrimônio criado (ID " + criado.id() + ")"
+                    + (anexados > 0 ? " com " + anexados + " anexo(s)." : "."));
         } catch (RuntimeException e) {
             redirect.addFlashAttribute("erro", e.getMessage());
         }
         return "redirect:/patrimonios";
     }
 
+    /**
+     * Anexa em lote os arquivos enviados no POST de criação.
+     * Falha em um arquivo apenas é logada — não desfaz a criação do patrimônio.
+     */
+    private int anexarArquivos(Long patrimonioId, MultipartFile[] arquivos, TipoAnexo tipo) {
+        if (arquivos == null) return 0;
+        int n = 0;
+        for (MultipartFile f : arquivos) {
+            if (f == null || f.isEmpty()) continue;
+            try {
+                anexoService.anexar(patrimonioId, f, tipo);
+                n++;
+            } catch (RuntimeException ex) {
+                // não trava o fluxo; usuário pode reenviar pela tela de edição
+            }
+        }
+        return n;
+    }
+
     @GetMapping("/{id}/editar")
     public String editarForm(@PathVariable Long id, Model model) {
         PatrimonioResponse p = patrimonioService.buscarPorId(id);
         model.addAttribute("patrimonioForm", new PatrimonioRequest(
-                p.numeroTombo(), p.descricao(), p.categoria(), p.dataCompra(),
+                p.numeroTombo(), p.descricao(), p.categoria(), p.subcategoria(), p.dataCompra(),
                 p.valorCompra(), p.conservacao(), p.notaFiscal(),
+                p.valorRecuperavel(), p.conclusaoImpairment(), p.observacao(), p.linkReferencia(),
                 p.lotacaoId(), p.responsavelId()
         ));
         model.addAttribute("id", id);
@@ -130,6 +167,20 @@ public class PatrimonioWebController {
             redirect.addFlashAttribute("erro", e.getMessage());
         }
         return "redirect:/patrimonios/" + id + "/editar";
+    }
+
+    // =========================================================================
+    // Relatório de movimentação (histórico)
+    // =========================================================================
+
+    @GetMapping("/{id}/historico")
+    public String historico(@PathVariable Long id, Model model) {
+        PatrimonioResponse p = patrimonioService.buscarPorId(id);
+        List<MovimentacaoResponse> movs = patrimonioService.historico(id);
+        model.addAttribute("patrimonio", p);
+        model.addAttribute("movimentacoes", movs);
+        model.addAttribute("ultima", movs.isEmpty() ? null : movs.get(0));
+        return "patrimonios/historico";
     }
 
     // =========================================================================
@@ -249,5 +300,8 @@ public class PatrimonioWebController {
         model.addAttribute("lotacoes", lotacoes);
         model.addAttribute("responsaveis", responsaveis);
         model.addAttribute("conservacoes", Conservacao.values());
+        model.addAttribute("categorias", patrimonioRepository.findDistinctCategorias());
+        model.addAttribute("subcategorias", SUBCATEGORIAS);
+        model.addAttribute("tiposAnexo", TipoAnexo.values());
     }
 }

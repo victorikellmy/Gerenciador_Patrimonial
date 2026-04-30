@@ -38,9 +38,10 @@ public enum Conservacao {
     public static Conservacao fromPlanilha(String raw) {
         if (raw == null || raw.isBlank()) return null;
 
-        // Normaliza: upper, remove acentos, padroniza separador "/"
+        // Normaliza: upper, remove acentos, padroniza separador "/" com espaços ao redor.
+        // Aceita "BOM/REGULAR", "BOM / REGULAR", "REGULAR/RUIM", "REGULAR / RUIM", etc.
         String s = raw.trim().toUpperCase()
-                .replace('Ó', 'O').replace('Ã', 'A').replace('Ç', 'C')
+                .replace('Ó', 'O').replace('Ã', 'A').replace('Ç', 'C').replace('Í', 'I')
                 .replaceAll("\\s*/\\s*", " / ")
                 .replaceAll("\\s+", " ");
 

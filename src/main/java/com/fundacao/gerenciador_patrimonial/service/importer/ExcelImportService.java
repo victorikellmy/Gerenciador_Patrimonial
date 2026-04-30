@@ -33,25 +33,37 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Importador da planilha original "Planilha Parcial de Patrimônio.xlsx".
+ * Importador da "Planilha de Reconstituição de Dados".
  *
  * <p>Estratégia de transação: <b>uma transação por linha</b>, via
  * {@link TransactionTemplate} com propagation default. Uma linha ruim
  * (constraint violation, dado inválido) só aborta a própria linha — as
  * demais continuam. Isso é essencial em planilhas reais que chegam sujas.</p>
  *
- * <p>Mapeamento das colunas:</p>
+ * <p>Mapeamento das colunas (aba "Planilha1"):</p>
  * <pre>
- *   A (0) Unidade (UPM)
- *   B (1) Responsável
- *   C (2) Sala
- *   D (3) Nº Patrimônio
- *   E (4) Ativo (descrição)
- *   F (5) Categoria
- *   G (6) Data de Aquisição
- *   H (7) Custo Original
- *   J (9) Estado de Conservação
- *   R (17) NF
+ *   A (0)  Unidade (UPM)
+ *   B (1)  Responsável
+ *   C (2)  Sala
+ *   D (3)  Nº Patrimônio
+ *   E (4)  Ativo (descrição)
+ *   F (5)  Categoria
+ *   G (6)  DATA DE AQUISIÇÃO
+ *   H (7)  Custo de Reposição / Custo Original
+ *   I (8)  VUT Padrão (Anos)              — não persistido (validado contra vida_util_categoria)
+ *   J (9)  Estado de Conservação
+ *   K (10) VUD %                          — derivado, ignorado
+ *   L (11) VUD (Anos)                     — derivado, ignorado
+ *   M (12) VUR                            — derivado, ignorado
+ *   N (13) Depreciação Acumulada          — derivado, ignorado
+ *   O (14) VCL                            — derivado, ignorado
+ *   P (15) Valor Recuperável (R$)
+ *   Q (16) Perda por Impairment (R$)      — derivado, ignorado
+ *   R (17) Nova Depreciação Anual (R$)    — derivado, ignorado
+ *   S (18) Conclusão_Impairment
+ *   T (19) Observação
+ *   U (20) links
+ *   V (21) NF
  * </pre>
  */
 @Service
@@ -59,22 +71,33 @@ import java.util.Set;
 @Slf4j
 public class ExcelImportService {
 
+    private static final String SHEET_PADRAO = "Planilha1";
+
     // Índices de coluna (0-based)
-    private static final int COL_UPM         = 0;
-    private static final int COL_RESP        = 1;
-    private static final int COL_SALA        = 2;
-    private static final int COL_TOMBO       = 3;
-    private static final int COL_DESCRICAO   = 4;
-    private static final int COL_CATEGORIA   = 5;
-    private static final int COL_DATA_COMPRA = 6;
-    private static final int COL_VALOR       = 7;
-    private static final int COL_CONSERVACAO = 9;
-    private static final int COL_NF          = 17;
+    private static final int COL_UPM             = 0;
+    private static final int COL_RESP            = 1;
+    private static final int COL_SALA            = 2;
+    private static final int COL_TOMBO           = 3;
+    private static final int COL_DESCRICAO       = 4;
+    private static final int COL_CATEGORIA       = 5;
+    private static final int COL_DATA_COMPRA     = 6;
+    private static final int COL_VALOR           = 7;
+    private static final int COL_VUT             = 8;
+    private static final int COL_CONSERVACAO     = 9;
+    private static final int COL_VALOR_RECUP     = 15;
+    private static final int COL_CONCLUSAO_IMP   = 18;
+    private static final int COL_OBSERVACAO      = 19;
+    private static final int COL_LINK            = 20;
+    private static final int COL_NF              = 21;
 
     private final LotacaoRepository lotacaoRepo;
     private final ResponsavelRepository responsavelRepo;
     private final PatrimonioRepository patrimonioRepo;
+    private final com.fundacao.gerenciador_patrimonial.repository.VidaUtilCategoriaRepository vutRepo;
     private final PlatformTransactionManager transactionManager;
+
+    /** VUT por categoria, carregado uma vez para validar a coluna VUT da planilha. */
+    private final Map<String, Integer> vutPorCategoria = new HashMap<>();
 
     /** Template inicializado após a injeção do {@link PlatformTransactionManager}. */
     private TransactionTemplate txTemplate;
@@ -82,6 +105,8 @@ public class ExcelImportService {
     @PostConstruct
     void initTxTemplate() {
         this.txTemplate = new TransactionTemplate(transactionManager);
+        vutRepo.findAll().forEach(v ->
+                vutPorCategoria.put(v.getCategoria().toUpperCase(), v.getVutAnos()));
     }
 
     /**
@@ -103,7 +128,13 @@ public class ExcelImportService {
         int[] responsaveisCriados = {0};
 
         try (Workbook wb = WorkbookFactory.create(inputStream)) {
-            Sheet sheet = (nomeSheet != null) ? wb.getSheet(nomeSheet) : wb.getSheetAt(0);
+            Sheet sheet;
+            if (nomeSheet != null) {
+                sheet = wb.getSheet(nomeSheet);
+            } else {
+                sheet = wb.getSheet(SHEET_PADRAO);
+                if (sheet == null) sheet = wb.getSheetAt(0);
+            }
             if (sheet == null) {
                 throw new IllegalArgumentException("Aba não encontrada: " + nomeSheet);
             }
@@ -153,16 +184,31 @@ public class ExcelImportService {
                                           Map<String, Long> cacheLotacaoId,
                                           Map<String, Long> cacheRespId,
                                           Set<String> tombosVistos) {
-        String upm       = Normalizadores.normalizarUpm(CellReader.lerString(row, COL_UPM));
-        String sala      = Normalizadores.normalizarSala(CellReader.lerString(row, COL_SALA));
-        String respNome  = Normalizadores.normalizarNome(CellReader.lerString(row, COL_RESP));
-        String tombo     = Normalizadores.normalizarTombo(CellReader.lerString(row, COL_TOMBO));
-        String descricao = CellReader.lerString(row, COL_DESCRICAO);
-        String categoria = Normalizadores.normalizarNome(CellReader.lerString(row, COL_CATEGORIA));
-        LocalDate data   = CellReader.lerData(row, COL_DATA_COMPRA);
-        BigDecimal valor = CellReader.lerBigDecimal(row, COL_VALOR);
-        String consRaw   = CellReader.lerString(row, COL_CONSERVACAO);
-        String nf        = CellReader.lerString(row, COL_NF);
+        String upm           = Normalizadores.normalizarUpm(CellReader.lerString(row, COL_UPM));
+        String sala          = Normalizadores.normalizarSala(CellReader.lerString(row, COL_SALA));
+        String respNome      = Normalizadores.normalizarNome(CellReader.lerString(row, COL_RESP));
+        String tombo         = Normalizadores.normalizarTombo(CellReader.lerString(row, COL_TOMBO));
+        String descricao     = CellReader.lerString(row, COL_DESCRICAO);
+        String categoria     = Normalizadores.normalizarNome(CellReader.lerString(row, COL_CATEGORIA));
+        LocalDate data       = CellReader.lerData(row, COL_DATA_COMPRA);
+        BigDecimal valor     = CellReader.lerBigDecimal(row, COL_VALOR);
+        BigDecimal vutLinha  = CellReader.lerBigDecimal(row, COL_VUT);
+        String consRaw       = CellReader.lerString(row, COL_CONSERVACAO);
+        BigDecimal valorRec  = CellReader.lerBigDecimal(row, COL_VALOR_RECUP);
+        String conclusao     = CellReader.lerString(row, COL_CONCLUSAO_IMP);
+        String observacao    = CellReader.lerString(row, COL_OBSERVACAO);
+        String link          = CellReader.lerString(row, COL_LINK);
+        String nf            = CellReader.lerString(row, COL_NF);
+
+        // Validação: VUT da linha deve bater com a tabela de referência por categoria.
+        // Divergência só gera warning — a fonte de verdade é vida_util_categoria.
+        if (vutLinha != null && categoria != null) {
+            Integer vutRef = vutPorCategoria.get(categoria.toUpperCase());
+            if (vutRef != null && vutLinha.intValue() != vutRef) {
+                log.warn("Linha {}: VUT da planilha ({}) difere do cadastro ({}) p/ categoria '{}'.",
+                        row.getRowNum() + 1, vutLinha, vutRef, categoria);
+            }
+        }
 
         if (descricao == null) {
             throw new IllegalArgumentException("Descrição vazia.");
@@ -225,6 +271,10 @@ public class ExcelImportService {
                 .dataCompra(data)
                 .valorCompra(valor)
                 .notaFiscal(nf)
+                .valorRecuperavel(valorRec)
+                .conclusaoImpairment(truncar(conclusao, 255))
+                .observacao(truncar(observacao, 1000))
+                .linkReferencia(truncar(link, 2000))
                 .lotacao(lotacao)
                 .responsavel(responsavel)
                 .build();
@@ -272,6 +322,12 @@ public class ExcelImportService {
                 .lotacao(lotacao)
                 .ativo(true)
                 .build();
+    }
+
+    /** Trunca string ao limite da coluna preservando null. */
+    private static String truncar(String s, int max) {
+        if (s == null) return null;
+        return s.length() <= max ? s : s.substring(0, max);
     }
 
     /** Extrai a mensagem mais útil da cadeia de causas (para log de erro). */

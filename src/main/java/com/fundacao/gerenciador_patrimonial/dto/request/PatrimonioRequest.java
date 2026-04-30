@@ -22,6 +22,8 @@ public record PatrimonioRequest(
 
         @Size(max = 60) String categoria,
 
+        @Size(max = 60) String subcategoria,
+
         @NotNull(message = "Data de aquisição é obrigatória")
         @PastOrPresent(message = "Data de aquisição não pode ser futura")
         LocalDate dataCompra,
@@ -32,6 +34,15 @@ public record PatrimonioRequest(
         Conservacao conservacao,
 
         @Size(max = 60) String notaFiscal,
+
+        @PositiveOrZero(message = "Valor recuperável não pode ser negativo")
+        BigDecimal valorRecuperavel,
+
+        @Size(max = 255) String conclusaoImpairment,
+
+        @Size(max = 1000) String observacao,
+
+        @Size(max = 2000) String linkReferencia,
 
         @NotNull(message = "Lotação é obrigatória")
         Long lotacaoId,

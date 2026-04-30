@@ -85,24 +85,31 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">UPM</label>
-                            <input type="text" class="form-control form-control-sm"
-                                   form="filterForm" name="upm"
-                                   th:value="${filtro.upm}"
-                                   onchange="document.querySelector('#filterForm input[type=hidden][name=upm]').value=this.value"/>
+                            <select class="form-select form-select-sm"
+                                    form="filterForm" name="upm">
+                                <option value="">Todas</option>
+                                <option th:each="u : ${upms}"
+                                        th:value="${u}"
+                                        th:text="${u}"
+                                        th:selected="${filtro.upm != null and filtro.upm == u}"></option>
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Categoria</label>
-                            <input type="text" class="form-control form-control-sm"
-                                   form="filterForm" name="categoria"
-                                   th:value="${filtro.categoria}"
-                                   onchange="document.querySelector('#filterForm input[type=hidden][name=categoria]').value=this.value"/>
+                            <select class="form-select form-select-sm"
+                                    form="filterForm" name="categoria">
+                                <option value="">Todas</option>
+                                <option th:each="cat : ${categorias}"
+                                        th:value="${cat}"
+                                        th:text="${cat}"
+                                        th:selected="${filtro.categoria != null and filtro.categoria == cat}"></option>
+                            </select>
                         </div>
                         <div class="col-md-3"></div>
                         <div class="col-md-3">
                             <label class="form-label">Situação</label>
                             <select class="form-select form-select-sm"
-                                    form="filterForm" name="situacao"
-                                    onchange="document.querySelector('#filterForm input[type=hidden][name=situacao]').value=this.value">
+                                    form="filterForm" name="situacao">
                                 <option value="">Todas</option>
                                 <option th:each="s : ${situacoes}"
                                         th:value="${s}"
@@ -113,8 +120,7 @@
                         <div class="col-md-3">
                             <label class="form-label">Conservação</label>
                             <select class="form-select form-select-sm"
-                                    form="filterForm" name="conservacao"
-                                    onchange="document.querySelector('#filterForm input[type=hidden][name=conservacao]').value=this.value">
+                                    form="filterForm" name="conservacao">
                                 <option value="">Todas</option>
                                 <option th:each="c : ${conservacoes}"
                                         th:value="${c}"
@@ -238,6 +244,12 @@
                                             <a class="dropdown-item"
                                                th:href="@{'/patrimonios/' + ${p.id} + '/editar'}">
                                                 <i class="bi bi-pencil"></i> Editar
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item"
+                                               th:href="@{'/patrimonios/' + ${p.id} + '/historico'}">
+                                                <i class="bi bi-clock-history"></i> Histórico
                                             </a>
                                         </li>
                                         <li th:if="${p.situacao.name() != 'BAIXADO'}">

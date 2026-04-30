@@ -7,6 +7,7 @@ import com.fundacao.gerenciador_patrimonial.service.DepreciacaoService.CalculoDe
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Projeção completa de Patrimônio para o frontend,
@@ -17,6 +18,7 @@ public record PatrimonioResponse(
         String numeroTombo,
         String descricao,
         String categoria,
+        String subcategoria,
         LocalDate dataCompra,
         BigDecimal valorCompra,
         Conservacao conservacao,
@@ -42,9 +44,21 @@ public record PatrimonioResponse(
         BigDecimal depreciacaoAcumulada,
         BigDecimal valorContabilLiquido,
         BigDecimal valorRecuperavel,
+        BigDecimal perdaImpairment,
         BigDecimal depreciacaoAnual,
         LocalDate  dataReferencia,
-        boolean    calculoLegado
+        boolean    calculoLegado,
+
+        // --- Campos do laudo de impairment ---
+        String conclusaoImpairment,
+        String observacao,
+        String linkReferencia,
+
+        // --- Auditoria (Spring Data JPA Auditing) ---
+        LocalDateTime criadoEm,
+        LocalDateTime atualizadoEm,
+        String criadoPor,
+        String atualizadoPor
 ) {
     public static PatrimonioResponse from(Patrimonio p, CalculoDepreciacao calc) {
         return new PatrimonioResponse(
@@ -52,6 +66,7 @@ public record PatrimonioResponse(
                 p.getNumeroTombo(),
                 p.getDescricao(),
                 p.getCategoria(),
+                p.getSubcategoria(),
                 p.getDataCompra(),
                 p.getValorCompra(),
                 p.getConservacao(),
@@ -70,10 +85,18 @@ public record PatrimonioResponse(
                 calc.vurAnos(),
                 calc.depreciacaoAcumulada(),
                 calc.valorContabilLiquido(),
-                calc.valorContabilLiquido(),
+                calc.valorRecuperavel(),
+                calc.perdaImpairment(),
                 calc.depreciacaoAnual(),
                 calc.dataReferencia(),
-                calc.calculoLegado()
+                calc.calculoLegado(),
+                p.getConclusaoImpairment(),
+                p.getObservacao(),
+                p.getLinkReferencia(),
+                p.getCriadoEm(),
+                p.getAtualizadoEm(),
+                p.getCriadoPor(),
+                p.getAtualizadoPor()
         );
     }
 }
