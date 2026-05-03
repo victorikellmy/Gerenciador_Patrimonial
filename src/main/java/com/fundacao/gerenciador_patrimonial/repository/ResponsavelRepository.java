@@ -15,4 +15,7 @@ public interface ResponsavelRepository extends JpaRepository<Responsavel, Long> 
     Optional<Responsavel> findByMatricula(String matricula);
 
     List<Responsavel> findByLotacaoIdAndAtivoTrue(Long lotacaoId);
+
+    /** Lista ordenada para popular {@code <select>} de formulários. */
+    List<Responsavel> findAllByOrderByNomeCompletoAsc();
 }

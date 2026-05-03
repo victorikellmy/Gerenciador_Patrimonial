@@ -56,21 +56,13 @@ public class PatrimonioController {
     /** Atalho: apenas ativos (aba "Ativos" do sistema legado). */
     @GetMapping("/ativos")
     public Page<PatrimonioResponse> ativos(@ModelAttribute FiltroPatrimonio filtro, Pageable pageable) {
-        FiltroPatrimonio comSituacao = new FiltroPatrimonio(
-                filtro.descricao(), filtro.numeroTombo(), filtro.lotacaoId(),
-                filtro.responsavelId(), filtro.upm(), filtro.categoria(),
-                SituacaoPatrimonio.ATIVO, filtro.conservacao());
-        return service.pesquisar(comSituacao, pageable);
+        return service.pesquisar(filtro.comSituacao(SituacaoPatrimonio.ATIVO), pageable);
     }
 
     /** Atalho: apenas baixados (aba "Baixados"). */
     @GetMapping("/baixados")
     public Page<PatrimonioResponse> baixados(@ModelAttribute FiltroPatrimonio filtro, Pageable pageable) {
-        FiltroPatrimonio comSituacao = new FiltroPatrimonio(
-                filtro.descricao(), filtro.numeroTombo(), filtro.lotacaoId(),
-                filtro.responsavelId(), filtro.upm(), filtro.categoria(),
-                SituacaoPatrimonio.BAIXADO, filtro.conservacao());
-        return service.pesquisar(comSituacao, pageable);
+        return service.pesquisar(filtro.comSituacao(SituacaoPatrimonio.BAIXADO), pageable);
     }
 
     @GetMapping("/{id}")

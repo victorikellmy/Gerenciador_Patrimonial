@@ -55,6 +55,14 @@ public class ResponsavelService {
         return responsavelRepository.findAll(pageable).map(ResponsavelResponse::from);
     }
 
+    /** Lista completa para popular dropdowns — substitui o anti-padrão {@code PageRequest.of(0, 1000)}. */
+    @Transactional(readOnly = true)
+    public List<ResponsavelResponse> listarParaSelect() {
+        return responsavelRepository.findAllByOrderByNomeCompletoAsc().stream()
+                .map(ResponsavelResponse::from)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public ResponsavelResponse buscarPorId(Long id) {
         return ResponsavelResponse.from(buscarEntidade(id));

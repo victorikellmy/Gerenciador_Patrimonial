@@ -17,4 +17,11 @@ public record FiltroPatrimonio(
         String categoria,
         SituacaoPatrimonio situacao,
         Conservacao conservacao
-) {}
+) {
+    /** Cópia com a situação trocada — usado pelos atalhos /ativos e /baixados. */
+    public FiltroPatrimonio comSituacao(SituacaoPatrimonio novaSituacao) {
+        return new FiltroPatrimonio(
+                descricao, numeroTombo, lotacaoId, responsavelId,
+                upm, categoria, novaSituacao, conservacao);
+    }
+}

@@ -1,5 +1,6 @@
 package com.fundacao.gerenciador_patrimonial.web;
 
+import com.fundacao.gerenciador_patrimonial.domain.catalog.SubcategoriaCatalog;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Conservacao;
 import com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.enums.TipoAnexo;
@@ -7,10 +8,8 @@ import com.fundacao.gerenciador_patrimonial.dto.request.BaixaRequest;
 import com.fundacao.gerenciador_patrimonial.dto.request.FiltroPatrimonio;
 import com.fundacao.gerenciador_patrimonial.dto.request.MovimentacaoRequest;
 import com.fundacao.gerenciador_patrimonial.dto.request.PatrimonioRequest;
-import com.fundacao.gerenciador_patrimonial.dto.response.LotacaoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.MovimentacaoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.PatrimonioResponse;
-import com.fundacao.gerenciador_patrimonial.dto.response.ResponsavelResponse;
 import com.fundacao.gerenciador_patrimonial.repository.LotacaoRepository;
 import com.fundacao.gerenciador_patrimonial.repository.PatrimonioRepository;
 import com.fundacao.gerenciador_patrimonial.service.AnexoService;
@@ -21,7 +20,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -37,16 +35,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PatrimonioWebController {
 
-    /** Subcategorias temporárias — quando houver tabela de domínio, mover para repositório. */
-    private static final List<String> SUBCATEGORIAS = List.of(
-            "Computadores", "Mesas", "Cadeiras", "Ar condicionado");
-
     private final PatrimonioService patrimonioService;
     private final LotacaoService lotacaoService;
     private final ResponsavelService responsavelService;
     private final AnexoService anexoService;
     private final LotacaoRepository lotacaoRepository;
     private final PatrimonioRepository patrimonioRepository;
+    private final SubcategoriaCatalog subcategoriaCatalog;
 
     // =========================================================================
     // Listagem com filtros
@@ -291,17 +286,11 @@ public class PatrimonioWebController {
     // =========================================================================
 
     private void prepararListasAuxiliares(Model model) {
-        Pageable todos = PageRequest.of(0, 1000, Sort.by("upm", "nome"));
-        List<LotacaoResponse> lotacoes = lotacaoService.listar(todos).getContent();
-
-        Pageable respPg = PageRequest.of(0, 1000, Sort.by("nomeCompleto"));
-        List<ResponsavelResponse> responsaveis = responsavelService.listar(respPg).getContent();
-
-        model.addAttribute("lotacoes", lotacoes);
-        model.addAttribute("responsaveis", responsaveis);
-        model.addAttribute("conservacoes", Conservacao.values());
-        model.addAttribute("categorias", patrimonioRepository.findDistinctCategorias());
-        model.addAttribute("subcategorias", SUBCATEGORIAS);
-        model.addAttribute("tiposAnexo", TipoAnexo.values());
+        model.addAttribute("lotacoes",      lotacaoService.listarParaSelect());
+        model.addAttribute("responsaveis",  responsavelService.listarParaSelect());
+        model.addAttribute("conservacoes",  Conservacao.values());
+        model.addAttribute("categorias",    patrimonioRepository.findDistinctCategorias());
+        model.addAttribute("subcategorias", subcategoriaCatalog.disponiveis());
+        model.addAttribute("tiposAnexo",    TipoAnexo.values());
     }
 }

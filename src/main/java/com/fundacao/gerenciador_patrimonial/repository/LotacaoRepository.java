@@ -17,6 +17,13 @@ public interface LotacaoRepository extends JpaRepository<Lotacao, Long> {
     /** Listagem simples por UPM. */
     List<Lotacao> findByUpmOrderByNomeAsc(String upm);
 
+    /**
+     * Lista completa ordenada para popular {@code <select>} de formulários.
+     * Sem paginação: retornar todas é o comportamento esperado no dropdown.
+     * Em PostgreSQL, com índice composto em (upm, nome), o sort sai do índice.
+     */
+    List<Lotacao> findAllByOrderByUpmAscNomeAsc();
+
     boolean existsByUpmAndNome(String upm, String nome);
 
     /** UPMs distintas, ordenadas — alimenta dropdowns de filtro. */

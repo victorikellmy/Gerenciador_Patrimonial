@@ -1,7 +1,10 @@
 package com.fundacao.gerenciador_patrimonial.domain.entity;
 
+import com.fundacao.gerenciador_patrimonial.domain.diff.DiffPatrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Conservacao;
 import com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio;
+import com.fundacao.gerenciador_patrimonial.dto.request.PatrimonioRequest;
+import com.fundacao.gerenciador_patrimonial.exception.RegraDeNegocioException;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedBy;
@@ -30,8 +33,10 @@ import java.util.List;
         @Index(name = "idx_patrimonio_resp", columnList = "responsavel_id")
 })
 @EntityListeners(AuditingEntityListener.class)
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter(AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class Patrimonio {
 
@@ -137,5 +142,93 @@ public class Patrimonio {
         this.situacao   = SituacaoPatrimonio.BAIXADO;
         this.dataBaixa  = LocalDate.now();
         this.motivoBaixa = motivo;
+    }
+
+    /**
+     * Move o patrimônio para outra lotação e/ou responsável.
+     * Argumentos {@code null} mantêm o valor atual — útil quando só
+     * um dos dois muda. Invariante: bens baixados não podem ser movidos.
+     */
+    public void movimentar(Lotacao novaLotacao, Responsavel novoResponsavel) {
+        if (situacao == SituacaoPatrimonio.BAIXADO) {
+            throw new RegraDeNegocioException("Patrimônio baixado não pode ser movimentado.");
+        }
+        if (novaLotacao != null)    this.lotacao = novaLotacao;
+        if (novoResponsavel != null) this.responsavel = novoResponsavel;
+    }
+
+    /**
+     * Factory para novos cadastros — fixa {@code situacao = ATIVO} e delega a
+     * cópia dos campos para {@link #aplicar}. O diff retornado é descartado
+     * porque um novo registro não tem estado anterior para comparar.
+     */
+    public static Patrimonio criar(PatrimonioRequest req,
+                                   Lotacao lotacao,
+                                   Responsavel responsavel) {
+        Patrimonio p = new Patrimonio();
+        p.situacao = SituacaoPatrimonio.ATIVO;
+        p.aplicar(req, lotacao, responsavel);
+        return p;
+    }
+
+    /**
+     * Copia os campos editáveis do request para a entidade e devolve o
+     * {@link DiffPatrimonio} com as mudanças efetivadas. Único ponto de
+     * normalização (trim, nullIfBlank) — para que criação e edição sigam
+     * exatamente as mesmas regras.
+     *
+     * <p>Campos governados pelo ciclo de vida ({@code situacao},
+     * {@code dataBaixa}, {@code motivoBaixa}) são intencionalmente
+     * deixados de fora — ver {@link #darBaixa}.</p>
+     */
+    public DiffPatrimonio aplicar(PatrimonioRequest req,
+                                  Lotacao novaLotacao,
+                                  Responsavel novoResponsavel) {
+        String tomboNovo     = nullIfBlank(req.numeroTombo());
+        String descricaoNova = req.descricao().trim();
+        Long lotacaoIdAntes  = lotacao     != null ? lotacao.getId()     : null;
+        Long respIdAntes     = responsavel != null ? responsavel.getId() : null;
+        Long lotacaoIdNovo   = novaLotacao    != null ? novaLotacao.getId()    : null;
+        Long respIdNovo      = novoResponsavel != null ? novoResponsavel.getId() : null;
+
+        DiffPatrimonio diff = DiffPatrimonio.builder()
+                .compara("tombo",               this.numeroTombo,         tomboNovo)
+                .compara("descricao",           this.descricao,           descricaoNova)
+                .compara("categoria",           this.categoria,           req.categoria())
+                .compara("subcategoria",        this.subcategoria,        req.subcategoria())
+                .compara("dataCompra",          this.dataCompra,          req.dataCompra())
+                .compara("valorCompra",         this.valorCompra,         req.valorCompra())
+                .compara("conservacao",         this.conservacao,         req.conservacao())
+                .compara("notaFiscal",          this.notaFiscal,          req.notaFiscal())
+                .compara("valorRecuperavel",    this.valorRecuperavel,    req.valorRecuperavel())
+                .compara("conclusaoImpairment", this.conclusaoImpairment, req.conclusaoImpairment())
+                .compara("observacao",          this.observacao,          req.observacao())
+                .compara("linkReferencia",      this.linkReferencia,      req.linkReferencia())
+                .compara("lotacaoId",           lotacaoIdAntes,           lotacaoIdNovo)
+                .compara("responsavelId",       respIdAntes,              respIdNovo)
+                .build();
+
+        this.numeroTombo         = tomboNovo;
+        this.descricao           = descricaoNova;
+        this.categoria           = req.categoria();
+        this.subcategoria        = req.subcategoria();
+        this.dataCompra          = req.dataCompra();
+        this.valorCompra         = req.valorCompra();
+        this.conservacao         = req.conservacao();
+        this.notaFiscal          = req.notaFiscal();
+        this.valorRecuperavel    = req.valorRecuperavel();
+        this.conclusaoImpairment = req.conclusaoImpairment();
+        this.observacao          = req.observacao();
+        this.linkReferencia      = req.linkReferencia();
+        this.lotacao             = novaLotacao;
+        this.responsavel         = novoResponsavel;
+
+        return diff;
+    }
+
+    private static String nullIfBlank(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
     }
 }

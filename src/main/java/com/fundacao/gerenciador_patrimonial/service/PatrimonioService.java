@@ -1,5 +1,6 @@
 package com.fundacao.gerenciador_patrimonial.service;
 
+import com.fundacao.gerenciador_patrimonial.domain.diff.DiffPatrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Lotacao;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Movimentacao;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
@@ -49,25 +50,11 @@ public class PatrimonioService {
     public PatrimonioResponse criar(PatrimonioRequest request) {
         validarTomboUnico(request.numeroTombo(), null);
 
-        Patrimonio p = Patrimonio.builder()
-                .numeroTombo(nullIfBlank(request.numeroTombo()))
-                .descricao(request.descricao().trim())
-                .categoria(request.categoria())
-                .subcategoria(request.subcategoria())
-                .dataCompra(request.dataCompra())
-                .valorCompra(request.valorCompra())
-                .conservacao(request.conservacao())
-                .notaFiscal(request.notaFiscal())
-                .valorRecuperavel(request.valorRecuperavel())
-                .conclusaoImpairment(request.conclusaoImpairment())
-                .observacao(request.observacao())
-                .linkReferencia(request.linkReferencia())
-                .situacao(SituacaoPatrimonio.ATIVO)
-                .lotacao(buscarLotacao(request.lotacaoId()))
-                .responsavel(buscarResponsavel(request.responsavelId()))
-                .build();
+        Patrimonio salvo = patrimonioRepository.save(Patrimonio.criar(
+                request,
+                buscarLotacao(request.lotacaoId()),
+                buscarResponsavel(request.responsavelId())));
 
-        Patrimonio salvo = patrimonioRepository.save(p);
         auditoriaService.registrar(AcaoAuditoria.CREATE, ENT, salvo.getId(),
                 "Cadastro: tombo=%s, descrição=%s, categoria=%s"
                         .formatted(salvo.getNumeroTombo(), salvo.getDescricao(), salvo.getCategoria()));
@@ -78,49 +65,13 @@ public class PatrimonioService {
         Patrimonio p = buscar(id);
         validarTomboUnico(request.numeroTombo(), id);
 
-        StringBuilder diff = new StringBuilder();
-        diff(diff, "tombo",      p.getNumeroTombo(),                         nullIfBlank(request.numeroTombo()));
-        diff(diff, "descricao",  p.getDescricao(),                           request.descricao().trim());
-        diff(diff, "categoria",  p.getCategoria(),                           request.categoria());
-        diff(diff, "subcategoria", p.getSubcategoria(),                      request.subcategoria());
-        diff(diff, "dataCompra", String.valueOf(p.getDataCompra()),          String.valueOf(request.dataCompra()));
-        diff(diff, "valorCompra", String.valueOf(p.getValorCompra()),        String.valueOf(request.valorCompra()));
-        diff(diff, "conservacao", String.valueOf(p.getConservacao()),        String.valueOf(request.conservacao()));
-        diff(diff, "notaFiscal", p.getNotaFiscal(),                          request.notaFiscal());
-        diff(diff, "valorRecuperavel", String.valueOf(p.getValorRecuperavel()), String.valueOf(request.valorRecuperavel()));
-        diff(diff, "lotacaoId",  p.getLotacao() != null ? String.valueOf(p.getLotacao().getId()) : null,
-                                 String.valueOf(request.lotacaoId()));
-        diff(diff, "responsavelId", p.getResponsavel() != null ? String.valueOf(p.getResponsavel().getId()) : null,
-                                    String.valueOf(request.responsavelId()));
+        DiffPatrimonio diff = p.aplicar(
+                request,
+                buscarLotacao(request.lotacaoId()),
+                buscarResponsavel(request.responsavelId()));
 
-        p.setNumeroTombo(nullIfBlank(request.numeroTombo()));
-        p.setDescricao(request.descricao().trim());
-        p.setCategoria(request.categoria());
-        p.setSubcategoria(request.subcategoria());
-        p.setDataCompra(request.dataCompra());
-        p.setValorCompra(request.valorCompra());
-        p.setConservacao(request.conservacao());
-        p.setNotaFiscal(request.notaFiscal());
-        p.setValorRecuperavel(request.valorRecuperavel());
-        p.setConclusaoImpairment(request.conclusaoImpairment());
-        p.setObservacao(request.observacao());
-        p.setLinkReferencia(request.linkReferencia());
-        p.setLotacao(buscarLotacao(request.lotacaoId()));
-        p.setResponsavel(buscarResponsavel(request.responsavelId()));
-
-        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, id,
-                diff.length() == 0 ? "Salvar sem alterações detectadas" : diff.toString());
+        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, id, diff.descricao());
         return toResponse(p);
-    }
-
-    /** Anexa "campo: antes → depois" ao buffer só quando o valor mudou. */
-    private static void diff(StringBuilder buf, String campo, String antes, String depois) {
-        String a = (antes == null || "null".equals(antes)) ? "—" : antes;
-        String d = (depois == null || "null".equals(depois)) ? "—" : depois;
-        if (!a.equals(d)) {
-            if (buf.length() > 0) buf.append("; ");
-            buf.append(campo).append(": ").append(a).append(" → ").append(d);
-        }
     }
 
     @Transactional(readOnly = true)
@@ -142,6 +93,7 @@ public class PatrimonioService {
     /**
      * Move o patrimônio para outra lotação e/ou responsável.
      * Gera automaticamente um registro em {@code Movimentacao} para auditoria.
+     * A regra "baixado não pode ser movimentado" vive na entidade.
      */
     public PatrimonioResponse movimentar(Long id, MovimentacaoRequest request) {
         if (request.novaLotacaoId() == null && request.novoResponsavelId() == null) {
@@ -150,21 +102,13 @@ public class PatrimonioService {
         }
 
         Patrimonio p = buscar(id);
-        if (p.getSituacao() == SituacaoPatrimonio.BAIXADO) {
-            throw new RegraDeNegocioException("Patrimônio baixado não pode ser movimentado.");
-        }
-
         Lotacao lotacaoOrigem  = p.getLotacao();
         Responsavel respOrigem = p.getResponsavel();
 
-        if (request.novaLotacaoId() != null) {
-            p.setLotacao(buscarLotacao(request.novaLotacaoId()));
-        }
-        if (request.novoResponsavelId() != null) {
-            p.setResponsavel(buscarResponsavel(request.novoResponsavelId()));
-        }
+        p.movimentar(
+                request.novaLotacaoId()    != null ? buscarLotacao(request.novaLotacaoId())          : null,
+                request.novoResponsavelId() != null ? buscarResponsavel(request.novoResponsavelId()) : null);
 
-        // Trilha de auditoria — registra o usuário autenticado.
         Movimentacao mov = Movimentacao.builder()
                 .patrimonio(p)
                 .lotacaoOrigem(lotacaoOrigem)

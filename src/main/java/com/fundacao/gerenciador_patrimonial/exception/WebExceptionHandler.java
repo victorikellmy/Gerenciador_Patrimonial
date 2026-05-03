@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.util.UUID;
+
 /**
  * Tratamento de exceções para os controllers Web (views Thymeleaf).
  *
@@ -56,10 +58,12 @@ public class WebExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public String handleGeneric(Exception ex, Model model, HttpServletRequest req) {
-        log.error("Erro não tratado em rota web: {}", req.getRequestURI(), ex);
+        String trackingId = UUID.randomUUID().toString();
+        log.error("Erro não tratado em rota web [tracking={}]: {}", trackingId, req.getRequestURI(), ex);
         model.addAttribute("status", 500);
         model.addAttribute("titulo", "Erro interno");
-        model.addAttribute("mensagem", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName());
+        model.addAttribute("mensagem",
+                "Falha inesperada. Informe ao suporte o código " + trackingId + ".");
         return "erro";
     }
 }

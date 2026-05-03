@@ -2,6 +2,7 @@ package com.fundacao.gerenciador_patrimonial.service;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Conservacao;
+import com.fundacao.gerenciador_patrimonial.domain.projection.PatrimonioDepreciavel;
 import com.fundacao.gerenciador_patrimonial.repository.PercentualConservacaoRepository;
 import com.fundacao.gerenciador_patrimonial.repository.VidaUtilCategoriaRepository;
 import jakarta.annotation.PostConstruct;
@@ -91,8 +92,13 @@ public class DepreciacaoService {
         return perda.signum() > 0 ? perda.setScale(SCALE_VALOR, RoundingMode.HALF_UP) : ZERO;
     }
 
-    /** Cálculo usando "hoje" como data de referência. */
+    /** Adapter para a entidade — usado nos templates Thymeleaf e nos exporters. */
     public CalculoDepreciacao calcular(Patrimonio p) {
+        return p == null ? CalculoDepreciacao.vazio() : calcular(projecaoDe(p));
+    }
+
+    /** Cálculo usando "hoje" como data de referência. Caminho principal. */
+    public CalculoDepreciacao calcular(PatrimonioDepreciavel p) {
         return calcular(p, LocalDate.now(clock));
     }
 
@@ -100,36 +106,40 @@ public class DepreciacaoService {
      * Variante testável (data de referência injetável).
      * Despacha entre as duas estratégias com base na presença de {@code dataCompra}.
      */
-    public CalculoDepreciacao calcular(Patrimonio p, LocalDate hoje) {
-        if (p == null || p.getCategoria() == null || p.getValorCompra() == null) {
+    public CalculoDepreciacao calcular(PatrimonioDepreciavel p, LocalDate hoje) {
+        if (p == null || p.categoria() == null || p.valorCompra() == null) {
             return CalculoDepreciacao.vazio();
         }
-        Integer vut = vutPorCategoria.get(p.getCategoria().toUpperCase(Locale.ROOT));
+        Integer vut = vutPorCategoria.get(p.categoria().toUpperCase(Locale.ROOT));
         if (vut == null || vut <= 0) {
             return CalculoDepreciacao.vazio();
         }
 
         // Dispatch condicional: presença da data define a estratégia.
-        if (p.getDataCompra() != null) {
-            return calcularPorTempo(p, hoje, vut);
-        }
-        return calcularPorConservacao(p, vut);
+        return p.dataCompra() != null
+                ? calcularPorTempo(p, hoje, vut)
+                : calcularPorConservacao(p, vut);
+    }
+
+    private static PatrimonioDepreciavel projecaoDe(Patrimonio p) {
+        return new PatrimonioDepreciavel(
+                p.getCategoria(), p.getValorCompra(), p.getDataCompra(),
+                p.getConservacao(), p.getValorRecuperavel());
     }
 
     // =========================================================================
     // Estratégia A — TEMPO (cadastros novos com dataCompra)
     // =========================================================================
 
-    private CalculoDepreciacao calcularPorTempo(Patrimonio p, LocalDate hoje, int vut) {
-        BigDecimal valor = p.getValorCompra();
+    private CalculoDepreciacao calcularPorTempo(PatrimonioDepreciavel p, LocalDate hoje, int vut) {
+        BigDecimal valor = p.valorCompra();
         BigDecimal vutBd = BigDecimal.valueOf(vut);
 
-        long dias = ChronoUnit.DAYS.between(p.getDataCompra(), hoje);
-        if (dias < 0) dias = 0;                                  // data futura ⇒ ainda não depreciou
+        long dias = Math.max(0, ChronoUnit.DAYS.between(p.dataCompra(), hoje));  // futuro ⇒ não depreciou
 
         BigDecimal vudAnos = BigDecimal.valueOf(dias)
-                .divide(DIAS_POR_ANO, SCALE_ANOS, RoundingMode.HALF_UP);
-        if (vudAnos.compareTo(vutBd) > 0) vudAnos = vutBd;       // cap: não passa da VUT
+                .divide(DIAS_POR_ANO, SCALE_ANOS, RoundingMode.HALF_UP)
+                .min(vutBd);                                          // cap: não passa da VUT
 
         BigDecimal vurAnos = vutBd.subtract(vudAnos)
                 .max(BigDecimal.ZERO)
@@ -137,14 +147,15 @@ public class DepreciacaoService {
         BigDecimal pctVud  = vudAnos.divide(vutBd, SCALE_PCT, RoundingMode.HALF_UP);
 
         BigDecimal deprAno  = valor.divide(vutBd, SCALE_VALOR, RoundingMode.HALF_UP);
-        BigDecimal deprAcum = deprAno.multiply(vudAnos).setScale(SCALE_VALOR, RoundingMode.HALF_UP);
-        if (deprAcum.compareTo(valor) > 0) deprAcum = valor;     // cap: não deprecia além do custo
+        BigDecimal deprAcum = deprAno.multiply(vudAnos)
+                .setScale(SCALE_VALOR, RoundingMode.HALF_UP)
+                .min(valor);                                           // cap: não deprecia além do custo
         BigDecimal vcl = valor.subtract(deprAcum).setScale(SCALE_VALOR, RoundingMode.HALF_UP);
 
         return new CalculoDepreciacao(
                 vut, pctVud, vudAnos, vurAnos, deprAcum, vcl,
-                p.getValorRecuperavel(), calcularPerdaImpairment(vcl, p.getValorRecuperavel()),
-                deprAno, p.getDataCompra(), false);
+                p.valorRecuperavel(), calcularPerdaImpairment(vcl, p.valorRecuperavel()),
+                deprAno, p.dataCompra(), false);
     }
 
     // =========================================================================
@@ -152,15 +163,15 @@ public class DepreciacaoService {
     // Replica a fórmula original que existia antes da mudança time-based.
     // =========================================================================
 
-    private CalculoDepreciacao calcularPorConservacao(Patrimonio p, int vut) {
-        BigDecimal pctVud = p.getConservacao() != null
-                ? vudPorConservacao.get(p.getConservacao())
+    private CalculoDepreciacao calcularPorConservacao(PatrimonioDepreciavel p, int vut) {
+        BigDecimal pctVud = p.conservacao() != null
+                ? vudPorConservacao.get(p.conservacao())
                 : null;
         if (pctVud == null) {
             return CalculoDepreciacao.vazio();
         }
 
-        BigDecimal valor = p.getValorCompra();
+        BigDecimal valor = p.valorCompra();
         BigDecimal vutBd = BigDecimal.valueOf(vut);
 
         BigDecimal vudAnos  = vutBd.multiply(pctVud).setScale(SCALE_ANOS, RoundingMode.HALF_UP);
@@ -171,7 +182,7 @@ public class DepreciacaoService {
 
         return new CalculoDepreciacao(
                 vut, pctVud, vudAnos, vurAnos, deprAcum, vcl,
-                p.getValorRecuperavel(), calcularPerdaImpairment(vcl, p.getValorRecuperavel()),
+                p.valorRecuperavel(), calcularPerdaImpairment(vcl, p.valorRecuperavel()),
                 deprAno, null, true);
     }
 }

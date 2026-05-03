@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Conversor central de exceções em respostas HTTP uniformes (JSON).
@@ -58,11 +59,22 @@ public class GlobalExceptionHandler {
                         req.getRequestURI()));
     }
 
-    /** Fallback — qualquer exceção não prevista. */
+    /**
+     * Fallback — qualquer exceção não prevista.
+     *
+     * <p>Não devolve {@code ex.getMessage()} ao cliente: stack traces e mensagens
+     * cruas (ex.: SQL com nomes de coluna, paths de classe) podem expor detalhes
+     * internos. Em vez disso retornamos um {@code trackingId} que o usuário pode
+     * informar ao suporte — o stack completo fica nos logs sob o mesmo ID.</p>
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErroResponse> handleGeneric(Exception ex, HttpServletRequest req) {
-        log.error("Erro não tratado", ex);
+        String trackingId = UUID.randomUUID().toString();
+        log.error("Erro não tratado [tracking={}]", trackingId, ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ErroResponse.of(500, "Erro interno", ex.getMessage(), req.getRequestURI()));
+                .body(ErroResponse.of(500,
+                        "Erro interno",
+                        "Falha inesperada. Código de rastreamento: " + trackingId,
+                        req.getRequestURI()));
     }
 }

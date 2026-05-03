@@ -2,6 +2,7 @@ package com.fundacao.gerenciador_patrimonial.repository;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio;
+import com.fundacao.gerenciador_patrimonial.domain.projection.PatrimonioDepreciavel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,8 +23,21 @@ public interface PatrimonioRepository
     /** Listagem paginada por situação. */
     Page<Patrimonio> findBySituacao(SituacaoPatrimonio situacao, Pageable pageable);
 
-    /** Listagem completa por situação — usada por agregações que precisam iterar (ex.: dashboard). */
-    List<Patrimonio> findBySituacao(SituacaoPatrimonio situacao);
+    /**
+     * Projeção mínima dos ativos para cálculo de depreciação em massa.
+     *
+     * <p>Retorna apenas os 5 campos da fórmula — sem fetch de lotação,
+     * responsável, anexos ou histórico. Crítico em produção (PostgreSQL):
+     * substitui o antigo {@code findBySituacao(ATIVO)} que hidratava o
+     * agregado completo só para somar dois {@link BigDecimal}.</p>
+     */
+    @Query("""
+           select new com.fundacao.gerenciador_patrimonial.domain.projection.PatrimonioDepreciavel(
+                  p.categoria, p.valorCompra, p.dataCompra, p.conservacao, p.valorRecuperavel)
+           from Patrimonio p
+           where p.situacao = com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio.ATIVO
+           """)
+    List<PatrimonioDepreciavel> projecaoDepreciacaoAtivos();
 
     // =========================================================================
     // Agregações para Dashboard / Relatórios (Sprint 4)

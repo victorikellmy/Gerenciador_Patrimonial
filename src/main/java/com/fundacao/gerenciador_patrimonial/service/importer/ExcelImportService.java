@@ -264,12 +264,15 @@ public class ExcelImportService {
         }
 
         // --- Patrimônio ---
+        EstadoConservacao estado = EstadoConservacao.resolver(consRaw);
         Patrimonio patrimonio = Patrimonio.builder()
                 .numeroTombo(tombo)
                 .descricao(descricao)
                 .categoria(categoria)
                 .dataCompra(data)
                 .valorCompra(valor)
+                .conservacao(estado.conservacao())
+                .situacao(estado.situacao())
                 .notaFiscal(nf)
                 .valorRecuperavel(valorRec)
                 .conclusaoImpairment(truncar(conclusao, 255))
@@ -278,27 +281,30 @@ public class ExcelImportService {
                 .lotacao(lotacao)
                 .responsavel(responsavel)
                 .build();
-
-        resolverConservacaoESituacao(patrimonio, consRaw);
         patrimonioRepo.save(patrimonio);
 
         return ResultadoLinha.ok(lotacaoCriada, responsavelCriado);
     }
 
     /**
-     * Valores "CAUTELADO" e "TECNICO" na coluna de conservação não são estados
-     * físicos — são <b>situações administrativas</b>. Isolamos aqui.
+     * Resolve o par (conservação, situação) a partir do texto bruto da planilha.
+     *
+     * <p>Valores "CAUTELADO" e "TECNICO" na coluna de conservação não são
+     * estados físicos — são <b>situações administrativas</b>. Pure function:
+     * sem mutação, fácil de testar isoladamente.</p>
      */
-    private void resolverConservacaoESituacao(Patrimonio p, String consRaw) {
-        Conservacao c = Conservacao.fromPlanilha(consRaw);
-        if (c != null) {
-            p.setConservacao(c);
-            p.setSituacao(SituacaoPatrimonio.ATIVO);
-        } else if (consRaw != null && consRaw.trim().equalsIgnoreCase("CAUTELADO")) {
-            p.setSituacao(SituacaoPatrimonio.CAUTELADO);
-        } else {
+    private record EstadoConservacao(Conservacao conservacao, SituacaoPatrimonio situacao) {
+
+        static EstadoConservacao resolver(String consRaw) {
+            Conservacao c = Conservacao.fromPlanilha(consRaw);
+            if (c != null) {
+                return new EstadoConservacao(c, SituacaoPatrimonio.ATIVO);
+            }
+            if (consRaw != null && consRaw.trim().equalsIgnoreCase("CAUTELADO")) {
+                return new EstadoConservacao(null, SituacaoPatrimonio.CAUTELADO);
+            }
             // TECNICO, vazio, valor desconhecido — precisa revisão manual
-            p.setSituacao(SituacaoPatrimonio.EM_APURACAO);
+            return new EstadoConservacao(null, SituacaoPatrimonio.EM_APURACAO);
         }
     }
 

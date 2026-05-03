@@ -1,7 +1,6 @@
 package com.fundacao.gerenciador_patrimonial.service.dashboard;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Movimentacao;
-import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio;
 import com.fundacao.gerenciador_patrimonial.dto.response.AgrupamentoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.DashboardMetrics;
@@ -77,13 +76,14 @@ public class DashboardService {
                 .toList();
 
         // ----------------- soma de valores + depreciação -----------------
-        // Valor total ainda é uma agregação SQL (rápida).
-        // Depreciação e VCL exigem cálculo time-based por item — feitos em Java
-        // para manter consistência com DepreciacaoService (única fonte da fórmula).
+        // Valor total: agregação SQL pura (rápida).
+        // Depreciação/VCL: cálculo time-based exige iteração — usamos a projeção
+        // mínima (5 colunas, sem fetch de relacionamentos) para não hidratar o
+        // agregado completo. Mantém o DepreciacaoService como única fonte da fórmula.
         BigDecimal valorTotal   = patrimonioRepo.somarValorAtivos();
         BigDecimal depAcumTotal = BigDecimal.ZERO;
         BigDecimal vclTotal     = BigDecimal.ZERO;
-        for (Patrimonio p : patrimonioRepo.findBySituacao(SituacaoPatrimonio.ATIVO)) {
+        for (var p : patrimonioRepo.projecaoDepreciacaoAtivos()) {
             CalculoDepreciacao calc = depreciacaoService.calcular(p);
             depAcumTotal = depAcumTotal.add(calc.depreciacaoAcumulada());
             vclTotal     = vclTotal.add(calc.valorContabilLiquido());

@@ -64,6 +64,14 @@ public class LotacaoService {
         return lotacaoRepository.findAll(pageable).map(LotacaoResponse::from);
     }
 
+    /** Lista completa para popular dropdowns — substitui o anti-padrão {@code PageRequest.of(0, 1000)}. */
+    @Transactional(readOnly = true)
+    public List<LotacaoResponse> listarParaSelect() {
+        return lotacaoRepository.findAllByOrderByUpmAscNomeAsc().stream()
+                .map(LotacaoResponse::from)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public LotacaoResponse buscarPorId(Long id) {
         return LotacaoResponse.from(buscarEntidade(id));
