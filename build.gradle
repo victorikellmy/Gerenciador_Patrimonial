@@ -16,10 +16,14 @@ java {
 }
 
 repositories {
+    mavenLocal()   // fpto-commons publicada localmente (com.fpto:fpto-commons)
     mavenCentral()
 }
 
 dependencies {
+    // --- Contratos e cross-cutting compartilhados do ecossistema FPTO ---
+    implementation 'com.fpto:fpto-commons:0.1.0'
+
     // --- Core Spring Boot ---
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
