@@ -34,4 +34,4 @@ app:
 logging:
   level:
     root: INFO
-    com.fundacao.gerenciador_patrimonial: DEBUG
+    com.fpto.patrimonio: DEBUG
