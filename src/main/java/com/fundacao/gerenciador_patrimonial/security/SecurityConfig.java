@@ -12,7 +12,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 /**
  * Configuração central do Spring Security.
@@ -77,7 +76,7 @@ public class SecurityConfig {
                                 "/webjars/**", "/favicon.ico"
                         ).permitAll()
                         // H2 console (dev)
-                        .requestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")).permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
 
                         // --- áreas restritas ao ADMINISTRADOR ---
                         .requestMatchers("/usuarios/**").hasRole("ADMINISTRADOR")
@@ -106,7 +105,7 @@ public class SecurityConfig {
                 // H2 console usa frames — liberar apenas em mesmo origem
                 .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 // CSRF habilitado por padrão, mas desabilitado no H2 console (dev)
-                .csrf(c -> c.ignoringRequestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")));
+                .csrf(c -> c.ignoringRequestMatchers("/h2-console/**"));
         return http.build();
     }
 }

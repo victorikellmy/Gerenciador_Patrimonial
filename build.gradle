@@ -1,8 +1,8 @@
 plugins {
     id 'java'
-    // Spring Boot 3.3.x — versão LTS estável
-    id 'org.springframework.boot' version '3.3.5'
-    id 'io.spring.dependency-management' version '1.1.6'
+    // Spring Boot 4.0.x — baseline do ecossistema FPTO
+    id 'org.springframework.boot' version '4.0.6'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.fundacao'
@@ -11,12 +11,9 @@ description = 'Gerenciador_Patrimonial'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
-
-// Sobrepõe a versão de Flyway gerenciada pelo Spring Boot 3.3.5
-ext['flyway.version'] = '10.20.1'
 
 repositories {
     mavenCentral()
@@ -34,6 +31,9 @@ dependencies {
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
     // --- Migrações de banco (Flyway) ---
+    // Boot 4 modularizou as autoconfigs: o módulo spring-boot-flyway precisa
+    // ser declarado explicitamente (não vem mais transitivo do flyway-core).
+    implementation 'org.springframework.boot:spring-boot-flyway'
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly    'org.flywaydb:flyway-database-postgresql'
 
