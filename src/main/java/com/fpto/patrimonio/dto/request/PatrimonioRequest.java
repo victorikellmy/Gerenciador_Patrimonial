@@ -1,0 +1,52 @@
+package com.fpto.patrimonio.dto.request;
+
+import com.fpto.patrimonio.domain.enums.Conservacao;
+import jakarta.validation.constraints.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+/**
+ * Payload de criação/atualização de Patrimônio.
+ *
+ * <p>Situação não é aceita aqui — é controlada por endpoints específicos
+ * (baixa, movimentação). Isso previne que um cliente mal-intencionado
+ * "reviva" um bem baixado via PUT comum.</p>
+ */
+public record PatrimonioRequest(
+        @Size(max = 30) String numeroTombo,
+
+        @NotBlank(message = "Descrição é obrigatória")
+        @Size(max = 255)
+        String descricao,
+
+        @Size(max = 60) String categoria,
+
+        @Size(max = 60) String subcategoria,
+
+        @NotNull(message = "Data de aquisição é obrigatória")
+        @PastOrPresent(message = "Data de aquisição não pode ser futura")
+        LocalDate dataCompra,
+
+        @PositiveOrZero(message = "Valor de compra não pode ser negativo")
+        BigDecimal valorCompra,
+
+        Conservacao conservacao,
+
+        @Size(max = 60) String notaFiscal,
+
+        @PositiveOrZero(message = "Valor recuperável não pode ser negativo")
+        BigDecimal valorRecuperavel,
+
+        @Size(max = 255) String conclusaoImpairment,
+
+        @Size(max = 1000) String observacao,
+
+        @Size(max = 2000) String linkReferencia,
+
+        @NotNull(message = "Lotação é obrigatória")
+        Long lotacaoId,
+
+        @NotNull(message = "Responsável é obrigatório")
+        Long responsavelId
+) {}

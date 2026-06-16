@@ -34,4 +34,7 @@ app:
 logging:
   level:
     root: INFO
-    com.fundacao.gerenciador_patrimonial: DEBUG
+    com.fpto.patrimonio: DEBUG
+  pattern:
+    # Inclui o correlationId (MDC) em cada linha de log — rastreio entre serviços
+    level: "%5p [%X{correlationId:-}]"

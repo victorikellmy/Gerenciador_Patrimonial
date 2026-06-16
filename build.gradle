@@ -1,28 +1,40 @@
 plugins {
     id 'java'
-    // Spring Boot 3.3.x — versão LTS estável
-    id 'org.springframework.boot' version '3.3.5'
-    id 'io.spring.dependency-management' version '1.1.6'
+    // Spring Boot 4.0.x — baseline do ecossistema FPTO
+    id 'org.springframework.boot' version '4.0.6'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'com.fundacao'
+group = 'com.fpto'
 version = '0.0.1-SNAPSHOT'
 description = 'Gerenciador_Patrimonial'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
-// Sobrepõe a versão de Flyway gerenciada pelo Spring Boot 3.3.5
-ext['flyway.version'] = '10.20.1'
-
 repositories {
+    mavenLocal()   // atalho de dev (se a fpto-commons estiver no ~/.m2)
+    // GitHub Packages — fpto-commons (somente grupo com.fpto; demais deps vêm do mavenCentral).
+    // Credenciais via env GITHUB_ACTOR/GITHUB_TOKEN ou props gpr.user/gpr.key (token com read:packages).
+    maven {
+        name = 'GitHubPackages'
+        url = uri('https://maven.pkg.github.com/victorikellmy/fpto-commons')
+        credentials {
+            username = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
+            password = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.key')
+        }
+        content { includeGroup 'com.fpto' }
+    }
     mavenCentral()
 }
 
 dependencies {
+    // --- Contratos e cross-cutting compartilhados do ecossistema FPTO ---
+    implementation 'com.fpto:fpto-commons:0.1.0'
+
     // --- Core Spring Boot ---
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
@@ -34,6 +46,9 @@ dependencies {
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
     // --- Migrações de banco (Flyway) ---
+    // Boot 4 modularizou as autoconfigs: o módulo spring-boot-flyway precisa
+    // ser declarado explicitamente (não vem mais transitivo do flyway-core).
+    implementation 'org.springframework.boot:spring-boot-flyway'
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly    'org.flywaydb:flyway-database-postgresql'
 
