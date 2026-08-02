@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Status da Importação')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/importacao}" title="Nova importação">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">
+                    <i class="bi bi-file-earmark-excel me-2" style="color: var(--primary-600);"></i>
+                    Importação de Patrimônio
+                </h1>
+                <div class="page-subtitle">
+                    Arquivo: <strong th:text="${job.arquivoNome} ?: '—'"></strong> ·
+                    Aba: <strong th:text="${job.sheet} ?: '(primeira)'"></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ EM ANDAMENTO ============================ -->
+    <div th:if="${job.estado.name() == 'EM_ANDAMENTO'}" class="card card-panel mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div class="spinner-border spinner-border-sm" role="status" style="color: var(--primary-600);"></div>
+                <strong>Importando…</strong>
+                <span class="text-muted" th:if="${job.total > 0}"
+                      th:text="${job.processadas} + ' de ' + ${job.total} + ' linhas'"></span>
+                <span class="text-muted" th:if="${job.total == 0}">lendo a planilha…</span>
+            </div>
+            <div class="progress" style="height: 10px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                     th:style="'width:' + ${job.percentual} + '%'"></div>
+            </div>
+            <div class="small text-muted mt-2">
+                A página atualiza automaticamente. Você pode navegar para outras telas —
+                a importação continua em segundo plano.
+            </div>
+        </div>
+    </div>
+    <!-- Recarrega a cada 2s enquanto o job roda -->
+    <script th:if="${job.estado.name() == 'EM_ANDAMENTO'}">
+        setTimeout(function () { window.location.reload(); }, 2000);
+    </script>
+
+    <!-- ============================ FALHOU ============================ -->
+    <div th:if="${job.estado.name() == 'FALHOU'}" class="alert alert-danger">
+        <i class="bi bi-x-octagon-fill"></i>
+        <div>
+            <strong>A importação falhou.</strong>
+            <div th:text="${job.mensagemErro}"></div>
+        </div>
+    </div>
+
+    <!-- ============================ CONCLUÍDO ============================ -->
+    <div th:if="${job.estado.name() == 'CONCLUIDO'}" class="card card-panel">
+        <div class="card-body">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">
+                        <i class="bi bi-check2-circle me-2" style="color: var(--success);"></i>
+                        Importação concluída
+                    </div>
+                    <div class="chart-subtitle" th:if="${job.fim != null}">
+                        Finalizada em
+                        <span th:text="${#temporals.format(job.fim, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== KPIs =============== -->
+            <div class="row g-3 mb-4" th:with="resultado=${job.resultado}">
+                <div class="col-md-3 col-6">
+                    <div class="card card-panel h-100">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="kpi-icon kpi-icon-primary"><i class="bi bi-list-ol"></i></div>
+                                <div>
+                                    <div class="kpi-label">Total lidas</div>
+                                    <div class="kpi-value tabular-nums" th:text="${resultado.total}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-panel h-100">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="kpi-icon kpi-icon-success"><i class="bi bi-check-lg"></i></div>
+                                <div>
+                                    <div class="kpi-label">Importadas</div>
+                                    <div class="kpi-value tabular-nums" th:text="${resultado.importados}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-panel h-100">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="kpi-icon kpi-icon-warning"><i class="bi bi-dash-circle"></i></div>
+                                <div>
+                                    <div class="kpi-label">Ignoradas</div>
+                                    <div class="kpi-value tabular-nums" th:text="${resultado.ignorados}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card card-panel h-100">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="kpi-icon kpi-icon-danger"><i class="bi bi-x-circle"></i></div>
+                                <div>
+                                    <div class="kpi-label">Com erro</div>
+                                    <div class="kpi-value tabular-nums" th:text="${resultado.erros.size()}">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== Entidades criadas =============== -->
+            <div class="row g-2 mb-4" th:with="resultado=${job.resultado}">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-2 p-3"
+                         style="background: var(--bg-muted); border-radius: var(--radius-sm);">
+                        <i class="bi bi-building" style="color: var(--primary-600);"></i>
+                        <span class="text-muted">Lotações criadas:</span>
+                        <strong class="tabular-nums" th:text="${resultado.lotacoesCriadas}">0</strong>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-2 p-3"
+                         style="background: var(--bg-muted); border-radius: var(--radius-sm);">
+                        <i class="bi bi-person-plus" style="color: var(--primary-600);"></i>
+                        <span class="text-muted">Responsáveis criados:</span>
+                        <strong class="tabular-nums" th:text="${resultado.responsaveisCriados}">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== Lista de erros =============== -->
+            <div th:with="resultado=${job.resultado}" th:if="${!job.resultado.erros.isEmpty()}">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-exclamation-triangle-fill" style="color: var(--danger);"></i>
+                    <strong>Erros encontrados:</strong>
+                    <span class="badge badge-sit BAIXADO" th:text="${resultado.erros.size()}"></span>
+                </div>
+                <div class="table-responsive" style="max-height: 360px;">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">#</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="err, iter : ${resultado.erros}">
+                                <td class="text-muted tabular-nums" th:text="${iter.count}"></td>
+                                <td th:text="${err}"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

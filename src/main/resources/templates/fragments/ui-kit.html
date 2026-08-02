@@ -72,12 +72,22 @@
                 acrescenta page= e size=. Ex.: '/usuarios?' ou
                 '/patrimonios?upm=X&'
      ======================================================== -->
-<nav th:fragment="pagination(pagina, baseUrl)" th:if="${pagina.totalPages > 1}"
+<nav th:fragment="pagination(pagina, baseUrl)" th:if="${pagina.totalPages > 1 or pagina.totalElements > 20}"
      class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <div class="small text-muted">
-        Página <strong th:text="${pagina.number + 1}"></strong> de
-        <strong th:text="${pagina.totalPages}"></strong> ·
-        <span th:text="${pagina.totalElements}"></span> registros
+    <div class="small text-muted d-flex align-items-center gap-2">
+        <span>
+            Página <strong th:text="${pagina.number + 1}"></strong> de
+            <strong th:text="${pagina.totalPages}"></strong> ·
+            <span th:text="${pagina.totalElements}"></span> registros
+        </span>
+        <span class="d-flex align-items-center gap-1">
+            · por página:
+            <a th:each="opt : ${ {20, 50, 100} }"
+               th:href="${baseUrl + 'page=0&size=' + opt}"
+               th:text="${opt}"
+               th:classappend="${pagina.size == opt} ? 'fw-bold text-decoration-none' : ''"
+               class="px-1"></a>
+        </span>
     </div>
     <ul class="pagination mb-0">
         <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">

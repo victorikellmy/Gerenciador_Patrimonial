@@ -31,7 +31,8 @@ public class UsuarioWebController {
                          @RequestParam(defaultValue = "20") int size,
                          Model model) {
         Page<UsuarioResponse> pagina = usuarioService.listar(
-                PageRequest.of(page, size, Sort.by("nomeCompleto")));
+                PageRequest.of(page, com.fundacao.gerenciador_patrimonial.util.Paginacao.clampSize(size),
+                        Sort.by("nomeCompleto")));
         model.addAttribute("pagina", pagina);
         return "usuarios/list";
     }

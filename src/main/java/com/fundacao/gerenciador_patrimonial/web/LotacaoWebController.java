@@ -27,7 +27,8 @@ public class LotacaoWebController {
                          @RequestParam(defaultValue = "20") int size,
                          Model model) {
         Page<LotacaoResponse> pagina = lotacaoService.listar(
-                PageRequest.of(page, size, Sort.by("upm", "nome")));
+                PageRequest.of(page, com.fundacao.gerenciador_patrimonial.util.Paginacao.clampSize(size),
+                        Sort.by("upm", "nome")));
         model.addAttribute("pagina", pagina);
         if (!model.containsAttribute("lotacaoForm")) {
             model.addAttribute("lotacaoForm",

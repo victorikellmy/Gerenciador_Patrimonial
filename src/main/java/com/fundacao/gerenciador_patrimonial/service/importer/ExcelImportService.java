@@ -131,15 +131,25 @@ public class ExcelImportService {
         Path tmp = Files.createTempFile("import-", ".xlsx");
         try {
             Files.copy(inputStream, tmp, StandardCopyOption.REPLACE_EXISTING);
-            try (Workbook wb = WorkbookFactory.create(tmp.toFile(), null, true)) {
-                return importarWorkbook(wb, nomeSheet);
-            }
+            return importar(tmp, nomeSheet, ProgressoImportacao.NENHUM);
         } finally {
             Files.deleteIfExists(tmp);
         }
     }
 
-    private ImportResult importarWorkbook(Workbook wb, String nomeSheet) {
+    /**
+     * Variante usada pelo job assíncrono: lê direto de um arquivo já salvo
+     * (o chamador é dono do arquivo) e reporta progresso por chunk.
+     */
+    public ImportResult importar(Path arquivo, String nomeSheet, ProgressoImportacao progresso)
+            throws IOException {
+        try (Workbook wb = WorkbookFactory.create(arquivo.toFile(), null, true)) {
+            return importarWorkbook(wb, nomeSheet,
+                    progresso != null ? progresso : ProgressoImportacao.NENHUM);
+        }
+    }
+
+    private ImportResult importarWorkbook(Workbook wb, String nomeSheet, ProgressoImportacao progresso) {
         Sheet sheet;
         if (nomeSheet != null) {
             sheet = wb.getSheet(nomeSheet);
@@ -171,6 +181,8 @@ public class ExcelImportService {
         int total = linhas.size();
         int importados = 0, lotacoesCriadas = 0, responsaveisCriados = 0;
         List<String> erros = new ArrayList<>();
+        int linhasProcessadas = 0;
+        progresso.atualizar(0, total);
 
         for (int i = 0; i < linhas.size(); i += LINHAS_POR_TRANSACAO) {
             List<Row> chunk = linhas.subList(i, Math.min(i + LINHAS_POR_TRANSACAO, linhas.size()));
@@ -217,6 +229,9 @@ public class ExcelImportService {
                     importados++;
                 }
             }
+
+            linhasProcessadas += chunk.size();
+            progresso.atualizar(linhasProcessadas, total);
         }
 
         log.info("Importação concluída: {}/{} linhas importadas, {} ignoradas. {} lotações e {} responsáveis novos.",

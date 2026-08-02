@@ -53,7 +53,8 @@ public class PatrimonioWebController {
                          @RequestParam(defaultValue = "20") int size,
                          Model model) {
         Page<PatrimonioResponse> pagina = patrimonioService.pesquisar(
-                filtro, PageRequest.of(page, size, Sort.by("id").descending()));
+                filtro, PageRequest.of(page, com.fundacao.gerenciador_patrimonial.util.Paginacao.clampSize(size),
+                        Sort.by("id").descending()));
 
         model.addAttribute("pagina", pagina);
         model.addAttribute("filtro", filtro);

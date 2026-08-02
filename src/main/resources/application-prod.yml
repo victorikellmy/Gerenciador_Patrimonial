@@ -17,7 +17,10 @@ spring:
         show_sql: false
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    # Migrations específicas do Postgres (índices funcionais, pg_trgm) ficam
+    # FORA de db/migration — o Flyway varre aquela pasta recursivamente, e o
+    # H2 do dev/testes não pode enxergá-las.
+    locations: classpath:db/migration,classpath:db/vendor/postgresql
 
 # Em produção o seed automático fica desligado — dados reais vêm via importação manual.
 app:

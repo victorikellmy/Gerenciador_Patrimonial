@@ -7,8 +7,11 @@ import com.fundacao.gerenciador_patrimonial.dto.request.UsuarioRequest;
 import com.fundacao.gerenciador_patrimonial.dto.response.UsuarioResponse;
 import com.fundacao.gerenciador_patrimonial.exception.RecursoNaoEncontradoException;
 import com.fundacao.gerenciador_patrimonial.exception.RegraDeNegocioException;
+import com.fundacao.gerenciador_patrimonial.config.CacheConfig;
 import com.fundacao.gerenciador_patrimonial.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +38,7 @@ public class UsuarioService {
     private final UsuarioRepository repo;
     private final PasswordEncoder passwordEncoder;
     private final AuditoriaService auditoriaService;
+    private final CacheManager cacheManager;
 
     // =========================================================================
     // CRUD básico
@@ -97,6 +101,10 @@ public class UsuarioService {
         if (trocouSenha) {
             u.setSenhaHash(passwordEncoder.encode(req.senha()));
         }
+        // Invalida o cache de autenticação da API (login antigo e novo).
+        evictUserCache(loginAntes);
+        evictUserCache(novoLogin);
+
         // Entidade managed: o dirty checking persiste no commit — save() seria um merge redundante.
         auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, id,
                 "Nome: %s → %s; Login: %s → %s; Perfil: %s → %s; Ativo: %s → %s; Senha alterada: %s".formatted(
@@ -113,6 +121,7 @@ public class UsuarioService {
     public void inativar(Long id) {
         Usuario u = buscarEntidade(id);
         u.setAtivo(false);
+        evictUserCache(u.getLogin());
         auditoriaService.registrar(AcaoAuditoria.DELETE, ENT, id,
                 "Inativação: login=%s, nome=%s".formatted(u.getLogin(), u.getNomeCompleto()));
     }
@@ -134,6 +143,7 @@ public class UsuarioService {
             throw new RegraDeNegocioException("Senha atual incorreta.");
         }
         u.setSenhaHash(passwordEncoder.encode(req.novaSenha()));
+        evictUserCache(login);
         auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, u.getId(),
                 "Troca de senha pelo próprio usuário (login=%s)".formatted(login));
     }
@@ -145,5 +155,13 @@ public class UsuarioService {
     private Usuario buscarEntidade(Long id) {
         return repo.findById(id).orElseThrow(() ->
                 new RecursoNaoEncontradoException("Usuário não encontrado: id=" + id));
+    }
+
+    /** Remove o usuário do cache de autenticação da API (ver SecurityConfig). */
+    private void evictUserCache(String login) {
+        Cache cache = cacheManager.getCache(CacheConfig.CACHE_USER_DETAILS);
+        if (cache != null && login != null) {
+            cache.evict(login);
+        }
     }
 }

@@ -1,18 +1,26 @@
 package com.fundacao.gerenciador_patrimonial.security;
 
+import com.fundacao.gerenciador_patrimonial.config.CacheConfig;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.cache.SpringCacheBasedUserCache;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import java.util.Objects;
 
 /**
  * Configuração central do Spring Security.
@@ -41,6 +49,29 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Provider com cache de {@link org.springframework.security.core.userdetails.UserDetails}
+     * (Caffeine, TTL 60s — ver {@code CacheConfig}).
+     *
+     * <p>A API {@code /api/**} é stateless (HTTP Basic revalida a cada request);
+     * sem o cache, cada chamada fazia um SELECT de usuário. Com ele, o lookup
+     * sai da memória e o banco só é consultado no primeiro acesso ou após
+     * alteração do usuário (o {@code UsuarioService} faz evict imediato).
+     * O BCrypt continua sendo verificado a cada request — é o custo inerente
+     * do esquema Basic.</p>
+     */
+    @Bean
+    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService,
+                                                         PasswordEncoder passwordEncoder,
+                                                         CacheManager cacheManager) throws Exception {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserCache(new SpringCacheBasedUserCache(
+                Objects.requireNonNull(cacheManager.getCache(CacheConfig.CACHE_USER_DETAILS))));
+        return provider;
+    }
+
     // =========================================================================
     // Filter chain #1 — API REST (/api/**)
     // =========================================================================
@@ -56,8 +87,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Escrita/alteração exige ADMINISTRADOR
-                        .requestMatchers(HttpMethod.POST, "/api/importacao/**").hasRole("ADMINISTRADOR")
+                        // Importação (upload e status de jobs) é área administrativa.
+                        .requestMatchers("/api/importacao/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMINISTRADOR")
                         .anyRequest().authenticated()
                 )

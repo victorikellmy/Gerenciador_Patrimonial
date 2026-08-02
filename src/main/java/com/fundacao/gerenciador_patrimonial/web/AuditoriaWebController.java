@@ -41,7 +41,8 @@ public class AuditoriaWebController {
             Model model) {
 
         model.addAttribute("pagina",
-                consulta.buscar(usuario, acao, entidade, entidadeId, de, ate, PageRequest.of(page, size)));
+                consulta.buscar(usuario, acao, entidade, entidadeId, de, ate,
+                        PageRequest.of(page, com.fundacao.gerenciador_patrimonial.util.Paginacao.clampSize(size))));
         model.addAttribute("acoes", AcaoAuditoria.values());
         model.addAttribute("topUsuarios", consulta.topUsuarios(null, 5));
         model.addAttribute("filtro", new Filtro(usuario, acao, entidade, entidadeId, de, ate));

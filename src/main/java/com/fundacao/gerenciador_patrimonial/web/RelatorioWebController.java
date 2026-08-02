@@ -59,7 +59,8 @@ public class RelatorioWebController {
                              @RequestParam(defaultValue = "50") int size,
                              Model model) {
         model.addAttribute("pagina", relatorioService.inventarioPagina(
-                PageRequest.of(page, Math.min(size, 200), Sort.by("id"))));
+                PageRequest.of(page, com.fundacao.gerenciador_patrimonial.util.Paginacao.clampSize(size),
+                        Sort.by("id"))));
         return "relatorios/inventario";
     }
 

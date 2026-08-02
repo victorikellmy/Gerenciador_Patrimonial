@@ -49,7 +49,7 @@ public class AdminAuditoriaController {
             @RequestParam(defaultValue = "50") int size) {
 
         return consulta.buscar(usuario, acao, entidade, entidadeId, de, ate,
-                PageRequest.of(page, size));
+                PageRequest.of(page, com.fundacao.gerenciador_patrimonial.util.Paginacao.clampSize(size)));
     }
 
     /** Top-N usuários mais ativos (opcionalmente recortado por data inicial). */
