@@ -2,11 +2,13 @@ package com.fundacao.gerenciador_patrimonial.service;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Lotacao;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Responsavel;
+import com.fundacao.gerenciador_patrimonial.domain.enums.AcaoAuditoria;
 import com.fundacao.gerenciador_patrimonial.dto.request.LotacaoRequest;
 import com.fundacao.gerenciador_patrimonial.dto.response.LotacaoResponse;
 import com.fundacao.gerenciador_patrimonial.exception.RecursoNaoEncontradoException;
 import com.fundacao.gerenciador_patrimonial.exception.RegraDeNegocioException;
 import com.fundacao.gerenciador_patrimonial.repository.LotacaoRepository;
+import com.fundacao.gerenciador_patrimonial.repository.PatrimonioRepository;
 import com.fundacao.gerenciador_patrimonial.repository.ResponsavelRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,8 +26,12 @@ import java.util.List;
 @Transactional
 public class LotacaoService {
 
+    private static final String ENT = "Lotacao";
+
     private final LotacaoRepository lotacaoRepository;
     private final ResponsavelRepository responsavelRepository;
+    private final PatrimonioRepository patrimonioRepository;
+    private final AuditoriaService auditoriaService;
 
     public LotacaoResponse criar(LotacaoRequest request) {
         String upm  = request.upm().trim();
@@ -44,11 +50,19 @@ public class LotacaoService {
                 .responsavelAtual(buscarResponsavelOpcional(request.responsavelAtualId()))
                 .build();
 
-        return LotacaoResponse.from(lotacaoRepository.save(lotacao));
+        Lotacao salvo = lotacaoRepository.save(lotacao);
+        auditoriaService.registrar(AcaoAuditoria.CREATE, ENT, salvo.getId(),
+                "Cadastro: UPM=%s, nome=%s, cidade=%s".formatted(upm, nome, request.cidade()));
+        return LotacaoResponse.from(salvo);
     }
 
     public LotacaoResponse atualizar(Long id, LotacaoRequest request) {
         Lotacao lotacao = buscarEntidade(id);
+
+        String upmAntes  = lotacao.getUpm();
+        String nomeAntes = lotacao.getNome();
+        String cidadeAntes = lotacao.getCidade();
+        Long respAntes = lotacao.getResponsavelAtual() != null ? lotacao.getResponsavelAtual().getId() : null;
 
         lotacao.setUpm(request.upm().trim());
         lotacao.setNome(request.nome().trim());
@@ -56,7 +70,13 @@ public class LotacaoService {
         lotacao.setTipoLocal(request.tipoLocal());
         lotacao.setResponsavelAtual(buscarResponsavelOpcional(request.responsavelAtualId()));
 
-        return LotacaoResponse.from(lotacao); // dirty checking do JPA persiste
+        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, id,
+                "UPM: %s → %s; Nome: %s → %s; Cidade: %s → %s; Responsável: %s → %s".formatted(
+                        upmAntes, lotacao.getUpm(),
+                        nomeAntes, lotacao.getNome(),
+                        cidadeAntes, lotacao.getCidade(),
+                        respAntes, request.responsavelAtualId()));
+        return LotacaoResponse.from(lotacao);
     }
 
     @Transactional(readOnly = true)
@@ -86,11 +106,14 @@ public class LotacaoService {
 
     public void excluir(Long id) {
         Lotacao lotacao = buscarEntidade(id);
-        if (!lotacao.getPatrimonios().isEmpty()) {
+        // exists O(1) no banco — o antigo getPatrimonios().isEmpty() hidratava a coleção inteira.
+        if (patrimonioRepository.existsByLotacaoId(id)) {
             throw new RegraDeNegocioException(
                     "Não é possível excluir a lotação: existem patrimônios vinculados. Movimente-os antes.");
         }
+        String resumo = "Exclusão: UPM=%s, nome=%s".formatted(lotacao.getUpm(), lotacao.getNome());
         lotacaoRepository.delete(lotacao);
+        auditoriaService.registrar(AcaoAuditoria.DELETE, ENT, id, resumo);
     }
 
     /**
@@ -101,9 +124,12 @@ public class LotacaoService {
      */
     public LotacaoResponse trocarResponsavelDoSetor(Long lotacaoId, Long novoResponsavelId) {
         Lotacao lotacao = buscarEntidade(lotacaoId);
+        Long antes = lotacao.getResponsavelAtual() != null ? lotacao.getResponsavelAtual().getId() : null;
         Responsavel novo = responsavelRepository.findById(novoResponsavelId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Responsável", novoResponsavelId));
         lotacao.setResponsavelAtual(novo);
+        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, lotacaoId,
+                "Troca de responsável do setor: %s → %s".formatted(antes, novoResponsavelId));
         return LotacaoResponse.from(lotacao);
     }
 

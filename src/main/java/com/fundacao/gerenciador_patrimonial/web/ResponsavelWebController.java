@@ -98,9 +98,8 @@ public class ResponsavelWebController {
         return "redirect:/responsaveis";
     }
 
-    /** Carrega todas as lotações (paginado apenas para não estourar memória em cenários grandes). */
+    /** Carrega todas as lotações ordenadas para o dropdown. */
     private java.util.List<LotacaoResponse> carregarTodasLotacoes() {
-        Pageable pageable = PageRequest.of(0, 500, Sort.by("upm", "nome"));
-        return lotacaoService.listar(pageable).getContent();
+        return lotacaoService.listarParaSelect();
     }
 }

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gerenciador-patrimonial",
+      "runtimeExecutable": "cmd.exe",
+      "runtimeArgs": ["/c", "cd /d C:\\Users\\victor\\IdeaProjects\\Gerenciador_Patrimonial && gradlew.bat bootRun"],
+      "port": 8080
+    }
+  ]
+}

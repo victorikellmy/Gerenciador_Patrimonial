@@ -130,26 +130,7 @@
     </div>
 
     <!-- ============================ PAGINAÇÃO ============================ -->
-    <nav th:if="${pagina.totalPages > 1}" class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="small text-muted">
-            Página <strong th:text="${pagina.number + 1}"></strong> de
-            <strong th:text="${pagina.totalPages}"></strong>
-        </div>
-        <ul class="pagination mb-0">
-            <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
-                <a class="page-link"
-                   th:href="@{/lotacoes(page=${pagina.number - 1}, size=${pagina.size})}">
-                    <i class="bi bi-chevron-left"></i> Anterior
-                </a>
-            </li>
-            <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
-                <a class="page-link"
-                   th:href="@{/lotacoes(page=${pagina.number + 1}, size=${pagina.size})}">
-                    Próxima <i class="bi bi-chevron-right"></i>
-                </a>
-            </li>
-        </ul>
-    </nav>
+    <nav th:replace="~{fragments/ui-kit :: pagination(${pagina}, '/lotacoes?')}"></nav>
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>

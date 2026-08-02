@@ -14,6 +14,16 @@ public record AgrupamentoResponse(
         long quantidade,
         BigDecimal valorTotal
 ) {
+    /** Construtor usado pelas constructor expressions JPQL (count() retorna Long). */
+    public AgrupamentoResponse(String chave, Long quantidade, BigDecimal valorTotal) {
+        this(chave, quantidade == null ? 0L : quantidade, valorTotal);
+    }
+
+    /** Variante sem soma — agrupamentos de contagem pura (ex.: por conservação). */
+    public AgrupamentoResponse(String chave, Long quantidade) {
+        this(chave, quantidade, null);
+    }
+
     public static AgrupamentoResponse of(String chave, long qtd) {
         return new AgrupamentoResponse(chave, qtd, null);
     }

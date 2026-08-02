@@ -9,6 +9,7 @@ import com.fundacao.gerenciador_patrimonial.domain.enums.TipoLocal;
 import com.fundacao.gerenciador_patrimonial.repository.LotacaoRepository;
 import com.fundacao.gerenciador_patrimonial.repository.PatrimonioRepository;
 import com.fundacao.gerenciador_patrimonial.repository.ResponsavelRepository;
+import com.fundacao.gerenciador_patrimonial.util.Textos;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Row;
@@ -24,6 +25,9 @@ import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,10 +39,17 @@ import java.util.Set;
 /**
  * Importador da "Planilha de Reconstituição de Dados".
  *
- * <p>Estratégia de transação: <b>uma transação por linha</b>, via
- * {@link TransactionTemplate} com propagation default. Uma linha ruim
- * (constraint violation, dado inválido) só aborta a própria linha — as
- * demais continuam. Isso é essencial em planilhas reais que chegam sujas.</p>
+ * <p>Estratégia de transação: <b>uma transação por chunk de linhas</b>
+ * ({@value #LINHAS_POR_TRANSACAO}), via {@link TransactionTemplate}. Se o
+ * chunk falhar (constraint violation, dado inválido), ele é revertido e
+ * reprocessado <b>linha a linha</b>, cada uma em transação própria — assim
+ * uma linha ruim só aborta a si mesma, sem pagar o custo de 1 commit por
+ * linha no caminho feliz. Isso é essencial em planilhas reais que chegam
+ * sujas.</p>
+ *
+ * <p>Antes do loop, tombos, lotações e responsáveis existentes são
+ * pré-carregados em memória (3 queries no total) — o processamento de linha
+ * não faz nenhum SELECT.</p>
  *
  * <p>Mapeamento das colunas (aba "Planilha1"):</p>
  * <pre>
@@ -73,6 +84,9 @@ public class ExcelImportService {
 
     private static final String SHEET_PADRAO = "Planilha1";
 
+    /** Linhas por transação no caminho feliz — reduz N commits para N/100. */
+    private static final int LINHAS_POR_TRANSACAO = 100;
+
     // Índices de coluna (0-based)
     private static final int COL_UPM             = 0;
     private static final int COL_RESP            = 1;
@@ -93,11 +107,8 @@ public class ExcelImportService {
     private final LotacaoRepository lotacaoRepo;
     private final ResponsavelRepository responsavelRepo;
     private final PatrimonioRepository patrimonioRepo;
-    private final com.fundacao.gerenciador_patrimonial.repository.VidaUtilCategoriaRepository vutRepo;
+    private final com.fundacao.gerenciador_patrimonial.service.DepreciacaoService depreciacaoService;
     private final PlatformTransactionManager transactionManager;
-
-    /** VUT por categoria, carregado uma vez para validar a coluna VUT da planilha. */
-    private final Map<String, Integer> vutPorCategoria = new HashMap<>();
 
     /** Template inicializado após a injeção do {@link PlatformTransactionManager}. */
     private TransactionTemplate txTemplate;
@@ -105,69 +116,112 @@ public class ExcelImportService {
     @PostConstruct
     void initTxTemplate() {
         this.txTemplate = new TransactionTemplate(transactionManager);
-        vutRepo.findAll().forEach(v ->
-                vutPorCategoria.put(v.getCategoria().toUpperCase(), v.getVutAnos()));
     }
 
     /**
-     * Executa a importação. Cada linha é persistida em uma transação própria:
-     * uma linha ruim NÃO aborta as demais.
+     * Executa a importação em chunks transacionais (ver Javadoc da classe).
      *
      * @param inputStream stream do .xlsx (não é fechado aqui — responsabilidade do chamador)
      * @param nomeSheet   nome da aba; se {@code null}, usa a primeira
      */
     public ImportResult importar(InputStream inputStream, String nomeSheet) throws IOException {
-        int total = 0, importados = 0, ignorados = 0;
+        // Copia para arquivo temporário: WorkbookFactory sobre File usa ZipFile
+        // (acesso randômico) em vez de bufferizar o .xlsx inteiro em heap —
+        // criar direto do InputStream custa ~10-50x o tamanho do arquivo em RAM.
+        Path tmp = Files.createTempFile("import-", ".xlsx");
+        try {
+            Files.copy(inputStream, tmp, StandardCopyOption.REPLACE_EXISTING);
+            try (Workbook wb = WorkbookFactory.create(tmp.toFile(), null, true)) {
+                return importarWorkbook(wb, nomeSheet);
+            }
+        } finally {
+            Files.deleteIfExists(tmp);
+        }
+    }
+
+    private ImportResult importarWorkbook(Workbook wb, String nomeSheet) {
+        Sheet sheet;
+        if (nomeSheet != null) {
+            sheet = wb.getSheet(nomeSheet);
+        } else {
+            sheet = wb.getSheet(SHEET_PADRAO);
+            if (sheet == null) sheet = wb.getSheetAt(0);
+        }
+        if (sheet == null) {
+            throw new IllegalArgumentException("Aba não encontrada: " + nomeSheet);
+        }
+
+        // Pré-carga dos dados existentes (3 queries) — o loop não consulta o banco.
+        ContextoImport global = new ContextoImport();
+        global.tombos.addAll(patrimonioRepo.findAllNumerosTombo());
+        lotacaoRepo.findAll().forEach(l ->
+                global.lotacoes.put(l.getUpm() + "|" + l.getNome(), l.getId()));
+        responsavelRepo.findAll().forEach(r ->
+                global.responsaveis.put(r.getNomeCompleto(), r.getId()));
+
+        List<Row> linhas = new ArrayList<>();
+        int ignorados = 0;
+        boolean primeira = true;
+        for (Row row : sheet) {
+            if (primeira) { primeira = false; continue; } // pula cabeçalho
+            if (isLinhaVazia(row)) { ignorados++; continue; }
+            linhas.add(row);
+        }
+
+        int total = linhas.size();
+        int importados = 0, lotacoesCriadas = 0, responsaveisCriados = 0;
         List<String> erros = new ArrayList<>();
 
-        // Caches e controle de duplicatas entre linhas do mesmo import
-        Map<String, Long> cacheLotacaoId = new HashMap<>();    // chave "upm|nome" → id
-        Map<String, Long> cacheRespId    = new HashMap<>();    // nome → id
-        Set<String> tombosVistos         = new HashSet<>();    // evita tombo duplicado dentro da planilha
-        int[] lotacoesCriadas     = {0};
-        int[] responsaveisCriados = {0};
+        for (int i = 0; i < linhas.size(); i += LINHAS_POR_TRANSACAO) {
+            List<Row> chunk = linhas.subList(i, Math.min(i + LINHAS_POR_TRANSACAO, linhas.size()));
+            List<ResultadoLinha> resultados = new ArrayList<>(chunk.size());
 
-        try (Workbook wb = WorkbookFactory.create(inputStream)) {
-            Sheet sheet;
-            if (nomeSheet != null) {
-                sheet = wb.getSheet(nomeSheet);
-            } else {
-                sheet = wb.getSheet(SHEET_PADRAO);
-                if (sheet == null) sheet = wb.getSheetAt(0);
-            }
-            if (sheet == null) {
-                throw new IllegalArgumentException("Aba não encontrada: " + nomeSheet);
-            }
-
-            boolean primeira = true;
-            for (Row row : sheet) {
-                if (primeira) { primeira = false; continue; } // pula cabeçalho
-                if (isLinhaVazia(row)) { ignorados++; continue; }
-                total++;
-
-                final int numeroLinha = row.getRowNum() + 1;
-                try {
-                    ResultadoLinha r = txTemplate.execute(status ->
-                            processarLinha(row, cacheLotacaoId, cacheRespId, tombosVistos));
-                    if (r != null) {
-                        if (r.lotacaoCriada)     lotacoesCriadas[0]++;
-                        if (r.responsavelCriado) responsaveisCriados[0]++;
-                        if (r.ignorado) {
-                            ignorados++;
-                        } else {
-                            importados++;
-                        }
+            // Caminho feliz: chunk inteiro em uma transação. As adições aos caches
+            // vão para o delta e só são absorvidas no global após o commit — se o
+            // chunk reverter, os ids criados nele somem do banco E dos caches.
+            ContextoImport delta = new ContextoImport();
+            try {
+                List<ResultadoLinha> rs = txTemplate.execute(status -> {
+                    List<ResultadoLinha> acc = new ArrayList<>(chunk.size());
+                    for (Row row : chunk) {
+                        acc.add(processarLinha(row, global, delta));
                     }
-                } catch (Exception e) {
-                    erros.add("Linha %d: %s".formatted(numeroLinha, rootMessage(e)));
-                    log.warn("Falha na linha {}: {}", numeroLinha, rootMessage(e));
+                    return acc;
+                });
+                global.absorver(delta);
+                if (rs != null) resultados.addAll(rs);
+            } catch (Exception e) {
+                // Fallback: reprocessa o chunk linha a linha, cada uma em transação
+                // própria, para isolar a(s) linha(s) ruim(ns) sem perder as boas.
+                for (Row row : chunk) {
+                    ContextoImport deltaLinha = new ContextoImport();
+                    try {
+                        ResultadoLinha r = txTemplate.execute(status ->
+                                processarLinha(row, global, deltaLinha));
+                        global.absorver(deltaLinha);
+                        if (r != null) resultados.add(r);
+                    } catch (Exception ex) {
+                        erros.add("Linha %d: %s".formatted(row.getRowNum() + 1, rootMessage(ex)));
+                        log.warn("Falha na linha {}: {}", row.getRowNum() + 1, rootMessage(ex));
+                    }
+                }
+            }
+
+            for (ResultadoLinha r : resultados) {
+                if (r == null) continue;
+                if (r.lotacaoCriada)     lotacoesCriadas++;
+                if (r.responsavelCriado) responsaveisCriados++;
+                if (r.ignorado) {
+                    ignorados++;
+                } else {
+                    importados++;
                 }
             }
         }
 
         log.info("Importação concluída: {}/{} linhas importadas, {} ignoradas. {} lotações e {} responsáveis novos.",
-                importados, total, ignorados, lotacoesCriadas[0], responsaveisCriados[0]);
-        return new ImportResult(total, importados, ignorados, erros, lotacoesCriadas[0], responsaveisCriados[0]);
+                importados, total, ignorados, lotacoesCriadas, responsaveisCriados);
+        return new ImportResult(total, importados, ignorados, erros, lotacoesCriadas, responsaveisCriados);
     }
 
     // =========================================================================
@@ -180,10 +234,25 @@ public class ExcelImportService {
         static ResultadoLinha skip() { return new ResultadoLinha(false, false, true); }
     }
 
-    private ResultadoLinha processarLinha(Row row,
-                                          Map<String, Long> cacheLotacaoId,
-                                          Map<String, Long> cacheRespId,
-                                          Set<String> tombosVistos) {
+    /**
+     * Caches da importação: tombos existentes e ids de lotação/responsável por
+     * chave natural. O par (global, delta) existe para que um rollback de chunk
+     * também "reverta" os caches: adições feitas dentro da transação ficam no
+     * delta e só são absorvidas no global após o commit.
+     */
+    private static final class ContextoImport {
+        final Map<String, Long> lotacoes     = new HashMap<>(); // chave "upm|nome" → id
+        final Map<String, Long> responsaveis = new HashMap<>(); // nome → id
+        final Set<String> tombos             = new HashSet<>();
+
+        void absorver(ContextoImport delta) {
+            lotacoes.putAll(delta.lotacoes);
+            responsaveis.putAll(delta.responsaveis);
+            tombos.addAll(delta.tombos);
+        }
+    }
+
+    private ResultadoLinha processarLinha(Row row, ContextoImport global, ContextoImport delta) {
         String upm           = Normalizadores.normalizarUpm(CellReader.lerString(row, COL_UPM));
         String sala          = Normalizadores.normalizarSala(CellReader.lerString(row, COL_SALA));
         String respNome      = Normalizadores.normalizarNome(CellReader.lerString(row, COL_RESP));
@@ -201,9 +270,10 @@ public class ExcelImportService {
         String nf            = CellReader.lerString(row, COL_NF);
 
         // Validação: VUT da linha deve bater com a tabela de referência por categoria.
-        // Divergência só gera warning — a fonte de verdade é vida_util_categoria.
+        // Divergência só gera warning — a fonte de verdade é vida_util_categoria
+        // (mapa único mantido pelo DepreciacaoService).
         if (vutLinha != null && categoria != null) {
-            Integer vutRef = vutPorCategoria.get(categoria.toUpperCase());
+            Integer vutRef = depreciacaoService.vutDaCategoria(categoria);
             if (vutRef != null && vutLinha.intValue() != vutRef) {
                 log.warn("Linha {}: VUT da planilha ({}) difere do cadastro ({}) p/ categoria '{}'.",
                         row.getRowNum() + 1, vutLinha, vutRef, categoria);
@@ -220,45 +290,37 @@ public class ExcelImportService {
             throw new IllegalArgumentException("Responsável não informado.");
         }
 
-        // --- Deduplicação de tombo ---
+        // --- Deduplicação de tombo (Sets pré-carregados — sem SELECT por linha) ---
         if (tombo != null) {
-            if (!tombosVistos.add(tombo) || patrimonioRepo.findByNumeroTombo(tombo).isPresent()) {
+            if (global.tombos.contains(tombo) || !delta.tombos.add(tombo)) {
                 log.debug("Tombo '{}' já presente — linha {} ignorada.", tombo, row.getRowNum() + 1);
                 return ResultadoLinha.skip();
             }
         }
 
-        // --- Lotação (upsert com cache) ---
+        // --- Lotação (upsert contra caches pré-carregados) ---
         String chaveLotacao = upm + "|" + sala;
         boolean lotacaoCriada = false;
-        Long lotacaoId = cacheLotacaoId.get(chaveLotacao);
+        Long lotacaoId = delta.lotacoes.get(chaveLotacao);
+        if (lotacaoId == null) lotacaoId = global.lotacoes.get(chaveLotacao);
         Lotacao lotacao;
         if (lotacaoId == null) {
-            var existente = lotacaoRepo.findByUpmAndNome(upm, sala);
-            if (existente.isPresent()) {
-                lotacao = existente.get();
-            } else {
-                lotacao = lotacaoRepo.save(novaLotacao(upm, sala));
-                lotacaoCriada = true;
-            }
-            cacheLotacaoId.put(chaveLotacao, lotacao.getId());
+            lotacao = lotacaoRepo.save(novaLotacao(upm, sala));
+            delta.lotacoes.put(chaveLotacao, lotacao.getId());
+            lotacaoCriada = true;
         } else {
             lotacao = lotacaoRepo.getReferenceById(lotacaoId);
         }
 
-        // --- Responsável (upsert com cache) ---
+        // --- Responsável (upsert contra caches pré-carregados) ---
         boolean responsavelCriado = false;
-        Long respId = cacheRespId.get(respNome);
+        Long respId = delta.responsaveis.get(respNome);
+        if (respId == null) respId = global.responsaveis.get(respNome);
         Responsavel responsavel;
         if (respId == null) {
-            var existente = responsavelRepo.findByNomeCompleto(respNome);
-            if (existente.isPresent()) {
-                responsavel = existente.get();
-            } else {
-                responsavel = responsavelRepo.save(novoResponsavel(respNome, lotacao));
-                responsavelCriado = true;
-            }
-            cacheRespId.put(respNome, responsavel.getId());
+            responsavel = responsavelRepo.save(novoResponsavel(respNome, lotacao));
+            delta.responsaveis.put(respNome, responsavel.getId());
+            responsavelCriado = true;
         } else {
             responsavel = responsavelRepo.getReferenceById(respId);
         }
@@ -275,9 +337,9 @@ public class ExcelImportService {
                 .situacao(estado.situacao())
                 .notaFiscal(nf)
                 .valorRecuperavel(valorRec)
-                .conclusaoImpairment(truncar(conclusao, 255))
-                .observacao(truncar(observacao, 1000))
-                .linkReferencia(truncar(link, 2000))
+                .conclusaoImpairment(Textos.truncar(conclusao, 255))
+                .observacao(Textos.truncar(observacao, 1000))
+                .linkReferencia(Textos.truncar(link, 2000))
                 .lotacao(lotacao)
                 .responsavel(responsavel)
                 .build();
@@ -328,12 +390,6 @@ public class ExcelImportService {
                 .lotacao(lotacao)
                 .ativo(true)
                 .build();
-    }
-
-    /** Trunca string ao limite da coluna preservando null. */
-    private static String truncar(String s, int max) {
-        if (s == null) return null;
-        return s.length() <= max ? s : s.substring(0, max);
     }
 
     /** Extrai a mensagem mais útil da cadeia de causas (para log de erro). */

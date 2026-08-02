@@ -48,9 +48,9 @@ public class ImportacaoWebController {
             return "importacao/index";
         }
 
-        try {
+        try (var is = arquivo.getInputStream()) {
             String nomeSheet = (sheet != null && !sheet.isBlank()) ? sheet.trim() : "val est cons";
-            ImportResult resultado = excelImportService.importar(arquivo.getInputStream(), nomeSheet);
+            ImportResult resultado = excelImportService.importar(is, nomeSheet);
             model.addAttribute("resultado", resultado);
             model.addAttribute("arquivoNome", arquivo.getOriginalFilename());
             model.addAttribute("sheetUsada", nomeSheet);

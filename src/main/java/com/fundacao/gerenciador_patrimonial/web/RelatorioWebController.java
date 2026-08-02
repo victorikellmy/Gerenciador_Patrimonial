@@ -1,8 +1,5 @@
 package com.fundacao.gerenciador_patrimonial.web;
 
-import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
-import com.fundacao.gerenciador_patrimonial.dto.response.ResponsavelResponse;
-import com.fundacao.gerenciador_patrimonial.service.DepreciacaoService;
 import com.fundacao.gerenciador_patrimonial.service.ResponsavelService;
 import com.fundacao.gerenciador_patrimonial.service.report.RelatorioService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * Controllers web de relatórios.
@@ -42,7 +38,6 @@ public class RelatorioWebController {
 
     private final RelatorioService relatorioService;
     private final ResponsavelService responsavelService;
-    private final DepreciacaoService depreciacaoService;
 
     // =========================================================================
     // Telas
@@ -54,12 +49,17 @@ public class RelatorioWebController {
         return "relatorios/index";
     }
 
-    /** Inventário em tela, com botões de download. */
+    /**
+     * Inventário em tela, paginado, com a depreciação pré-calculada no DTO.
+     * (Antes: base inteira no Model + service chamado por linha no template.)
+     * Os downloads continuam exportando o inventário completo.
+     */
     @GetMapping("/inventario")
-    public String inventario(Model model) {
-        List<Patrimonio> lista = relatorioService.listarInventario();
-        model.addAttribute("lista", lista);
-        model.addAttribute("depreciacaoService", depreciacaoService); // para uso inline no template
+    public String inventario(@RequestParam(defaultValue = "0") int page,
+                             @RequestParam(defaultValue = "50") int size,
+                             Model model) {
+        model.addAttribute("pagina", relatorioService.inventarioPagina(
+                PageRequest.of(page, Math.min(size, 200), Sort.by("id"))));
         return "relatorios/inventario";
     }
 
@@ -73,10 +73,7 @@ public class RelatorioWebController {
     /** Tela para escolher responsável e gerar termo. */
     @GetMapping("/termo-responsabilidade")
     public String termoForm(Model model) {
-        List<ResponsavelResponse> resps = responsavelService.listar(
-                PageRequest.of(0, 1000, Sort.by("nomeCompleto"))
-        ).getContent();
-        model.addAttribute("responsaveis", resps);
+        model.addAttribute("responsaveis", responsavelService.listarParaSelect());
         return "relatorios/termo";
     }
 

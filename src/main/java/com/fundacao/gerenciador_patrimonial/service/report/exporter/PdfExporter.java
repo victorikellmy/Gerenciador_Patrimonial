@@ -40,7 +40,7 @@ public class PdfExporter {
     // Inventário geral
     // =========================================================================
 
-    public void gerarInventario(List<Patrimonio> lista, OutputStream out) {
+    public void gerarInventario(List<LinhaInventario> linhas, OutputStream out) {
         // Paisagem (A4 girado) para caber mais colunas.
         Document doc = new Document(PageSize.A4.rotate(), 28, 28, 36, 28);
         try {
@@ -53,7 +53,7 @@ public class PdfExporter {
 
             Paragraph rodape = new Paragraph(
                     "Gerado em " + LocalDate.now().format(DATA)
-                            + " · " + lista.size() + " registros",
+                            + " · " + linhas.size() + " registros",
                     FONT_PEQUENO);
             rodape.setAlignment(Element.ALIGN_CENTER);
             rodape.setSpacingAfter(12f);
@@ -62,24 +62,33 @@ public class PdfExporter {
             PdfPTable tabela = new PdfPTable(new float[]{5, 8, 25, 12, 14, 18, 10, 10});
             tabela.setWidthPercentage(100);
             tabela.setHeaderRows(1);
+            // Tabela incremental: adicionar milhares de linhas de uma vez faz o
+            // layout do PdfPTable degenerar (O(n²) — ~90s para ~2k linhas).
+            // Com setComplete(false) + flush periódico, as linhas já emitidas
+            // são liberadas e o tempo volta a ser linear.
+            tabela.setComplete(false);
 
             for (String h : new String[]{"ID","Tombo","Descrição","Categoria","Lotação","Responsável","Valor","Situação"}) {
                 tabela.addCell(headerCell(h));
             }
 
-            for (Patrimonio p : lista) {
-                tabela.addCell(corpoCell(str(p.getId())));
-                tabela.addCell(corpoCell(str(p.getNumeroTombo())));
-                tabela.addCell(corpoCell(str(p.getDescricao())));
-                tabela.addCell(corpoCell(str(p.getCategoria())));
-                tabela.addCell(corpoCell(p.getLotacao() != null
-                        ? p.getLotacao().getUpm() + " / " + p.getLotacao().getNome() : ""));
-                tabela.addCell(corpoCell(p.getResponsavel() != null
-                        ? p.getResponsavel().getNomeCompleto() : ""));
-                tabela.addCell(corpoCellRight(formatarValor(p.getValorCompra())));
-                tabela.addCell(corpoCell(p.getSituacao() != null ? p.getSituacao().name() : ""));
+            int linha = 0;
+            for (LinhaInventario l : linhas) {
+                tabela.addCell(corpoCell(str(l.id())));
+                tabela.addCell(corpoCell(str(l.tombo())));
+                tabela.addCell(corpoCell(str(l.descricao())));
+                tabela.addCell(corpoCell(str(l.categoria())));
+                tabela.addCell(corpoCell(l.lotacaoNome() != null
+                        ? l.upm() + " / " + l.lotacaoNome() : ""));
+                tabela.addCell(corpoCell(str(l.responsavelNome())));
+                tabela.addCell(corpoCellRight(formatarValor(l.valorCompra())));
+                tabela.addCell(corpoCell(str(l.situacao())));
+                if (++linha % 200 == 0) {
+                    doc.add(tabela); // flush parcial: libera as linhas já renderizadas
+                }
             }
 
+            tabela.setComplete(true);
             doc.add(tabela);
         } finally {
             doc.close();

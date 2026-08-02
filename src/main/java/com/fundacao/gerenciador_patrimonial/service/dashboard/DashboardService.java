@@ -11,6 +11,7 @@ import com.fundacao.gerenciador_patrimonial.repository.ResponsavelRepository;
 import com.fundacao.gerenciador_patrimonial.service.DepreciacaoService;
 import com.fundacao.gerenciador_patrimonial.service.DepreciacaoService.CalculoDepreciacao;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +41,9 @@ public class DashboardService {
     private final MovimentacaoRepository movimentacaoRepo;
     private final DepreciacaoService depreciacaoService;
 
+    // Cache TTL 60s (CacheConfig): evita repetir as agregações e o loop de
+    // depreciação sobre todos os ativos a cada acesso à home.
+    @Cacheable("dashboard")
     @Transactional(readOnly = true)
     public DashboardMetrics carregar() {
 
@@ -53,27 +57,10 @@ public class DashboardService {
         }
         long totalPatrimonios = porSituacao.values().stream().mapToLong(Long::longValue).sum();
 
-        // ----------------- agrupamentos -----------------
-        List<AgrupamentoResponse> porCategoria = patrimonioRepo.agruparPorCategoria().stream()
-                .map(row -> AgrupamentoResponse.of(
-                        (String) row[0],
-                        ((Number) row[1]).longValue(),
-                        (BigDecimal) row[2]))
-                .toList();
-
-        List<AgrupamentoResponse> porConservacao = patrimonioRepo.agruparPorConservacao().stream()
-                .map(row -> AgrupamentoResponse.of(
-                        (String) row[0],
-                        ((Number) row[1]).longValue()))
-                .toList();
-
-        List<AgrupamentoResponse> topUpms = patrimonioRepo
-                .agruparPorUpm(PageRequest.of(0, 10)).stream()
-                .map(row -> AgrupamentoResponse.of(
-                        (String) row[0],
-                        ((Number) row[1]).longValue(),
-                        (BigDecimal) row[2]))
-                .toList();
+        // ----------------- agrupamentos (DTOs direto da query) -----------------
+        List<AgrupamentoResponse> porCategoria   = patrimonioRepo.agruparPorCategoria();
+        List<AgrupamentoResponse> porConservacao = patrimonioRepo.agruparPorConservacao();
+        List<AgrupamentoResponse> topUpms        = patrimonioRepo.agruparPorUpm(PageRequest.of(0, 10));
 
         // ----------------- soma de valores + depreciação -----------------
         // Valor total: agregação SQL pura (rápida).

@@ -2,6 +2,7 @@ package com.fundacao.gerenciador_patrimonial.service;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.ArquivoAnexo;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
+import com.fundacao.gerenciador_patrimonial.domain.enums.AcaoAuditoria;
 import com.fundacao.gerenciador_patrimonial.domain.enums.TipoAnexo;
 import com.fundacao.gerenciador_patrimonial.dto.response.AnexoResponse;
 import com.fundacao.gerenciador_patrimonial.exception.RecursoNaoEncontradoException;
@@ -35,9 +36,12 @@ public class AnexoService {
             "image/webp"
     );
 
+    private static final String ENT = "Anexo";
+
     private final ArquivoAnexoRepository anexoRepo;
     private final PatrimonioRepository patrimonioRepo;
     private final StorageService storageService;
+    private final AuditoriaService auditoriaService;
 
     public AnexoResponse anexar(Long patrimonioId, MultipartFile arquivo, TipoAnexo tipo) {
         Patrimonio patrimonio = patrimonioRepo.findById(patrimonioId)
@@ -68,7 +72,12 @@ public class AnexoService {
                 .tipo(tipo != null ? tipo : TipoAnexo.OUTRO)
                 .build();
 
-        return AnexoResponse.from(anexoRepo.save(anexo));
+        ArquivoAnexo salvo = anexoRepo.save(anexo);
+        auditoriaService.registrar(AcaoAuditoria.ANEXAR, ENT, salvo.getId(),
+                "Anexo no patrimônio #%d: %s (%s, %d bytes, tipo=%s)".formatted(
+                        patrimonioId, salvo.getNomeOriginal(),
+                        salvo.getContentType(), salvo.getTamanhoBytes(), salvo.getTipo()));
+        return AnexoResponse.from(salvo);
     }
 
     @Transactional(readOnly = true)
@@ -92,8 +101,12 @@ public class AnexoService {
     public void excluir(Long anexoId) {
         ArquivoAnexo anexo = anexoRepo.findById(anexoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Anexo", anexoId));
+        Long patrimonioId = anexo.getPatrimonio() != null ? anexo.getPatrimonio().getId() : null;
+        String resumo = "Remoção de anexo do patrimônio #%s: %s".formatted(
+                patrimonioId, anexo.getNomeOriginal());
         storageService.deletar(anexo.getCaminhoArmazenamento());
         anexoRepo.delete(anexo);
+        auditoriaService.registrar(AcaoAuditoria.REMOVER_ANEXO, ENT, anexoId, resumo);
     }
 
     public record ArquivoParaDownload(ArquivoAnexo anexo, Resource recurso) {}

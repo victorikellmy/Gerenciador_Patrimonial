@@ -19,7 +19,7 @@
                     Inventário completo
                 </h1>
                 <div class="page-subtitle">
-                    <span th:text="${lista.size()}">0</span> item(ns) — inclui ativos e baixados.
+                    <span th:text="${pagina.totalElements}">0</span> item(ns) — inclui ativos e baixados.
                 </div>
             </div>
         </div>
@@ -41,7 +41,7 @@
 
     <!-- ============================ TABELA ============================ -->
     <div class="card card-panel" style="overflow: hidden;">
-        <div class="table-responsive" th:if="${!lista.isEmpty()}">
+        <div class="table-responsive" th:if="${!pagina.empty}">
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
@@ -57,7 +57,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="p : ${lista}">
+                    <!-- DTO com depreciação pré-calculada no service (1x por item), sem chamadas de service no template -->
+                    <tr th:each="p : ${pagina.content}">
                         <td>
                             <span class="chip-tombo" th:text="${p.numeroTombo} ?: '—'">—</span>
                         </td>
@@ -69,20 +70,20 @@
                         </td>
                         <td class="text-secondary" th:text="${p.categoria} ?: '—'"></td>
                         <td>
-                            <div class="cell-stack" th:if="${p.lotacao}">
-                                <span class="cell-primary" th:text="${p.lotacao.nome}"></span>
-                                <span class="cell-secondary" th:text="${p.lotacao.upm}"></span>
+                            <div class="cell-stack" th:if="${p.lotacaoNome != null}">
+                                <span class="cell-primary" th:text="${p.lotacaoNome}"></span>
+                                <span class="cell-secondary" th:text="${p.lotacaoUpm}"></span>
                             </div>
-                            <span class="text-muted" th:unless="${p.lotacao}">—</span>
+                            <span class="text-muted" th:if="${p.lotacaoNome == null}">—</span>
                         </td>
                         <td>
-                            <span th:text="${p.responsavel?.nomeCompleto} ?: '—'"
-                                  th:classappend="${p.responsavel == null} ? 'text-muted'"></span>
+                            <span th:text="${p.responsavelNome} ?: '—'"
+                                  th:classappend="${p.responsavelNome == null} ? 'text-muted'"></span>
                         </td>
                         <td class="text-end tabular-nums"
                             th:text="${p.valorCompra != null} ? ${#numbers.formatDecimal(p.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
-                        <td class="text-end tabular-nums" th:with="calc=${depreciacaoService.calcular(p)}"
-                            th:text="${calc.valorContabilLiquido != null} ? ${#numbers.formatDecimal(calc.valorContabilLiquido, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                        <td class="text-end tabular-nums"
+                            th:text="${p.valorContabilLiquido != null} ? ${#numbers.formatDecimal(p.valorContabilLiquido, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
                         <td>
                             <span class="badge badge-conservacao badge-plain"
                                   th:if="${p.conservacao}" th:text="${p.conservacao}"></span>
@@ -97,13 +98,15 @@
             </table>
         </div>
 
-        <div th:if="${lista.isEmpty()}"
+        <div th:if="${pagina.empty}"
              th:replace="~{fragments/ui-kit :: empty-state(
                 'bi-inbox',
                 'Nenhum patrimônio cadastrado',
                 'Cadastre itens para gerar relatórios de inventário.',
                 @{/patrimonios/novo}, 'Cadastrar patrimônio')}"></div>
     </div>
+
+    <nav th:replace="~{fragments/ui-kit :: pagination(${pagina}, '/relatorios/inventario?')}"></nav>
 
     <!-- ============================ NOTA ============================ -->
     <div class="alert alert-info mt-3" style="font-size: 0.8125rem;">

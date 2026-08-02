@@ -2,6 +2,7 @@ package com.fundacao.gerenciador_patrimonial.service;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Lotacao;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Responsavel;
+import com.fundacao.gerenciador_patrimonial.domain.enums.AcaoAuditoria;
 import com.fundacao.gerenciador_patrimonial.dto.request.ResponsavelRequest;
 import com.fundacao.gerenciador_patrimonial.dto.response.ResponsavelResponse;
 import com.fundacao.gerenciador_patrimonial.exception.RecursoNaoEncontradoException;
@@ -21,8 +22,11 @@ import java.util.List;
 @Transactional
 public class ResponsavelService {
 
+    private static final String ENT = "Responsavel";
+
     private final ResponsavelRepository responsavelRepository;
     private final LotacaoRepository lotacaoRepository;
+    private final AuditoriaService auditoriaService;
 
     public ResponsavelResponse criar(ResponsavelRequest request) {
         validarMatriculaUnica(request.matricula(), null);
@@ -35,18 +39,31 @@ public class ResponsavelService {
                 .ativo(true)
                 .build();
 
-        return ResponsavelResponse.from(responsavelRepository.save(responsavel));
+        Responsavel salvo = responsavelRepository.save(responsavel);
+        auditoriaService.registrar(AcaoAuditoria.CREATE, ENT, salvo.getId(),
+                "Cadastro: nome=%s, matrícula=%s, lotação=%s".formatted(
+                        salvo.getNomeCompleto(), salvo.getMatricula(), request.lotacaoId()));
+        return ResponsavelResponse.from(salvo);
     }
 
     public ResponsavelResponse atualizar(Long id, ResponsavelRequest request) {
         Responsavel responsavel = buscarEntidade(id);
         validarMatriculaUnica(request.matricula(), id);
 
+        String nomeAntes = responsavel.getNomeCompleto();
+        String matrAntes = responsavel.getMatricula();
+        Long lotAntes = responsavel.getLotacao() != null ? responsavel.getLotacao().getId() : null;
+
         responsavel.setNomeCompleto(request.nomeCompleto().trim());
         responsavel.setMatricula(normalizarMatricula(request.matricula()));
         responsavel.setCidade(request.cidade());
         responsavel.setLotacao(buscarLotacaoOpcional(request.lotacaoId()));
 
+        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, id,
+                "Nome: %s → %s; Matrícula: %s → %s; Lotação: %s → %s".formatted(
+                        nomeAntes, responsavel.getNomeCompleto(),
+                        matrAntes, responsavel.getMatricula(),
+                        lotAntes, request.lotacaoId()));
         return ResponsavelResponse.from(responsavel);
     }
 
@@ -82,6 +99,8 @@ public class ResponsavelService {
     public void inativar(Long id) {
         Responsavel r = buscarEntidade(id);
         r.setAtivo(false);
+        auditoriaService.registrar(AcaoAuditoria.DELETE, ENT, id,
+                "Inativação: %s (matrícula %s)".formatted(r.getNomeCompleto(), r.getMatricula()));
     }
 
     // ------- helpers -------
@@ -109,8 +128,6 @@ public class ResponsavelService {
     }
 
     private String normalizarMatricula(String raw) {
-        if (raw == null) return null;
-        String trimmed = raw.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        return com.fundacao.gerenciador_patrimonial.util.Textos.nullIfBlank(raw);
     }
 }

@@ -68,6 +68,16 @@ public class DepreciacaoService {
                         (a, b) -> a)));
     }
 
+    /**
+     * VUT de referência (anos) da categoria, ou {@code null} se não cadastrada.
+     * Fonte única do mapa — consumido também pelo importador de Excel, que
+     * antes mantinha uma cópia própria da mesma tabela.
+     */
+    public Integer vutDaCategoria(String categoria) {
+        if (categoria == null) return null;
+        return vutPorCategoria.get(categoria.toUpperCase(Locale.ROOT));
+    }
+
     public record CalculoDepreciacao(
             Integer vutAnos,
             BigDecimal percentualVud,         // 0.0000–1.0000 (fração da VUT consumida)

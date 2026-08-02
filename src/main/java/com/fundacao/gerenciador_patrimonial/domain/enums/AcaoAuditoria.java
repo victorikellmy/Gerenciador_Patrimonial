@@ -12,5 +12,7 @@ public enum AcaoAuditoria {
     BAIXAR,
     ANEXAR,
     REMOVER_ANEXO,
-    LOGIN
+    LOGIN,
+    LOGIN_FALHA,
+    LOGOUT
 }

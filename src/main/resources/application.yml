@@ -12,6 +12,14 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # Rede de segurança contra N+1: relações LAZY sem fetch explícito são
+        # carregadas em lotes de 16 (IN (...)) em vez de 1 select por linha.
+        default_batch_fetch_size: 16
+        # Agrupa INSERTs/UPDATEs em batches JDBC (usado na importação de Excel).
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
   servlet:
     multipart:
       max-file-size: 10MB       # limite por arquivo anexado

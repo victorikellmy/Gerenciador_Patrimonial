@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Auditoria')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <i class="bi bi-shield-check me-2" style="color: var(--primary-600);"></i>
+                Auditoria
+            </h1>
+            <div class="page-subtitle">
+                Trilha imutável de ações realizadas no sistema —
+                <span th:text="${pagina.totalElements}">0</span> registro(s)
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ TOP USUÁRIOS ============================ -->
+    <div class="row g-3 mb-4" th:if="${!topUsuarios.isEmpty()}">
+        <div class="col-12">
+            <div class="card card-panel">
+                <div class="card-body">
+                    <h6 class="mb-3 text-secondary">
+                        <i class="bi bi-trophy"></i> Usuários mais ativos
+                    </h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span th:each="t : ${topUsuarios}"
+                              class="badge badge-sit badge-plain CAUTELADO">
+                            <strong th:text="${t.usuario}"></strong> ·
+                            <span th:text="${t.total}"></span> ações
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ FILTROS ============================ -->
+    <div class="card card-panel mb-4">
+        <div class="card-body">
+            <form method="get" th:action="@{/admin/auditoria}" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small">Usuário</label>
+                    <input type="text" name="usuario" class="form-control form-control-sm"
+                           th:value="${filtro.usuario()}" placeholder="login ou trecho"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Ação</label>
+                    <select name="acao" class="form-select form-select-sm">
+                        <option value="">— todas —</option>
+                        <option th:each="a : ${acoes}" th:value="${a}" th:text="${a}"
+                                th:selected="${filtro.acao() != null and filtro.acao().name() == a.name()}"></option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Entidade</label>
+                    <input type="text" name="entidade" class="form-control form-control-sm"
+                           th:value="${filtro.entidade()}" placeholder="Patrimonio, Lotacao..."/>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">ID</label>
+                    <input type="number" name="entidadeId" class="form-control form-control-sm"
+                           th:value="${filtro.entidadeId()}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">De</label>
+                    <input type="datetime-local" name="de" class="form-control form-control-sm"
+                           th:value="${filtro.de()}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Até</label>
+                    <input type="datetime-local" name="ate" class="form-control form-control-sm"
+                           th:value="${filtro.ate()}"/>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-funnel"></i> Filtrar
+                    </button>
+                    <a th:href="@{/admin/auditoria}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle"></i> Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================ LISTAGEM ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div class="table-responsive" th:if="${!pagina.empty}">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 170px;">Data/Hora</th>
+                        <th style="width: 130px;">Usuário</th>
+                        <th style="width: 110px;">Ação</th>
+                        <th style="width: 130px;">Entidade</th>
+                        <th>Descrição</th>
+                        <th style="width: 110px;">IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${pagina.content}">
+                        <td class="tabular-nums small text-secondary"
+                            th:text="${#temporals.format(a.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
+                        <td>
+                            <span class="chip-tombo" th:text="${a.usuario}"></span>
+                        </td>
+                        <td>
+                            <span class="badge badge-sit"
+                                  th:classappend="${a.acao.name() == 'DELETE' or a.acao.name() == 'LOGIN_FALHA' or a.acao.name() == 'BAIXAR'} ? 'BAIXADO'
+                                              : (${a.acao.name() == 'CREATE' or a.acao.name() == 'LOGIN'} ? 'ATIVO'
+                                              : 'MANUTENCAO')"
+                                  th:text="${a.acao}"></span>
+                        </td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary" th:text="${a.entidade}"></span>
+                                <span class="cell-secondary" th:if="${a.entidadeId != null}">
+                                    #<span th:text="${a.entidadeId}"></span>
+                                </span>
+                            </div>
+                        </td>
+                        <td class="small" th:text="${a.descricao}"></td>
+                        <td class="small text-secondary tabular-nums"
+                            th:text="${a.ipOrigem != null} ? ${a.ipOrigem} : '—'"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${pagina.empty}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-shield-check',
+                'Nenhum registro encontrado',
+                'Ajuste os filtros ou aguarde que ações sejam registradas no sistema.',
+                @{/admin/auditoria},
+                'Limpar filtros')}"></div>
+    </div>
+
+    <!-- ============================ PAGINAÇÃO ============================ -->
+    <nav th:if="${pagina.totalPages > 1}"
+         class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="small text-muted">
+            Página <strong th:text="${pagina.number + 1}"></strong> de
+            <strong th:text="${pagina.totalPages}"></strong>
+        </div>
+        <ul class="pagination mb-0">
+            <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/auditoria(page=${pagina.number - 1}, size=${pagina.size},
+                              usuario=${filtro.usuario()}, acao=${filtro.acao()},
+                              entidade=${filtro.entidade()}, entidadeId=${filtro.entidadeId()},
+                              de=${filtro.de()}, ate=${filtro.ate()})}">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
+            </li>
+            <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/auditoria(page=${pagina.number + 1}, size=${pagina.size},
+                              usuario=${filtro.usuario()}, acao=${filtro.acao()},
+                              entidade=${filtro.entidade()}, entidadeId=${filtro.entidadeId()},
+                              de=${filtro.de()}, ate=${filtro.ate()})}">
+                    Próxima <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

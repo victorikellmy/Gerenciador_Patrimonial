@@ -20,11 +20,11 @@ import com.fundacao.gerenciador_patrimonial.repository.MovimentacaoRepository;
 import com.fundacao.gerenciador_patrimonial.repository.PatrimonioRepository;
 import com.fundacao.gerenciador_patrimonial.repository.ResponsavelRepository;
 import com.fundacao.gerenciador_patrimonial.repository.spec.PatrimonioSpecifications;
+import com.fundacao.gerenciador_patrimonial.security.SecurityUtils;
+import com.fundacao.gerenciador_patrimonial.util.Textos;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,7 +116,7 @@ public class PatrimonioService {
                 .responsavelOrigem(respOrigem)
                 .responsavelDestino(p.getResponsavel())
                 .observacao(request.observacao())
-                .executadoPor(usuarioAtual())
+                .executadoPor(SecurityUtils.usuarioAtualOuSystem())
                 .build();
         movimentacaoRepository.save(mov);
 
@@ -159,8 +159,10 @@ public class PatrimonioService {
     /** Histórico completo de movimentações de um patrimônio (mais recente primeiro). */
     @Transactional(readOnly = true)
     public List<MovimentacaoResponse> historico(Long patrimonioId) {
-        // Garante 404 se o patrimônio não existir.
-        buscar(patrimonioId);
+        // Garante 404 se o patrimônio não existir (sem hidratar a entidade inteira).
+        if (!patrimonioRepository.existsById(patrimonioId)) {
+            throw new RecursoNaoEncontradoException("Patrimônio", patrimonioId);
+        }
         return movimentacaoRepository.findByPatrimonioIdOrderByDataMovimentacaoDesc(patrimonioId)
                 .stream()
                 .map(MovimentacaoResponse::from)
@@ -170,9 +172,7 @@ public class PatrimonioService {
     /** Última movimentação registrada (ou {@code null} se nunca foi movimentado). */
     @Transactional(readOnly = true)
     public MovimentacaoResponse ultimaMovimentacao(Long patrimonioId) {
-        return movimentacaoRepository.findByPatrimonioIdOrderByDataMovimentacaoDesc(patrimonioId)
-                .stream()
-                .findFirst()
+        return movimentacaoRepository.findFirstByPatrimonioIdOrderByDataMovimentacaoDesc(patrimonioId)
                 .map(MovimentacaoResponse::from)
                 .orElse(null);
     }
@@ -180,15 +180,6 @@ public class PatrimonioService {
     // =========================================================================
     // helpers
     // =========================================================================
-
-    /** Login do usuário autenticado, ou {@code "SYSTEM"} se anônimo. */
-    private static String usuarioAtual() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            return "SYSTEM";
-        }
-        return auth.getName();
-    }
 
     private Patrimonio buscar(Long id) {
         return patrimonioRepository.findById(id)
@@ -206,7 +197,7 @@ public class PatrimonioService {
     }
 
     private void validarTomboUnico(String tombo, Long idExistente) {
-        String norm = nullIfBlank(tombo);
+        String norm = Textos.nullIfBlank(tombo);
         if (norm == null) return;
         patrimonioRepository.findByNumeroTombo(norm).ifPresent(p -> {
             if (!p.getId().equals(idExistente)) {
@@ -214,12 +205,6 @@ public class PatrimonioService {
                         "Número de tombo '%s' já está em uso.".formatted(norm));
             }
         });
-    }
-
-    private String nullIfBlank(String s) {
-        if (s == null) return null;
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
     }
 
     private PatrimonioResponse toResponse(Patrimonio p) {

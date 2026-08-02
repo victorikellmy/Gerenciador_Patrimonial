@@ -1,6 +1,7 @@
 package com.fundacao.gerenciador_patrimonial.service;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Usuario;
+import com.fundacao.gerenciador_patrimonial.domain.enums.AcaoAuditoria;
 import com.fundacao.gerenciador_patrimonial.dto.request.TrocarSenhaRequest;
 import com.fundacao.gerenciador_patrimonial.dto.request.UsuarioRequest;
 import com.fundacao.gerenciador_patrimonial.dto.response.UsuarioResponse;
@@ -29,8 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UsuarioService {
 
+    private static final String ENT = "Usuario";
+
     private final UsuarioRepository repo;
     private final PasswordEncoder passwordEncoder;
+    private final AuditoriaService auditoriaService;
 
     // =========================================================================
     // CRUD básico
@@ -62,7 +66,11 @@ public class UsuarioService {
                 .perfil(req.perfil())
                 .ativo(req.ativo() == null || req.ativo())
                 .build();
-        return UsuarioResponse.from(repo.save(u));
+        Usuario salvo = repo.save(u);
+        auditoriaService.registrar(AcaoAuditoria.CREATE, ENT, salvo.getId(),
+                "Cadastro: nome=%s, login=%s, perfil=%s, ativo=%s".formatted(
+                        salvo.getNomeCompleto(), salvo.getLogin(), salvo.getPerfil(), salvo.isAtivo()));
+        return UsuarioResponse.from(salvo);
     }
 
     @Transactional
@@ -75,16 +83,29 @@ public class UsuarioService {
             throw new RegraDeNegocioException("Login já está em uso: " + novoLogin);
         }
 
+        String nomeAntes = u.getNomeCompleto();
+        String loginAntes = u.getLogin();
+        var perfilAntes = u.getPerfil();
+        boolean ativoAntes = u.isAtivo();
+        boolean trocouSenha = req.senha() != null && !req.senha().isBlank();
+
         u.setNomeCompleto(req.nomeCompleto().trim());
         u.setLogin(novoLogin);
         u.setPerfil(req.perfil());
         if (req.ativo() != null) u.setAtivo(req.ativo());
 
-        // Senha só é alterada se informada
-        if (req.senha() != null && !req.senha().isBlank()) {
+        if (trocouSenha) {
             u.setSenhaHash(passwordEncoder.encode(req.senha()));
         }
-        return UsuarioResponse.from(repo.save(u));
+        // Entidade managed: o dirty checking persiste no commit — save() seria um merge redundante.
+        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, id,
+                "Nome: %s → %s; Login: %s → %s; Perfil: %s → %s; Ativo: %s → %s; Senha alterada: %s".formatted(
+                        nomeAntes, u.getNomeCompleto(),
+                        loginAntes, u.getLogin(),
+                        perfilAntes, u.getPerfil(),
+                        ativoAntes, u.isAtivo(),
+                        trocouSenha ? "sim" : "não"));
+        return UsuarioResponse.from(u);
     }
 
     /** Inativa em vez de deletar — preserva auditoria. */
@@ -92,7 +113,8 @@ public class UsuarioService {
     public void inativar(Long id) {
         Usuario u = buscarEntidade(id);
         u.setAtivo(false);
-        repo.save(u);
+        auditoriaService.registrar(AcaoAuditoria.DELETE, ENT, id,
+                "Inativação: login=%s, nome=%s".formatted(u.getLogin(), u.getNomeCompleto()));
     }
 
     // =========================================================================
@@ -112,7 +134,8 @@ public class UsuarioService {
             throw new RegraDeNegocioException("Senha atual incorreta.");
         }
         u.setSenhaHash(passwordEncoder.encode(req.novaSenha()));
-        repo.save(u);
+        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, u.getId(),
+                "Troca de senha pelo próprio usuário (login=%s)".formatted(login));
     }
 
     // =========================================================================

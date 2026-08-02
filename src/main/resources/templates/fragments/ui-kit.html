@@ -7,6 +7,7 @@
       ~{fragments/ui-kit :: empty-state(icon, title, desc, ctaHref, ctaLabel)}
       ~{fragments/ui-kit :: filter-chip(label, valor, removeHref)}
       ~{fragments/ui-kit :: section-header(icon, title, desc)}
+      ~{fragments/ui-kit :: pagination(pagina, baseUrl)}
 -->
 <body>
 
@@ -62,6 +63,37 @@
         <div class="form-section-desc" th:if="${desc != null}" th:text="${desc}"></div>
     </div>
 </div>
+
+<!-- ========================================================
+     PAGINATION — navegação Anterior/Próxima padrão
+     Params:
+       pagina:  Page do Spring Data
+       baseUrl: URL já com '?' (e filtros, se houver) — o fragmento
+                acrescenta page= e size=. Ex.: '/usuarios?' ou
+                '/patrimonios?upm=X&'
+     ======================================================== -->
+<nav th:fragment="pagination(pagina, baseUrl)" th:if="${pagina.totalPages > 1}"
+     class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="small text-muted">
+        Página <strong th:text="${pagina.number + 1}"></strong> de
+        <strong th:text="${pagina.totalPages}"></strong> ·
+        <span th:text="${pagina.totalElements}"></span> registros
+    </div>
+    <ul class="pagination mb-0">
+        <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+            <a class="page-link"
+               th:href="${baseUrl + 'page=' + (pagina.number - 1) + '&size=' + pagina.size}">
+                <i class="bi bi-chevron-left"></i> Anterior
+            </a>
+        </li>
+        <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+            <a class="page-link"
+               th:href="${baseUrl + 'page=' + (pagina.number + 1) + '&size=' + pagina.size}">
+                Próxima <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>
 
 <!-- ========================================================
      SKELETON CARD — card fantasma (usado em dashboards)

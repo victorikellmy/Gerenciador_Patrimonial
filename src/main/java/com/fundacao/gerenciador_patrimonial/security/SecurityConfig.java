@@ -33,6 +33,8 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final AuditoriaLoginListener auditoriaLoginListener;
+
     /** BCrypt com cost 10 (default) — resistente a brute force. */
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -82,6 +84,7 @@ public class SecurityConfig {
                         // --- áreas restritas ao ADMINISTRADOR ---
                         .requestMatchers("/usuarios/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/importacao/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers("/admin/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/patrimonios/*/excluir").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/patrimonios/anexos/*/excluir").hasRole("ADMINISTRADOR")
@@ -100,6 +103,7 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/login?desconectado")
+                        .addLogoutHandler(auditoriaLoginListener)
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 )

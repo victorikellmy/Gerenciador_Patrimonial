@@ -1,9 +1,5 @@
 package com.fundacao.gerenciador_patrimonial.service.report.exporter;
 
-import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
-import com.fundacao.gerenciador_patrimonial.service.DepreciacaoService;
-import com.fundacao.gerenciador_patrimonial.service.DepreciacaoService.CalculoDepreciacao;
-import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.stereotype.Component;
@@ -19,12 +15,9 @@ import java.util.List;
  * seguro para planilhas com milhares de linhas.
  */
 @Component
-@RequiredArgsConstructor
 public class XlsxExporter {
 
-    private final DepreciacaoService depreciacaoService;
-
-    public void exportarInventario(List<Patrimonio> lista, OutputStream out) throws IOException {
+    public void exportarInventario(List<LinhaInventario> linhas, OutputStream out) throws IOException {
         // SXSSF mantém só 100 linhas em memória, resto vai para disco (tmp).
         try (SXSSFWorkbook wb = new SXSSFWorkbook(100)) {
             Sheet sh = wb.createSheet("Inventário");
@@ -33,47 +26,39 @@ public class XlsxExporter {
             CellStyle dateStyle = criarDateStyle(wb);
             CellStyle moneyStyle = criarMoneyStyle(wb);
 
-            // Cabeçalho
-            String[] cols = {
-                    "ID", "Tombo", "Descrição", "Categoria", "Data Compra", "Valor Compra",
-                    "Conservação", "Situação", "Nota Fiscal",
-                    "UPM", "Lotação", "Responsável",
-                    "VUT (anos)", "Depreciação Acumulada", "VCL", "Depreciação Anual",
-                    "Data Baixa", "Motivo Baixa"
-            };
+            // Cabeçalho (colunas compartilhadas com o CSV — ver LinhaInventario)
             Row header = sh.createRow(0);
-            for (int i = 0; i < cols.length; i++) {
+            for (int i = 0; i < LinhaInventario.CABECALHO.length; i++) {
                 Cell c = header.createCell(i);
-                c.setCellValue(cols[i]);
+                c.setCellValue(LinhaInventario.CABECALHO[i]);
                 c.setCellStyle(headerStyle);
             }
 
-            // Linhas de dados
+            // Linhas de dados (depreciação já calculada no mapeamento da linha)
             int rowIdx = 1;
-            for (Patrimonio p : lista) {
-                CalculoDepreciacao calc = depreciacaoService.calcular(p);
+            for (LinhaInventario l : linhas) {
                 Row r = sh.createRow(rowIdx++);
 
-                setLong(r, 0, p.getId());
-                setStr(r, 1, p.getNumeroTombo());
-                setStr(r, 2, p.getDescricao());
-                setStr(r, 3, p.getCategoria());
-                setDate(r, 4, p.getDataCompra() != null
-                        ? java.sql.Date.valueOf(p.getDataCompra()) : null, dateStyle);
-                setMoney(r, 5, p.getValorCompra(), moneyStyle);
-                setStr(r, 6, p.getConservacao() != null ? p.getConservacao().name() : null);
-                setStr(r, 7, p.getSituacao() != null ? p.getSituacao().name() : null);
-                setStr(r, 8, p.getNotaFiscal());
-                setStr(r, 9, p.getLotacao() != null ? p.getLotacao().getUpm() : null);
-                setStr(r, 10, p.getLotacao() != null ? p.getLotacao().getNome() : null);
-                setStr(r, 11, p.getResponsavel() != null ? p.getResponsavel().getNomeCompleto() : null);
-                if (calc.vutAnos() != null) setLong(r, 12, calc.vutAnos().longValue());
-                setMoney(r, 13, calc.depreciacaoAcumulada(), moneyStyle);
-                setMoney(r, 14, calc.valorContabilLiquido(), moneyStyle);
-                setMoney(r, 15, calc.depreciacaoAnual(), moneyStyle);
-                setDate(r, 16, p.getDataBaixa() != null
-                        ? java.sql.Date.valueOf(p.getDataBaixa()) : null, dateStyle);
-                setStr(r, 17, p.getMotivoBaixa());
+                setLong(r, 0, l.id());
+                setStr(r, 1, l.tombo());
+                setStr(r, 2, l.descricao());
+                setStr(r, 3, l.categoria());
+                setDate(r, 4, l.dataCompra() != null
+                        ? java.sql.Date.valueOf(l.dataCompra()) : null, dateStyle);
+                setMoney(r, 5, l.valorCompra(), moneyStyle);
+                setStr(r, 6, l.conservacao());
+                setStr(r, 7, l.situacao());
+                setStr(r, 8, l.notaFiscal());
+                setStr(r, 9, l.upm());
+                setStr(r, 10, l.lotacaoNome());
+                setStr(r, 11, l.responsavelNome());
+                if (l.vutAnos() != null) setLong(r, 12, l.vutAnos().longValue());
+                setMoney(r, 13, l.depreciacaoAcumulada(), moneyStyle);
+                setMoney(r, 14, l.valorContabilLiquido(), moneyStyle);
+                setMoney(r, 15, l.depreciacaoAnual(), moneyStyle);
+                setDate(r, 16, l.dataBaixa() != null
+                        ? java.sql.Date.valueOf(l.dataBaixa()) : null, dateStyle);
+                setStr(r, 17, l.motivoBaixa());
             }
 
             // Congela primeira linha e auto-size nas principais colunas.

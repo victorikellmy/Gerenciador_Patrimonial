@@ -3,8 +3,12 @@ package com.fundacao.gerenciador_patrimonial.repository;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Patrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio;
 import com.fundacao.gerenciador_patrimonial.domain.projection.PatrimonioDepreciavel;
+import com.fundacao.gerenciador_patrimonial.dto.response.AgrupamentoResponse;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -19,6 +23,19 @@ public interface PatrimonioRepository
         extends JpaRepository<Patrimonio, Long>, JpaSpecificationExecutor<Patrimonio> {
 
     Optional<Patrimonio> findByNumeroTombo(String numeroTombo);
+
+    /**
+     * Sobrescrito com {@link EntityGraph} para carregar lotação e responsável
+     * na mesma query — o mapeamento para {@code PatrimonioResponse} acessa as
+     * duas relações LAZY, o que sem o graph gerava N+1 (2 selects por linha
+     * da página). O graph só se aplica à query de conteúdo, não à de count.
+     */
+    @Override
+    @EntityGraph(attributePaths = {"lotacao", "responsavel"})
+    Page<Patrimonio> findAll(Specification<Patrimonio> spec, Pageable pageable);
+
+    /** Existe algum patrimônio vinculado à lotação? (check O(1), sem hidratar coleção) */
+    boolean existsByLotacaoId(Long lotacaoId);
 
     /** Listagem paginada por situação. */
     Page<Patrimonio> findBySituacao(SituacaoPatrimonio situacao, Pageable pageable);
@@ -42,8 +59,8 @@ public interface PatrimonioRepository
     // =========================================================================
     // Agregações para Dashboard / Relatórios (Sprint 4)
     //
-    // Retornam arrays Object[] com (chave, quantidade) ou (chave, quantidade, soma).
-    // Convertidos em DTOs pelos services.
+    // Constructor expressions: o Hibernate materializa AgrupamentoResponse
+    // direto, sem os casts manuais de Object[] que existiam nos services.
     // =========================================================================
 
     /** Contagem de patrimônios por situação. */
@@ -56,37 +73,40 @@ public interface PatrimonioRepository
 
     /** Contagem + soma de valor por categoria (apenas ATIVO). */
     @Query("""
-           select coalesce(p.categoria,'(sem categoria)'),
+           select new com.fundacao.gerenciador_patrimonial.dto.response.AgrupamentoResponse(
+                  coalesce(p.categoria,'(sem categoria)'),
                   count(p),
-                  coalesce(sum(p.valorCompra), 0)
+                  coalesce(sum(p.valorCompra), 0))
            from Patrimonio p
            where p.situacao = com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio.ATIVO
            group by p.categoria
            order by count(p) desc
            """)
-    List<Object[]> agruparPorCategoria();
+    List<AgrupamentoResponse> agruparPorCategoria();
 
     /** Contagem por estado de conservação (apenas ATIVO). */
     @Query("""
-           select coalesce(cast(p.conservacao as string),'(não informado)'),
-                  count(p)
+           select new com.fundacao.gerenciador_patrimonial.dto.response.AgrupamentoResponse(
+                  coalesce(cast(p.conservacao as string),'(não informado)'),
+                  count(p))
            from Patrimonio p
            where p.situacao = com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio.ATIVO
            group by p.conservacao
            order by count(p) desc
            """)
-    List<Object[]> agruparPorConservacao();
+    List<AgrupamentoResponse> agruparPorConservacao();
 
     /** Top-N UPMs por quantidade de patrimônios ativos. */
     @Query("""
-           select l.upm, count(p), coalesce(sum(p.valorCompra), 0)
+           select new com.fundacao.gerenciador_patrimonial.dto.response.AgrupamentoResponse(
+                  l.upm, count(p), coalesce(sum(p.valorCompra), 0))
            from Patrimonio p
            join p.lotacao l
            where p.situacao = com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio.ATIVO
            group by l.upm
            order by count(p) desc
            """)
-    List<Object[]> agruparPorUpm(Pageable pageable);
+    List<AgrupamentoResponse> agruparPorUpm(Pageable pageable);
 
     /** Soma do valor de compra (custo de reposição) dos ativos. */
     @Query("""
@@ -118,9 +138,14 @@ public interface PatrimonioRepository
            """)
     List<Patrimonio> listarAtivosDoResponsavel(Long responsavelId);
 
-    /** Categorias distintas — alimenta dropdowns de filtro e cadastro. */
+    /** Categorias distintas — alimenta dropdowns de filtro e cadastro. Cache TTL 60s (CacheConfig). */
+    @Cacheable("categorias-distintas")
     @Query("select distinct p.categoria from Patrimonio p where p.categoria is not null order by p.categoria")
     List<String> findDistinctCategorias();
+
+    /** Todos os tombos existentes — pré-carga da deduplicação na importação (1 query em vez de 1 por linha). */
+    @Query("select p.numeroTombo from Patrimonio p where p.numeroTombo is not null")
+    List<String> findAllNumerosTombo();
 
     /** Patrimônios baixados (para relatório de baixas). */
     @Query("""

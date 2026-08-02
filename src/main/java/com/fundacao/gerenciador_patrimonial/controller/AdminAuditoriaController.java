@@ -2,7 +2,8 @@ package com.fundacao.gerenciador_patrimonial.controller;
 
 import com.fundacao.gerenciador_patrimonial.domain.enums.AcaoAuditoria;
 import com.fundacao.gerenciador_patrimonial.dto.response.AuditoriaResponse;
-import com.fundacao.gerenciador_patrimonial.repository.AuditoriaAcaoRepository;
+import com.fundacao.gerenciador_patrimonial.service.AuditoriaConsultaService;
+import com.fundacao.gerenciador_patrimonial.service.AuditoriaConsultaService.TopUsuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Endpoint admin para o painel de monitoramento de logs.
@@ -26,7 +26,7 @@ import java.util.Map;
 @PreAuthorize("hasRole('ADMINISTRADOR')")
 public class AdminAuditoriaController {
 
-    private final AuditoriaAcaoRepository repo;
+    private final AuditoriaConsultaService consulta;
 
     /**
      * Busca paginada com filtros opcionais.
@@ -48,20 +48,16 @@ public class AdminAuditoriaController {
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "50") int size) {
 
-        return repo.buscar(usuario, acao, entidade, entidadeId, de, ate,
-                        PageRequest.of(page, size))
-                .map(AuditoriaResponse::from);
+        return consulta.buscar(usuario, acao, entidade, entidadeId, de, ate,
+                PageRequest.of(page, size));
     }
 
     /** Top-N usuários mais ativos (opcionalmente recortado por data inicial). */
     @GetMapping("/usuarios-mais-ativos")
-    public List<Map<String, Object>> topUsuarios(
+    public List<TopUsuario> topUsuarios(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime de,
             @RequestParam(defaultValue = "10") int limite) {
 
-        return repo.contarPorUsuario(de, PageRequest.of(0, limite))
-                .stream()
-                .map(r -> Map.of("usuario", (Object) r[0], "total", (Object) r[1]))
-                .toList();
+        return consulta.topUsuarios(de, limite);
     }
 }

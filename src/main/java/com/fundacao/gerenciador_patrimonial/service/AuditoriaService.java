@@ -3,11 +3,11 @@ package com.fundacao.gerenciador_patrimonial.service;
 import com.fundacao.gerenciador_patrimonial.domain.entity.AuditoriaAcao;
 import com.fundacao.gerenciador_patrimonial.domain.enums.AcaoAuditoria;
 import com.fundacao.gerenciador_patrimonial.repository.AuditoriaAcaoRepository;
+import com.fundacao.gerenciador_patrimonial.security.SecurityUtils;
+import com.fundacao.gerenciador_patrimonial.util.Textos;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,19 +26,17 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Slf4j
 public class AuditoriaService {
 
-    private static final String SYSTEM = "SYSTEM";
-
     private final AuditoriaAcaoRepository repo;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrar(AcaoAuditoria acao, String entidade, Long entidadeId, String descricao) {
         try {
             AuditoriaAcao registro = AuditoriaAcao.builder()
-                    .usuario(usuarioAtual())
+                    .usuario(SecurityUtils.usuarioAtualOuSystem())
                     .acao(acao)
                     .entidade(entidade)
                     .entidadeId(entidadeId)
-                    .descricao(truncar(descricao, 2000))
+                    .descricao(Textos.truncar(descricao, 2000))
                     .ipOrigem(ipAtual())
                     .build();
             repo.save(registro);
@@ -47,14 +45,6 @@ public class AuditoriaService {
             log.error("Falha ao registrar auditoria ({} {} #{}): {}",
                     acao, entidade, entidadeId, e.getMessage());
         }
-    }
-
-    private static String usuarioAtual() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            return SYSTEM;
-        }
-        return auth.getName();
     }
 
     /** IP de origem da requisição HTTP corrente, ou {@code null} fora de contexto web. */
@@ -73,10 +63,5 @@ public class AuditoriaService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static String truncar(String s, int max) {
-        if (s == null) return null;
-        return s.length() <= max ? s : s.substring(0, max);
     }
 }
