@@ -1,0 +1,19 @@
+[Unit]
+Description=Gerenciador Patrimonial compose autostart (projeto manual, fora do Umbrel)
+Requires=docker.service
+After=docker.service network-online.target umbrel.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/umbrel/patrimonial-novo
+# aguarda o umbreld terminar a reconciliacao de containers no boot antes de subir
+ExecStartPre=/bin/sleep 65
+# -p reusa o projeto/volumes antigos (gerenciador-patrimonial_pgdata tem os dados)
+ExecStart=/usr/bin/docker compose -p gerenciador-patrimonial up -d
+ExecStop=/usr/bin/docker compose -p gerenciador-patrimonial stop
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

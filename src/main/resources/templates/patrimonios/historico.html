@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Histórico de Movimentação')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon"
+               th:href="@{'/patrimonios/' + ${patrimonio.id} + '/editar'}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">Histórico de movimentação</h1>
+                <div class="page-subtitle">
+                    <span th:text="${patrimonio.descricao}">Patrimônio</span>
+                    <span class="mx-1">·</span>
+                    Tombo <span th:text="${patrimonio.numeroTombo} ?: '—'"></span>
+                    <span class="mx-1">·</span>
+                    ID #<span th:text="${patrimonio.id}"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ ÚLTIMA ALTERAÇÃO ============================ -->
+    <div class="card card-panel mb-4">
+        <div class="card-body">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-clock-history',
+                'Última alteração',
+                'Resumo do estado mais recente do patrimônio.')}"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="summary-label">Lotação atual</div>
+                    <div class="summary-value">
+                        <span th:text="${patrimonio.lotacaoNome} ?: '—'"></span>
+                        <small class="text-secondary"
+                               th:if="${patrimonio.lotacaoUpm}"
+                               th:text="' (' + ${patrimonio.lotacaoUpm} + ')'"></small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="summary-label">Responsável atual</div>
+                    <div class="summary-value" th:text="${patrimonio.responsavelNome} ?: '—'"></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="summary-label">Cadastrado por</div>
+                    <div>
+                        <span th:text="${patrimonio.criadoPor} ?: '—'"></span>
+                        <small class="text-secondary"
+                               th:if="${patrimonio.criadoEm}"
+                               th:text="' em ' + ${#temporals.format(patrimonio.criadoEm, 'dd/MM/yyyy HH:mm')}"></small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="summary-label">Última atualização</div>
+                    <div>
+                        <span th:text="${patrimonio.atualizadoPor} ?: '—'"></span>
+                        <small class="text-secondary"
+                               th:if="${patrimonio.atualizadoEm}"
+                               th:text="' em ' + ${#temporals.format(patrimonio.atualizadoEm, 'dd/MM/yyyy HH:mm')}"></small>
+                    </div>
+                </div>
+
+                <div class="col-12" th:if="${ultima != null}">
+                    <hr style="border-color: var(--border);"/>
+                    <div class="summary-label">Última movimentação</div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span th:if="${ultima.lotacaoOrigemNome}"
+                              th:text="${ultima.lotacaoOrigemNome}"></span>
+                        <span class="text-muted" th:unless="${ultima.lotacaoOrigemNome}">—</span>
+                        <i class="bi bi-arrow-right text-secondary"></i>
+                        <strong th:text="${ultima.lotacaoDestinoNome} ?: '—'"></strong>
+                        <span class="text-secondary mx-2">·</span>
+                        <span th:if="${ultima.responsavelOrigemNome}"
+                              th:text="${ultima.responsavelOrigemNome}"></span>
+                        <span class="text-muted" th:unless="${ultima.responsavelOrigemNome}">—</span>
+                        <i class="bi bi-arrow-right text-secondary"></i>
+                        <strong th:text="${ultima.responsavelDestinoNome} ?: '—'"></strong>
+                    </div>
+                    <div class="small text-secondary mt-1">
+                        <i class="bi bi-calendar-event"></i>
+                        <span th:if="${ultima.dataMovimentacao}"
+                              th:text="${#temporals.format(ultima.dataMovimentacao, 'dd/MM/yyyy HH:mm')}"></span>
+                        <span class="mx-2">·</span>
+                        <i class="bi bi-person"></i>
+                        <span th:text="${ultima.executadoPor} ?: '—'"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ TIMELINE COMPLETA ============================ -->
+    <div class="card card-panel">
+        <div class="card-body">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-list-ul',
+                'Movimentações',
+                'Todas as movimentações registradas para este patrimônio.')}"></div>
+
+            <div class="table-responsive" th:if="${!movimentacoes.isEmpty()}">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>De (lotação)</th>
+                            <th>Para (lotação)</th>
+                            <th>De (responsável)</th>
+                            <th>Para (responsável)</th>
+                            <th>Executado por</th>
+                            <th>Observação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="m : ${movimentacoes}">
+                            <td class="text-secondary small text-nowrap"
+                                th:text="${m.dataMovimentacao != null} ? ${#temporals.format(m.dataMovimentacao, 'dd/MM/yyyy HH:mm')} : '—'"></td>
+                            <td>
+                                <div th:if="${m.lotacaoOrigemNome}">
+                                    <span th:text="${m.lotacaoOrigemNome}"></span>
+                                    <small class="text-secondary"
+                                           th:if="${m.lotacaoOrigemUpm}"
+                                           th:text="' (' + ${m.lotacaoOrigemUpm} + ')'"></small>
+                                </div>
+                                <span class="text-muted" th:unless="${m.lotacaoOrigemNome}">—</span>
+                            </td>
+                            <td>
+                                <div th:if="${m.lotacaoDestinoNome}">
+                                    <strong th:text="${m.lotacaoDestinoNome}"></strong>
+                                    <small class="text-secondary"
+                                           th:if="${m.lotacaoDestinoUpm}"
+                                           th:text="' (' + ${m.lotacaoDestinoUpm} + ')'"></small>
+                                </div>
+                                <span class="text-muted" th:unless="${m.lotacaoDestinoNome}">—</span>
+                            </td>
+                            <td>
+                                <span th:text="${m.responsavelOrigemNome} ?: '—'"
+                                      th:classappend="${m.responsavelOrigemNome == null} ? 'text-muted'"></span>
+                            </td>
+                            <td>
+                                <strong th:text="${m.responsavelDestinoNome} ?: '—'"
+                                        th:classappend="${m.responsavelDestinoNome == null} ? 'text-muted fw-normal'"></strong>
+                            </td>
+                            <td>
+                                <span class="badge badge-plain"
+                                      th:if="${m.executadoPor}" th:text="${m.executadoPor}"></span>
+                                <span class="text-muted" th:unless="${m.executadoPor}">—</span>
+                            </td>
+                            <td>
+                                <span th:text="${m.observacao} ?: '—'"
+                                      th:classappend="${m.observacao == null} ? 'text-muted'"></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${movimentacoes.isEmpty()}"
+                 th:replace="~{fragments/ui-kit :: empty-state(
+                    'bi-inbox',
+                    'Sem movimentações',
+                    'Este patrimônio ainda não foi movimentado.',
+                    null, null)}"></div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
