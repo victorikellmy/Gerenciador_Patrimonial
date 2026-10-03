@@ -45,6 +45,10 @@ services:
       DB_USER:     ${DB_USER:-patrimonial}
       DB_PASSWORD: ${DB_PASSWORD}
       APP_STORAGE_PASTA_RAIZ: /uploads
+      # Integração com o Almoxarifado: usuário técnico criado no boot quando a
+      # senha vier definida no .env (mesmos valores de PATRIMONIO_USUARIO/SENHA lá).
+      INTEGRACAO_ALMOXARIFADO_LOGIN: ${INTEGRACAO_ALMOXARIFADO_LOGIN:-integracao.almoxarifado}
+      INTEGRACAO_ALMOXARIFADO_SENHA: ${INTEGRACAO_ALMOXARIFADO_SENHA:-}
       JAVA_OPTS: "-Xms512m -Xmx1g"
     volumes:
       # Anexos vão para o servidor de armazenamento via NFS.
