@@ -10,17 +10,28 @@
     <!-- ============================ PAGE HEADER ============================ -->
     <div class="page-header">
         <div class="d-flex align-items-center gap-3">
-            <a class="btn btn-secondary btn-icon" th:href="@{/patrimonios}" title="Voltar">
+            <a class="btn btn-secondary btn-icon"
+               th:href="${pendencia != null} ? @{'/pendencias/' + ${pendencia.id}} : @{/patrimonios}" title="Voltar">
                 <i class="bi bi-arrow-left"></i>
             </a>
             <div>
-                <h1 class="page-title" th:text="${editando} ? 'Editar Patrimônio' : 'Novo Patrimônio'">Patrimônio</h1>
+                <h1 class="page-title" th:text="${editando} ? 'Editar Patrimônio' : (${pendencia != null} ? 'Patrimoniar bem recebido' : 'Novo Patrimônio')">Patrimônio</h1>
                 <div class="page-subtitle" th:if="${editando}">
                     <span>ID #</span><span th:text="${patrimonio.id}"></span>
                     <span class="mx-1">·</span>
                     Tombo <span th:text="${patrimonio.numeroTombo} ?: '—'"></span>
                 </div>
-                <div class="page-subtitle" th:unless="${editando}">
+                <div class="page-subtitle" th:if="${!editando and pendencia != null}">
+                    Pendência #<span th:text="${pendencia.id}"></span>
+                    <span class="mx-1">·</span>
+                    Almoxarifado compra #<span th:text="${pendencia.compraIdOrigem}"></span>
+                    <span class="mx-1" th:if="${pendencia.quantidadeTotal > 1}">·</span>
+                    <span th:if="${pendencia.quantidadeTotal > 1}">
+                        Unidade <span th:text="${pendencia.quantidadePatrimoniada + 1}"></span>
+                        de <span th:text="${pendencia.quantidadeTotal}"></span>
+                    </span>
+                </div>
+                <div class="page-subtitle" th:if="${!editando and pendencia == null}">
                     Preencha os dados abaixo para cadastrar um novo item.
                 </div>
             </div>
@@ -30,10 +41,47 @@
     <div class="row g-4">
         <!-- ============================ COLUNA PRINCIPAL ============================ -->
         <div th:class="${editando} ? 'col-lg-8' : 'col-12'">
-            <form th:action="${editando} ? @{'/patrimonios/' + ${id}} : @{/patrimonios}"
+            <form th:action="${editando} ? @{'/patrimonios/' + ${id}} : (${pendencia != null} ? @{'/pendencias/' + ${pendencia.id} + '/patrimoniar'} : @{/patrimonios})"
                   th:object="${patrimonioForm}" method="post"
                   th:enctype="${editando} ? 'application/x-www-form-urlencoded' : 'multipart/form-data'"
                   class="card card-panel" style="overflow: hidden;">
+
+                <!-- =============== ORIGEM: PENDÊNCIA DO ALMOXARIFADO =============== -->
+                <div class="form-section" th:if="${!editando and pendencia != null}"
+                     style="background: var(--info-bg, rgba(13,110,253,.06));">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-inbox',
+                        'Dados recebidos do Almoxarifado',
+                        'Descrição, data, valor, NF e observação já vieram preenchidos — confira e complete tombo, lotação, responsável e categoria.')}"></div>
+                    <div class="row g-2 small">
+                        <div class="col-md-4"><span class="text-muted">Fornecedor:</span>
+                            <span th:text="${pendencia.fornecedor} ?: '—'"></span></div>
+                        <div class="col-md-4"><span class="text-muted">Nota fiscal:</span>
+                            <span th:text="${pendencia.numeroNotaFiscal} ?: '—'"></span>
+                            <a th:if="${pendencia.possuiNotaFiscal}" class="ms-1"
+                               th:href="@{'/pendencias/' + ${pendencia.id} + '/nota-fiscal'}" target="_blank"
+                               title="Abrir PDF da NF"><i class="bi bi-file-earmark-pdf"></i> PDF</a></div>
+                        <div class="col-md-4"><span class="text-muted">Parte/Ofício:</span>
+                            <span th:text="${pendencia.numeroDocumento} ?: '—'"></span>
+                            <span th:if="${pendencia.numeroSgd}" class="text-muted"> · SGD </span>
+                            <span th:text="${pendencia.numeroSgd}"></span></div>
+                        <div class="col-md-4"><span class="text-muted">Setor de destino:</span>
+                            <span th:text="${pendencia.setorDestino} ?: '—'"></span></div>
+                        <div class="col-md-4"><span class="text-muted">Retirado por:</span>
+                            <span th:text="${pendencia.retiradoPor} ?: '—'"></span></div>
+                        <div class="col-md-4"><span class="text-muted">Registrado por:</span>
+                            <span th:text="${pendencia.registradoPor} ?: '—'"></span></div>
+                        <div class="col-12" th:if="${!pendencia.itens.isEmpty()}">
+                            <span class="text-muted">Itens:</span>
+                            <span th:each="it, st : ${pendencia.itens}">
+                                <span th:text="${it.quantidade != null ? it.quantidade : 1} + '× ' + ${it.descricao}"></span><span th:if="${!st.last}">; </span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2" th:if="${pendencia.possuiNotaFiscal}">
+                        <i class="bi bi-paperclip"></i> O PDF da nota fiscal será anexado automaticamente ao bem.
+                    </div>
+                </div>
 
                 <!-- =============== SEÇÃO: IDENTIFICAÇÃO =============== -->
                 <div class="form-section">
@@ -192,9 +240,13 @@
                     <span class="actions-hint">
                         <i class="bi bi-info-circle"></i> Campos com * são obrigatórios.
                     </span>
-                    <a class="btn btn-secondary" th:href="@{/patrimonios}">Cancelar</a>
+                    <a class="btn btn-secondary"
+                       th:href="${pendencia != null} ? @{/pendencias} : @{/patrimonios}">Cancelar</a>
                     <button class="btn btn-primary" type="submit">
-                        <i class="bi bi-check-lg"></i> <span th:text="${editando} ? 'Salvar alterações' : 'Cadastrar'"></span>
+                        <i class="bi bi-check-lg"></i>
+                        <span th:text="${editando} ? 'Salvar alterações'
+                                        : (${pendencia != null and pendencia.quantidadeRestante > 1} ? 'Patrimoniar e ir para a próxima unidade'
+                                        : (${pendencia != null} ? 'Patrimoniar' : 'Cadastrar'))"></span>
                     </button>
                 </div>
             </form>

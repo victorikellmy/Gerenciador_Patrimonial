@@ -71,6 +71,44 @@ public class AnexoService {
         return AnexoResponse.from(anexoRepo.save(anexo));
     }
 
+    /**
+     * Anexa ao patrimônio uma <b>cópia</b> de um arquivo já existente no storage
+     * (ex.: a NF guardada numa pendência de patrimoniamento). Cada bem recebe
+     * o seu próprio arquivo — excluir o anexo de um não afeta os demais.
+     */
+    public AnexoResponse anexarCopia(Long patrimonioId,
+                                     String caminhoOrigem,
+                                     String nomeOriginal,
+                                     String contentType,
+                                     Long tamanhoBytes,
+                                     TipoAnexo tipo) {
+        Patrimonio patrimonio = patrimonioRepo.findById(patrimonioId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Patrimônio", patrimonioId));
+
+        Resource origem = storageService.carregar(caminhoOrigem);
+        LocalDate hoje = LocalDate.now();
+        String subpasta = "patrimonio/%d/%04d-%02d"
+                .formatted(patrimonioId, hoje.getYear(), hoje.getMonthValue());
+
+        String caminho;
+        try (var in = origem.getInputStream()) {
+            caminho = storageService.armazenar(in, nomeOriginal, subpasta);
+        } catch (java.io.IOException e) {
+            throw new RegraDeNegocioException("Falha ao copiar arquivo: " + e.getMessage());
+        }
+
+        ArquivoAnexo anexo = ArquivoAnexo.builder()
+                .patrimonio(patrimonio)
+                .nomeOriginal(nomeOriginal != null ? nomeOriginal : "nota-fiscal.pdf")
+                .caminhoArmazenamento(caminho)
+                .contentType(contentType)
+                .tamanhoBytes(tamanhoBytes)
+                .tipo(tipo != null ? tipo : TipoAnexo.OUTRO)
+                .build();
+
+        return AnexoResponse.from(anexoRepo.save(anexo));
+    }
+
     @Transactional(readOnly = true)
     public List<AnexoResponse> listar(Long patrimonioId) {
         return anexoRepo.findByPatrimonioId(patrimonioId).stream()

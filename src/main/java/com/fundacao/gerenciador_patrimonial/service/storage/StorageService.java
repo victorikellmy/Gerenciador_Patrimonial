@@ -24,6 +24,17 @@ public interface StorageService {
      */
     String armazenar(MultipartFile arquivo, String subpasta);
 
+    /**
+     * Persiste um conteúdo arbitrário (ex.: PDF decodificado de Base64 recebido
+     * por integração, ou cópia de um arquivo já armazenado).
+     *
+     * @param conteudo     stream do arquivo — é lido até o fim e NÃO é fechado aqui
+     * @param nomeOriginal nome informado pelo remetente (só a extensão é aproveitada)
+     * @param subpasta     sub-diretório lógico (ex.: "pendencias/17")
+     * @return identificador de armazenamento a ser salvo no DB
+     */
+    String armazenar(java.io.InputStream conteudo, String nomeOriginal, String subpasta);
+
     /** Recupera o arquivo como recurso Spring para download. */
     Resource carregar(String caminhoArmazenamento);
 

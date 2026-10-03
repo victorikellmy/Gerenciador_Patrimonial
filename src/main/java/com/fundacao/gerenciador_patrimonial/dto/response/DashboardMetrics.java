@@ -18,6 +18,7 @@ import java.util.Map;
  * @param porConservacao agrupamento por conservação
  * @param topUpms top-N UPMs por volume
  * @param ultimasMovimentacoes últimas N movimentações
+ * @param pendenciasPatrimoniamento bens recebidos do Almoxarifado aguardando cadastro
  */
 public record DashboardMetrics(
         long totalPatrimonios,
@@ -33,7 +34,9 @@ public record DashboardMetrics(
         List<AgrupamentoResponse> porConservacao,
         List<AgrupamentoResponse> topUpms,
 
-        List<MovimentacaoResumo> ultimasMovimentacoes
+        List<MovimentacaoResumo> ultimasMovimentacoes,
+
+        long pendenciasPatrimoniamento
 ) {
     /** Resumo leve de movimentação para dashboard — evita serializar entidade inteira. */
     public record MovimentacaoResumo(

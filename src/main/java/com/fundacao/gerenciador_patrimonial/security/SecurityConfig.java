@@ -54,10 +54,14 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Integração com sistemas externos (Almoxarifado): usuário técnico INTEGRACAO
+                        // ou um ADMINISTRADOR (testes manuais via curl).
+                        .requestMatchers("/api/integracao/**").hasAnyRole("ADMINISTRADOR", "INTEGRACAO")
                         // Escrita/alteração exige ADMINISTRADOR
                         .requestMatchers(HttpMethod.POST, "/api/importacao/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMINISTRADOR")
-                        .anyRequest().authenticated()
+                        // Restante da API: operadores humanos — o perfil INTEGRACAO fica de fora.
+                        .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
                 )
                 .httpBasic(org.springframework.security.config.Customizer.withDefaults());
         return http.build();
@@ -87,9 +91,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/patrimonios/anexos/*/excluir").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/lotacoes/*/excluir").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/responsaveis/*/inativar").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/pendencias/*/descartar").hasRole("ADMINISTRADOR")
 
-                        // --- demais → autenticado ---
-                        .anyRequest().authenticated()
+                        // --- demais (inclui /pendencias/**) → operadores humanos ---
+                        // O perfil INTEGRACAO é só para a API; não navega na interface web.
+                        .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
                 )
                 .formLogin(form -> form
                         .loginPage("/login")

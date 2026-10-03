@@ -22,6 +22,13 @@ app:
   storage:
     tipo: LOCAL                 # LOCAL | S3 (futuro)
     pasta-raiz: ./uploads
+  integracao:
+    # Usuário técnico que o Almoxarifado usa (HTTP Basic) em
+    # POST /api/integracao/almoxarifado/recebimentos. Só é criado quando a senha
+    # vier configurada. No Almoxarifado: PATRIMONIO_USUARIO / PATRIMONIO_SENHA.
+    almoxarifado:
+      login: ${INTEGRACAO_ALMOXARIFADO_LOGIN:integracao.almoxarifado}
+      senha: ${INTEGRACAO_ALMOXARIFADO_SENHA:}
   importacao:
     # Seed automático da planilha base no primeiro start.
     # Idempotente: só roda se o banco estiver sem patrimônios.

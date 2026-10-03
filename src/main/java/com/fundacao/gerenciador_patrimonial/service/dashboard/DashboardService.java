@@ -2,6 +2,8 @@ package com.fundacao.gerenciador_patrimonial.service.dashboard;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Movimentacao;
 import com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio;
+import com.fundacao.gerenciador_patrimonial.domain.enums.StatusPendencia;
+import com.fundacao.gerenciador_patrimonial.repository.PendenciaPatrimoniamentoRepository;
 import com.fundacao.gerenciador_patrimonial.dto.response.AgrupamentoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.DashboardMetrics;
 import com.fundacao.gerenciador_patrimonial.repository.LotacaoRepository;
@@ -38,6 +40,7 @@ public class DashboardService {
     private final LotacaoRepository lotacaoRepo;
     private final ResponsavelRepository responsavelRepo;
     private final MovimentacaoRepository movimentacaoRepo;
+    private final PendenciaPatrimoniamentoRepository pendenciaRepo;
     private final DepreciacaoService depreciacaoService;
 
     @Transactional(readOnly = true)
@@ -107,7 +110,8 @@ public class DashboardService {
                 porCategoria,
                 porConservacao,
                 topUpms,
-                ultimas
+                ultimas,
+                pendenciaRepo.countByStatus(StatusPendencia.PENDENTE)
         );
     }
 

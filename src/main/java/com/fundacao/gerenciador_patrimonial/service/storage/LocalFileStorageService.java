@@ -48,10 +48,21 @@ public class LocalFileStorageService implements StorageService {
             throw new RegraDeNegocioException("Arquivo vazio.");
         }
 
-        String nomeOriginal = StringUtils.cleanPath(
-                arquivo.getOriginalFilename() != null ? arquivo.getOriginalFilename() : "arquivo");
+        try (var in = arquivo.getInputStream()) {
+            return armazenar(in, arquivo.getOriginalFilename(), subpasta);
+        } catch (IOException e) {
+            throw new RegraDeNegocioException("Falha ao ler arquivo enviado: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public String armazenar(java.io.InputStream conteudo, String nomeOriginal, String subpasta) {
+        if (conteudo == null) {
+            throw new RegraDeNegocioException("Arquivo vazio.");
+        }
+        String nomeLimpo = StringUtils.cleanPath(nomeOriginal != null ? nomeOriginal : "arquivo");
         // Gera um nome único para evitar colisão e exposição do nome original
-        String extensao = extrairExtensao(nomeOriginal);
+        String extensao = extrairExtensao(nomeLimpo);
         String nomeFinal = UUID.randomUUID() + (extensao.isEmpty() ? "" : "." + extensao);
 
         Path destino = pastaRaiz.resolve(Paths.get(subpasta)).normalize().resolve(nomeFinal);
@@ -63,9 +74,7 @@ public class LocalFileStorageService implements StorageService {
 
         try {
             Files.createDirectories(destino.getParent());
-            try (var in = arquivo.getInputStream()) {
-                Files.copy(in, destino, StandardCopyOption.REPLACE_EXISTING);
-            }
+            Files.copy(conteudo, destino, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             throw new RegraDeNegocioException("Falha ao gravar arquivo: " + e.getMessage());
         }

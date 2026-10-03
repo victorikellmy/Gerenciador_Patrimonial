@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Pendências de patrimoniamento')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Pendências de patrimoniamento</h1>
+            <div class="page-subtitle">
+                Bens recebidos pelo Almoxarifado (compras patrimoniais) aguardando cadastro.
+                <span th:if="${totalPendentes > 0}">
+                    <span class="mx-1">·</span>
+                    <strong th:text="${totalPendentes}">0</strong> em aberto
+                </span>
+            </div>
+        </div>
+        <div class="btn-group" role="group" aria-label="Filtro de situação">
+            <a th:href="@{/pendencias(status='PENDENTE')}" class="btn btn-sm"
+               th:classappend="${!todas and status != null and status.name() == 'PENDENTE'} ? 'btn-primary' : 'btn-secondary'">Pendentes</a>
+            <a th:href="@{/pendencias(status='CONCLUIDA')}" class="btn btn-sm"
+               th:classappend="${!todas and status != null and status.name() == 'CONCLUIDA'} ? 'btn-primary' : 'btn-secondary'">Concluídas</a>
+            <a th:href="@{/pendencias(status='DESCARTADA')}" class="btn btn-sm"
+               th:classappend="${!todas and status != null and status.name() == 'DESCARTADA'} ? 'btn-primary' : 'btn-secondary'">Descartadas</a>
+            <a th:href="@{/pendencias(todas=true)}" class="btn btn-sm"
+               th:classappend="${todas} ? 'btn-primary' : 'btn-secondary'">Todas</a>
+        </div>
+    </div>
+
+    <!-- ============================ LISTAGEM ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div class="table-responsive" th:if="${!pagina.empty}">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">#</th>
+                        <th>Bem / itens</th>
+                        <th>Origem</th>
+                        <th>Setor de destino</th>
+                        <th class="text-end">Valor (R$)</th>
+                        <th>Recebido em</th>
+                        <th>Situação</th>
+                        <th class="text-end" style="width: 200px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${pagina.content}">
+                        <td><span class="chip-tombo" th:text="${p.id}"></span></td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary"
+                                      th:text="${p.itens.isEmpty()} ? (${p.assunto} ?: 'Sem descrição') : ${p.itens[0].descricao}"></span>
+                                <span class="cell-secondary">
+                                    <span th:if="${p.itens.size() > 1}" th:text="'+' + ${p.itens.size() - 1} + ' item(ns) · '"></span>
+                                    <span th:text="${p.quantidadePatrimoniada} + '/' + ${p.quantidadeTotal} + ' unidade(s) patrimoniada(s)'"></span>
+                                    <span th:if="${p.possuiNotaFiscal}" title="Nota fiscal anexada"> · <i class="bi bi-file-earmark-pdf"></i> NF</span>
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary">Compra #<span th:text="${p.compraIdOrigem}"></span></span>
+                                <span class="cell-secondary">
+                                    <span th:text="${p.fornecedor} ?: '—'"></span>
+                                    <span th:if="${p.numeroDocumento}" th:text="' · Parte/Ofício ' + ${p.numeroDocumento}"></span>
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary" th:text="${p.setorDestino} ?: '—'"></span>
+                                <span class="cell-secondary" th:if="${p.retiradoPor}" th:text="'Retirado por ' + ${p.retiradoPor}"></span>
+                            </div>
+                        </td>
+                        <td class="text-end" th:text="${p.valorTotal != null} ? ${#numbers.formatDecimal(p.valorTotal, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                        <td th:text="${p.dataRecebimento != null} ? ${#temporals.format(p.dataRecebimento, 'dd/MM/yyyy HH:mm')} : (${p.criadoEm != null} ? ${#temporals.format(p.criadoEm, 'dd/MM/yyyy HH:mm')} : '—')"></td>
+                        <td>
+                            <span class="badge badge-plain"
+                                  th:classappend="${p.status.name() == 'PENDENTE'} ? 'text-bg-warning' : (${p.status.name() == 'CONCLUIDA'} ? 'text-bg-success' : 'text-bg-secondary')"
+                                  th:text="${p.status}"></span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/pendencias/' + ${p.id}}" title="Detalhes">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a class="btn btn-sm btn-primary" th:if="${p.pendente()}"
+                                   th:href="@{'/pendencias/' + ${p.id} + '/patrimoniar'}" title="Cadastrar o bem">
+                                    <i class="bi bi-box-seam"></i> Patrimoniar
+                                </a>
+                                <a class="btn btn-sm btn-secondary btn-icon" th:if="${!p.pendente() and p.patrimonioId != null}"
+                                   th:href="@{'/patrimonios/' + ${p.patrimonioId} + '/editar'}" title="Abrir patrimônio">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${pagina.empty}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-inbox',
+                'Nenhuma pendência',
+                ${todas} ? 'Nenhum recebimento do Almoxarifado foi registrado ainda.' : 'Não há pendências nesta situação.',
+                null, null)}"></div>
+    </div>
+
+    <!-- ============================ PAGINAÇÃO ============================ -->
+    <nav th:if="${pagina.totalPages > 1}" class="mt-3" aria-label="Paginação">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+            <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+                <a class="page-link" th:href="@{/pendencias(status=${status},todas=${todas},page=${pagina.number - 1},size=${pagina.size})}">&laquo;</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link" th:text="${pagina.number + 1} + ' / ' + ${pagina.totalPages}"></span>
+            </li>
+            <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+                <a class="page-link" th:href="@{/pendencias(status=${status},todas=${todas},page=${pagina.number + 1},size=${pagina.size})}">&raquo;</a>
+            </li>
+        </ul>
+    </nav>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

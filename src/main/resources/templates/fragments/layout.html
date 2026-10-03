@@ -86,6 +86,14 @@
 
             <div class="sidebar-section">
                 <div class="sidebar-section-title">Operacional</div>
+                <a class="sidebar-link" th:href="@{/pendencias}" data-nav-match="/pendencias">
+                    <i class="bi bi-inbox"></i>
+                    <span class="sidebar-link-label">Pendências</span>
+                    <span class="badge rounded-pill text-bg-danger ms-auto badge-plain"
+                          th:if="${pendenciasPendentes != null and pendenciasPendentes > 0}"
+                          th:text="${pendenciasPendentes}"
+                          th:title="${pendenciasPendentes} + ' bem(ns) a patrimoniar'">0</span>
+                </a>
                 <a class="sidebar-link" th:href="@{/patrimonios}" data-nav-match="/patrimonios">
                     <i class="bi bi-grid-3x3-gap"></i>
                     <span class="sidebar-link-label">Patrimônios</span>
@@ -152,6 +160,20 @@
         <div class="topbar-breadcrumb" id="topbarBreadcrumb" aria-hidden="true"></div>
 
         <div class="topbar-spacer"></div>
+
+        <!-- Sino: bens recebidos do Almoxarifado aguardando patrimoniamento -->
+        <a class="topbar-icon-btn position-relative text-decoration-none" th:href="@{/pendencias}"
+           sec:authorize="isAuthenticated()"
+           th:title="${pendenciasPendentes != null and pendenciasPendentes > 0}
+                     ? ${pendenciasPendentes} + ' bem(ns) a patrimoniar'
+                     : 'Nenhuma pendência de patrimoniamento'"
+           aria-label="Pendências de patrimoniamento">
+            <i class="bi" th:classappend="${pendenciasPendentes != null and pendenciasPendentes > 0} ? 'bi-bell-fill' : 'bi-bell'"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger badge-plain"
+                  style="font-size:.65rem; margin-left:-6px; margin-top:6px;"
+                  th:if="${pendenciasPendentes != null and pendenciasPendentes > 0}"
+                  th:text="${pendenciasPendentes > 99 ? '99+' : pendenciasPendentes}">0</span>
+        </a>
 
         <button type="button" class="topbar-icon-btn theme-toggle" id="themeToggleBtn"
                 title="Alternar tema claro/escuro" aria-label="Alternar tema">

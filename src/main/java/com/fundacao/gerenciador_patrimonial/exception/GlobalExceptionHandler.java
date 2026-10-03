@@ -48,6 +48,17 @@ public class GlobalExceptionHandler {
                 .body(ErroResponse.of(400, "Erro de validação", "Campos inválidos", req.getRequestURI(), detalhes));
     }
 
+    /** JSON malformado ou com tipos errados (ex.: data fora do ISO-8601) no corpo da requisição. */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ErroResponse> handleUnreadable(
+            org.springframework.http.converter.HttpMessageNotReadableException ex, HttpServletRequest req) {
+        String causa = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        log.warn("Corpo ilegível em {}: {}", req.getRequestURI(), causa);
+        return ResponseEntity.badRequest()
+                .body(ErroResponse.of(400, "Requisição inválida", "Corpo da requisição ilegível", req.getRequestURI(),
+                        causa != null ? List.of(causa) : List.of()));
+    }
+
     /** Constraints de unicidade do banco (ex.: matricula duplicada). */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErroResponse> handleDataIntegrity(DataIntegrityViolationException ex,

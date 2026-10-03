@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Pendência #' + ${pendencia.id})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/pendencias}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">
+                    Pendência #<span th:text="${pendencia.id}"></span>
+                    <span class="badge badge-plain ms-2 align-middle"
+                          th:classappend="${pendencia.status.name() == 'PENDENTE'} ? 'text-bg-warning' : (${pendencia.status.name() == 'CONCLUIDA'} ? 'text-bg-success' : 'text-bg-secondary')"
+                          th:text="${pendencia.status}"></span>
+                </h1>
+                <div class="page-subtitle">
+                    Recebida do <span th:text="${pendencia.origem}"></span> · compra #<span th:text="${pendencia.compraIdOrigem}"></span>
+                    <span th:if="${pendencia.dataRecebimento != null}">
+                        · em <span th:text="${#temporals.format(pendencia.dataRecebimento, 'dd/MM/yyyy HH:mm')}"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2" th:if="${pendencia.pendente()}">
+            <a class="btn btn-primary" th:href="@{'/pendencias/' + ${pendencia.id} + '/patrimoniar'}">
+                <i class="bi bi-box-seam"></i>
+                <span th:text="${pendencia.quantidadePatrimoniada > 0} ? 'Patrimoniar próximo' : 'Patrimoniar'"></span>
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ============================ COLUNA PRINCIPAL ============================ -->
+        <div class="col-lg-8">
+            <div class="card card-panel" style="overflow: hidden;">
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-receipt',
+                        'Dados do recebimento',
+                        'Informações registradas pelo setor de Compras no Almoxarifado.')}"></div>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4">Fornecedor</dt>
+                        <dd class="col-sm-8" th:text="${pendencia.fornecedor} ?: '—'"></dd>
+                        <dt class="col-sm-4">Nota fiscal</dt>
+                        <dd class="col-sm-8">
+                            <span th:text="${pendencia.numeroNotaFiscal} ?: '—'"></span>
+                            <a th:if="${pendencia.possuiNotaFiscal}" class="ms-2"
+                               th:href="@{'/pendencias/' + ${pendencia.id} + '/nota-fiscal'}" target="_blank">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                                <span th:text="${pendencia.nfNomeOriginal} ?: 'PDF'"></span>
+                            </a>
+                            <span th:unless="${pendencia.possuiNotaFiscal}" class="text-muted ms-2">(PDF não enviado)</span>
+                        </dd>
+                        <dt class="col-sm-4">Data da compra</dt>
+                        <dd class="col-sm-8" th:text="${pendencia.dataCompra != null} ? ${#temporals.format(pendencia.dataCompra, 'dd/MM/yyyy')} : '—'"></dd>
+                        <dt class="col-sm-4">Valor total</dt>
+                        <dd class="col-sm-8" th:text="${pendencia.valorTotal != null} ? 'R$ ' + ${#numbers.formatDecimal(pendencia.valorTotal, 1, 'POINT', 2, 'COMMA')} : '—'"></dd>
+                        <dt class="col-sm-4">Parte / Ofício</dt>
+                        <dd class="col-sm-8">
+                            <span th:text="${pendencia.numeroDocumento} ?: '—'"></span>
+                            <span th:if="${pendencia.numeroSgd}" class="text-muted"> · SGD <span th:text="${pendencia.numeroSgd}"></span></span>
+                        </dd>
+                        <dt class="col-sm-4">Assunto</dt>
+                        <dd class="col-sm-8" th:text="${pendencia.assunto} ?: '—'"></dd>
+                        <dt class="col-sm-4">Solicitante do documento</dt>
+                        <dd class="col-sm-8" th:text="${pendencia.solicitanteDocumento} ?: '—'"></dd>
+                        <dt class="col-sm-4">Setor de destino</dt>
+                        <dd class="col-sm-8">
+                            <span th:text="${pendencia.setorDestino} ?: '—'"></span>
+                            <span th:if="${pendencia.setorDestinoCentroCusto}" class="text-muted">
+                                (<span th:text="${pendencia.setorDestinoCentroCusto}"></span>)</span>
+                        </dd>
+                        <dt class="col-sm-4">Retirado por</dt>
+                        <dd class="col-sm-8" th:text="${pendencia.retiradoPor} ?: '—'"></dd>
+                        <dt class="col-sm-4">Registrado por (Almoxarifado)</dt>
+                        <dd class="col-sm-8" th:text="${pendencia.registradoPor} ?: '—'"></dd>
+                        <dt class="col-sm-4">Observação</dt>
+                        <dd class="col-sm-8" th:text="${pendencia.observacao} ?: '—'"></dd>
+                    </dl>
+                </div>
+
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-list-check',
+                        'Itens recebidos',
+                        'Cada unidade vira um patrimônio. A NF é anexada a todos.')}"></div>
+                    <div class="table-responsive" th:if="${!pendencia.itens.isEmpty()}">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr>
+                                <th>Descrição</th><th>SKU</th>
+                                <th class="text-end">Qtd.</th><th class="text-end">Valor unit. (R$)</th>
+                            </tr></thead>
+                            <tbody>
+                                <tr th:each="it : ${pendencia.itens}">
+                                    <td th:text="${it.descricao}"></td>
+                                    <td th:text="${it.codigoSku} ?: '—'"></td>
+                                    <td class="text-end" th:text="${it.quantidade} ?: 1"></td>
+                                    <td class="text-end" th:text="${it.valorUnitario != null} ? ${#numbers.formatDecimal(it.valorUnitario, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-muted small" th:if="${pendencia.itens.isEmpty()}">Nenhum item detalhado foi enviado.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================ COLUNA LATERAL ============================ -->
+        <div class="col-lg-4">
+            <div class="card card-panel mb-4" style="overflow: hidden;">
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header(
+                        'bi-box-seam',
+                        'Andamento',
+                        'Unidades já cadastradas como patrimônio.')}"></div>
+                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                        <span class="fs-3 fw-semibold" th:text="${pendencia.quantidadePatrimoniada}">0</span>
+                        <span class="text-muted">de <span th:text="${pendencia.quantidadeTotal}">1</span> unidade(s)</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 6px;">
+                        <div class="progress-bar" role="progressbar"
+                             th:style="'width:' + ${pendencia.quantidadeTotal > 0 ? (100 * pendencia.quantidadePatrimoniada / pendencia.quantidadeTotal) : 0} + '%'"></div>
+                    </div>
+                    <div class="small text-muted" th:if="${pendencia.patrimonioId != null}">
+                        Último bem criado:
+                        <a th:href="@{'/patrimonios/' + ${pendencia.patrimonioId} + '/editar'}">
+                            patrimônio #<span th:text="${pendencia.patrimonioId}"></span>
+                        </a>
+                    </div>
+                    <div class="small text-muted" th:if="${!pendencia.pendente()}">
+                        <span th:text="${pendencia.status.name() == 'CONCLUIDA'} ? 'Concluída' : 'Descartada'"></span>
+                        por <span th:text="${pendencia.concluidaPor} ?: '—'"></span>
+                        <span th:if="${pendencia.concluidaEm != null}">
+                            em <span th:text="${#temporals.format(pendencia.concluidaEm, 'dd/MM/yyyy HH:mm')}"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="form-section" th:if="${pendencia.pendente()}">
+                    <div class="d-grid gap-2">
+                        <a class="btn btn-primary" th:href="@{'/pendencias/' + ${pendencia.id} + '/patrimoniar'}">
+                            <i class="bi bi-box-seam"></i>
+                            <span th:text="${pendencia.quantidadePatrimoniada > 0} ? 'Patrimoniar próximo' : 'Patrimoniar'"></span>
+                        </a>
+                        <form th:action="@{'/pendencias/' + ${pendencia.id} + '/concluir'}" method="post"
+                              onsubmit="return confirm('Concluir esta pendência sem cadastrar as unidades restantes?');">
+                            <button class="btn btn-secondary w-100" type="submit">
+                                <i class="bi bi-check2-circle"></i> Concluir manualmente
+                            </button>
+                        </form>
+                        <form th:action="@{'/pendencias/' + ${pendencia.id} + '/descartar'}" method="post"
+                              sec:authorize="hasRole('ADMINISTRADOR')"
+                              onsubmit="return confirm('Descartar esta pendência? Nenhum patrimônio será criado.');">
+                            <input type="text" class="form-control form-control-sm mb-2" name="motivo"
+                                   placeholder="Motivo do descarte (opcional)" maxlength="200"/>
+                            <button class="btn btn-outline-danger w-100" type="submit">
+                                <i class="bi bi-x-circle"></i> Descartar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
