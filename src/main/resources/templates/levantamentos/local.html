@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Conferência — ' + ${lotacao.nome})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{'/levantamentos/' + ${lev.id}}" title="Voltar ao guia">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title" th:text="${lotacao.nome}">Local</h1>
+                <div class="page-subtitle">
+                    <span th:text="${lotacao.upm}"></span>
+                    <span th:if="${lotacao.cidade}" th:text="' · ' + ${lotacao.cidade}"></span>
+                    · <span th:text="${lev.descricao}"></span>
+                    <span class="badge badge-plain ms-1" th:unless="${lev.aberto()}">Concluído — somente leitura</span>
+                </div>
+            </div>
+        </div>
+        <div class="btn-group" role="group" aria-label="Filtro">
+            <a th:href="@{'/levantamentos/' + ${lev.id} + '/locais/' + ${lotacao.id}}" class="btn btn-sm"
+               th:classappend="${!todos} ? 'btn-primary' : 'btn-secondary'">
+                Pendentes <span class="badge text-bg-light ms-1" th:text="${pendentes}">0</span>
+            </a>
+            <a th:href="@{'/levantamentos/' + ${lev.id} + '/locais/' + ${lotacao.id}(todos=true)}" class="btn btn-sm"
+               th:classappend="${todos} ? 'btn-primary' : 'btn-secondary'">
+                Todos <span class="badge text-bg-light ms-1" th:text="${total}">0</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================ PROGRESSO + LOCALIZAR BEM ============================ -->
+    <div class="card card-panel mb-3">
+        <div class="card-body d-flex flex-column flex-md-row align-items-md-center gap-3">
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>
+                        <strong class="text-body" th:text="${total - pendentes}">0</strong> de
+                        <strong class="text-body" th:text="${total}">0</strong> bens conferidos neste local
+                    </span>
+                    <span class="tabular-nums" th:text="${total == 0 ? 0 : T(java.lang.Math).round(100.0 * (total - pendentes) / total)} + '%'"></span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar" role="progressbar"
+                         th:classappend="${total > 0 and pendentes == 0} ? 'bg-success' : ''"
+                         th:style="'width:' + ${total == 0 ? 0 : (100 * (total - pendentes) / total)} + '%'"></div>
+                </div>
+            </div>
+            <form th:if="${lev.aberto()}" class="d-flex gap-2 flex-shrink-0"
+                  th:action="@{'/levantamentos/' + ${lev.id} + '/locais/' + ${lotacao.id} + '/localizar'}" method="post">
+                <input type="hidden" name="todos" th:value="${todos}"/>
+                <input type="text" class="form-control form-control-sm" name="tombo" required
+                       placeholder="Tombo de um bem achado aqui" title="Encontrou um bem que não está nesta lista? Informe o tombo (ou o ID) para adicioná-lo a este local."
+                       style="min-width: 220px;"/>
+                <button class="btn btn-sm btn-secondary text-nowrap" type="submit">
+                    <i class="bi bi-search"></i> Localizar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================ CHECKLIST ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div th:if="${itens.isEmpty()}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-check2-all',
+                ${todos} ? 'Nenhum bem neste local' : 'Tudo conferido por aqui',
+                ${todos} ? 'Não há bens cadastrados nesta lotação para este levantamento.' : 'Não restam bens pendentes neste local. Use o filtro “Todos” para rever ou desfazer uma conferência.',
+                null, null)}"></div>
+
+        <div class="lev-item" th:each="it : ${itens}" th:id="'item-' + ${it.id}">
+            <!-- Foto atual do bem -->
+            <div class="lev-thumb">
+                <a th:if="${it.fotoAtualId != null}" th:href="@{'/levantamentos/fotos/' + ${it.fotoAtualId}}" target="_blank" title="Ver foto atual">
+                    <img th:src="@{'/levantamentos/fotos/' + ${it.fotoAtualId}}" alt="Foto do bem" loading="lazy"/>
+                </a>
+                <i class="bi bi-camera" th:if="${it.fotoAtualId == null}" title="Sem foto cadastrada"></i>
+            </div>
+
+            <div class="lev-body">
+                <!-- Identificação -->
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <span class="chip-tombo" th:text="${it.numeroTombo} ?: '#' + ${it.patrimonioId}"></span>
+                    <span class="fw-semibold" th:text="${it.descricao}"></span>
+                    <span class="badge badge-res badge-plain ms-auto" th:classappend="${it.resultado.name()}"
+                          th:text="${it.resultado.rotulo}"></span>
+                </div>
+                <div class="small text-muted mb-2">
+                    <span th:text="${it.categoria} ?: 'Sem categoria'"></span>
+                    <span th:if="${it.subcategoria}" th:text="' · ' + ${it.subcategoria}"></span>
+                    <span th:if="${it.responsavelNome}" th:text="' · ' + ${it.responsavelNome}"></span>
+                    · Conservação:
+                    <span th:text="${it.conservacaoAtual != null ? it.conservacaoAtual.name().replace('_','/') : '—'}"></span>
+                    <a class="ms-1" th:href="@{'/patrimonios/' + ${it.patrimonioId} + '/editar'}" target="_blank" title="Abrir cadastro do bem">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                </div>
+
+                <!-- Avisos de local -->
+                <div class="alert alert-info py-1 px-2 small mb-2" th:if="${it.encontradoFora(lotacao.id)}">
+                    <i class="bi bi-geo-alt"></i>
+                    Bem de <strong th:text="${it.lotacaoNome}"></strong> (<span th:text="${it.lotacaoUpm}"></span>) encontrado aqui.
+                </div>
+                <div class="alert alert-warning py-1 px-2 small mb-2" th:if="${it.levadoParaOutroLocal(lotacao.id)}">
+                    <i class="bi bi-geo-alt"></i>
+                    Encontrado em <strong th:text="${it.lotacaoEncontradaNome}"></strong> (<span th:text="${it.lotacaoEncontradaUpm}"></span>), não neste local.
+                </div>
+
+                <!-- ===== Formulário de conferência (pendente + levantamento aberto) ===== -->
+                <form th:if="${it.pendente() and lev.aberto()}"
+                      th:action="@{'/levantamentos/' + ${lev.id} + '/itens/' + ${it.id} + '/conferir'}"
+                      method="post" enctype="multipart/form-data" class="lev-form">
+                    <input type="hidden" name="lotacaoContextoId" th:value="${lotacao.id}"/>
+                    <input type="hidden" name="todos" th:value="${todos}"/>
+
+                    <div class="btn-group w-100" role="group" aria-label="Resultado">
+                        <input type="radio" class="btn-check" name="resultado" value="OK" th:id="'ok-' + ${it.id}" required/>
+                        <label class="btn btn-sm btn-outline-success" th:for="'ok-' + ${it.id}">
+                            <i class="bi bi-check-circle"></i> OK
+                        </label>
+                        <input type="radio" class="btn-check" name="resultado" value="AVARIADO" th:id="'av-' + ${it.id}"/>
+                        <label class="btn btn-sm btn-outline-warning" th:for="'av-' + ${it.id}">
+                            <i class="bi bi-exclamation-triangle"></i> Avaria
+                        </label>
+                        <input type="radio" class="btn-check" name="resultado" value="NAO_LOCALIZADO" th:id="'nl-' + ${it.id}"/>
+                        <label class="btn btn-sm btn-outline-danger" th:for="'nl-' + ${it.id}">
+                            <i class="bi bi-question-circle"></i> Não localizado
+                        </label>
+                    </div>
+
+                    <div class="row g-2 mt-1">
+                        <div class="col-sm-6">
+                            <label class="form-label small mb-1" th:for="'cons-' + ${it.id}">Conservação observada</label>
+                            <select class="form-select form-select-sm" name="conservacaoVerificada" th:id="'cons-' + ${it.id}">
+                                <option value="">Manter como está</option>
+                                <option th:each="c : ${conservacoes}" th:value="${c}"
+                                        th:text="${c.name().replace('_','/')}"></option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small mb-1" th:for="'foto-' + ${it.id}">Foto atualizada</label>
+                            <input type="file" class="form-control form-control-sm" name="foto" th:id="'foto-' + ${it.id}"
+                                   accept="image/*" capture="environment"/>
+                        </div>
+                    </div>
+
+                    <div class="lev-avaria mt-2" hidden>
+                        <label class="form-label small mb-1" th:for="'avaria-' + ${it.id}">
+                            Descreva a avaria <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control form-control-sm" name="descricaoAvaria" th:id="'avaria-' + ${it.id}"
+                                  rows="2" maxlength="1000" placeholder="Ex.: tela trincada, pé quebrado, não liga..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-2">
+                        <input type="text" class="form-control form-control-sm" name="observacao" maxlength="1000"
+                               placeholder="Observação (opcional)"/>
+                        <button class="btn btn-sm btn-primary text-nowrap" type="submit">
+                            <i class="bi bi-check2"></i> Registrar
+                        </button>
+                    </div>
+                </form>
+
+                <!-- ===== Resumo da conferência já feita ===== -->
+                <div th:if="${!it.pendente()}" class="small">
+                    <div class="d-flex flex-wrap gap-3 text-muted">
+                        <span th:if="${it.conservacaoVerificada != null}">
+                            <i class="bi bi-activity"></i>
+                            <span th:text="${it.conservacaoAnterior != null ? it.conservacaoAnterior.name().replace('_','/') : '—'}"></span>
+                            → <strong th:text="${it.conservacaoVerificada.name().replace('_','/')}"></strong>
+                        </span>
+                        <span th:if="${it.fotoId != null}">
+                            <i class="bi bi-camera-fill"></i>
+                            <a th:href="@{'/levantamentos/fotos/' + ${it.fotoId}}" target="_blank">foto atualizada</a>
+                        </span>
+                        <span>
+                            <i class="bi bi-person-check"></i>
+                            <span th:text="${it.verificadoPor}"></span>
+                            <span th:if="${it.verificadoEm != null}" th:text="' em ' + ${#temporals.format(it.verificadoEm, 'dd/MM/yyyy HH:mm')}"></span>
+                        </span>
+                    </div>
+                    <div class="mt-1 text-warning-emphasis" th:if="${it.descricaoAvaria}">
+                        <i class="bi bi-exclamation-triangle"></i> <span th:text="${it.descricaoAvaria}"></span>
+                    </div>
+                    <div class="mt-1 text-muted" th:if="${it.observacao}" th:text="${it.observacao}"></div>
+
+                    <div class="d-flex gap-2 mt-2" th:if="${lev.aberto()}">
+                        <form th:action="@{'/levantamentos/' + ${lev.id} + '/itens/' + ${it.id} + '/desfazer'}" method="post"
+                              data-confirm="Desfazer esta conferência? O bem volta a pendente (a foto já anexada é mantida no cadastro)."
+                              data-confirm-title="Desfazer conferência" data-confirm-variant="warning">
+                            <input type="hidden" name="lotacaoId" th:value="${lotacao.id}"/>
+                            <input type="hidden" name="todos" th:value="${todos}"/>
+                            <button class="btn btn-sm btn-outline-secondary" type="submit">
+                                <i class="bi bi-arrow-counterclockwise"></i> Desfazer
+                            </button>
+                        </form>
+                        <form th:if="${it.localDivergente()}"
+                              th:action="@{'/levantamentos/' + ${lev.id} + '/itens/' + ${it.id} + '/movimentar'}" method="post"
+                              th:attr="data-confirm='Movimentar o bem para ' + ${it.lotacaoEncontradaNome} + ' (' + ${it.lotacaoEncontradaUpm} + ')?'"
+                              data-confirm-title="Regularizar local" data-confirm-variant="primary">
+                            <input type="hidden" name="lotacaoId" th:value="${lotacao.id}"/>
+                            <button class="btn btn-sm btn-primary" type="submit">
+                                <i class="bi bi-arrow-left-right"></i> Mover para onde foi encontrado
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Mostra o campo de avaria só quando "Avaria" é escolhido; destaca o item vindo do redirect (#item-N).
+    (function () {
+        document.querySelectorAll('.lev-form').forEach(function (form) {
+            var bloco = form.querySelector('.lev-avaria');
+            var texto = bloco ? bloco.querySelector('textarea') : null;
+            form.querySelectorAll('input[name="resultado"]').forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    var marcado = form.querySelector('input[name="resultado"]:checked');
+                    var avaria = marcado && marcado.value === 'AVARIADO';
+                    if (bloco) bloco.hidden = !avaria;
+                    if (texto) { texto.required = avaria; if (avaria) texto.focus(); }
+                });
+            });
+        });
+        if (location.hash && location.hash.indexOf('#item-') === 0) {
+            var alvo = document.getElementById(location.hash.substring(1));
+            if (alvo) {
+                alvo.classList.add('is-target');
+                alvo.scrollIntoView({ block: 'center' });
+                setTimeout(function () { alvo.classList.remove('is-target'); }, 2500);
+            }
+        }
+    })();
+</script>
+</body>
+</html>

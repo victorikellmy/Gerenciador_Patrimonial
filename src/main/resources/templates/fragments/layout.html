@@ -106,6 +106,16 @@
                     <i class="bi bi-person-badge"></i>
                     <span class="sidebar-link-label">Responsáveis</span>
                 </a>
+                <a class="sidebar-link"
+                   th:href="${levantamentoAberto != null} ? @{'/levantamentos/' + ${levantamentoAberto.id}} : @{/levantamentos}"
+                   data-nav-match="/levantamentos">
+                    <i class="bi bi-clipboard2-check"></i>
+                    <span class="sidebar-link-label">Levantamento</span>
+                    <span class="badge rounded-pill text-bg-info ms-auto badge-plain"
+                          th:if="${levantamentoAberto != null}"
+                          th:text="${levantamentoAberto.percentual()} + '%'"
+                          th:title="'Levantamento ' + ${levantamentoAberto.ano} + ' em andamento: ' + ${levantamentoAberto.conferidos()} + ' de ' + ${levantamentoAberto.total} + ' bens conferidos'">0%</span>
+                </a>
             </div>
 
             <div class="sidebar-section">

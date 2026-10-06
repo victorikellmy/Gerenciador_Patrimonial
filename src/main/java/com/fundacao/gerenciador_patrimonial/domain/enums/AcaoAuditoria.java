@@ -16,5 +16,7 @@ public enum AcaoAuditoria {
     /** Recebimento de pendência vinda de sistema externo (Almoxarifado). */
     RECEBER_INTEGRACAO,
     /** Bem cadastrado a partir de uma pendência de patrimoniamento. */
-    PATRIMONIAR
+    PATRIMONIAR,
+    /** Conferência física registrada em um levantamento patrimonial. */
+    LEVANTAMENTO
 }

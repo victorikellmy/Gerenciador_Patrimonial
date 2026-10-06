@@ -118,6 +118,19 @@ public interface PatrimonioRepository
            """)
     List<Patrimonio> listarAtivosDoResponsavel(Long responsavelId);
 
+    /**
+     * Bens não baixados com a lotação carregada — base para abrir um levantamento
+     * patrimonial (cada bem vira um item de conferência no local atual).
+     */
+    @Query("""
+           select p
+           from Patrimonio p
+           join fetch p.lotacao
+           where p.situacao <> com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio.BAIXADO
+           order by p.id
+           """)
+    List<Patrimonio> listarNaoBaixadosComLotacao();
+
     /** Categorias distintas — alimenta dropdowns de filtro e cadastro. */
     @Query("select distinct p.categoria from Patrimonio p where p.categoria is not null order by p.categoria")
     List<String> findDistinctCategorias();

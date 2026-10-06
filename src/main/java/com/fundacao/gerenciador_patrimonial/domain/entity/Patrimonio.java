@@ -158,6 +158,14 @@ public class Patrimonio {
     }
 
     /**
+     * Atualiza o estado físico de conservação a partir de uma conferência do
+     * levantamento patrimonial. {@code null} mantém o valor atual.
+     */
+    public void atualizarConservacao(Conservacao nova) {
+        if (nova != null) this.conservacao = nova;
+    }
+
+    /**
      * Factory para novos cadastros — fixa {@code situacao = ATIVO} e delega a
      * cópia dos campos para {@link #aplicar}. O diff retornado é descartado
      * porque um novo registro não tem estado anterior para comparar.

@@ -38,6 +38,29 @@
         </a>
     </div>
 
+    <!-- ============================ LEVANTAMENTO EM ANDAMENTO ============================ -->
+    <div class="alert alert-info d-flex align-items-center justify-content-between gap-3 mb-4 flex-wrap"
+         role="alert" th:if="${levantamentoAberto != null}">
+        <div class="d-flex align-items-center gap-2 flex-grow-1">
+            <i class="bi bi-clipboard2-check fs-5"></i>
+            <div class="flex-grow-1">
+                <strong th:text="${levantamentoAberto.descricao}">Levantamento</strong>
+                em andamento:
+                <span th:text="${levantamentoAberto.conferidos()} + ' de ' + ${levantamentoAberto.total} + ' bens conferidos'"></span>
+                <span th:if="${levantamentoAberto.ocorrencias() > 0}" class="text-muted">
+                    · <span th:text="${levantamentoAberto.ocorrencias()}"></span> ocorrência(s)
+                </span>
+                <div class="progress mt-1" style="height: 5px; max-width: 420px;">
+                    <div class="progress-bar bg-info" role="progressbar"
+                         th:style="'width:' + ${levantamentoAberto.percentual()} + '%'"></div>
+                </div>
+            </div>
+        </div>
+        <a class="btn btn-sm btn-info" th:href="@{'/levantamentos/' + ${levantamentoAberto.id}}">
+            <i class="bi bi-list-check"></i> Continuar conferência
+        </a>
+    </div>
+
     <!-- ============================ KPIs ============================ -->
     <div class="row g-3 mb-4">
         <!-- Total -->

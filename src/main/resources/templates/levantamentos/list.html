@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Levantamento patrimonial')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Levantamento patrimonial</h1>
+            <div class="page-subtitle">
+                Conferência física anual dos bens, local a local: situação, avarias e foto atualizada.
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================ ABRIR NOVO (ADMIN) ============================ -->
+    <div class="card card-panel mb-4" sec:authorize="hasRole('ADMINISTRADOR')" th:if="${!existeAberto}">
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-clipboard2-plus',
+                'Abrir novo levantamento',
+                'Todos os bens não baixados entram no checklist, cada um na lotação em que está hoje.')}"></div>
+            <form th:action="@{/levantamentos}" method="post" class="row g-3 align-items-end">
+                <div class="col-sm-2">
+                    <label class="form-label" for="ano">Ano</label>
+                    <input type="number" class="form-control" id="ano" name="ano" min="2000" max="2100"
+                           th:value="${anoSugerido}" required/>
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label" for="descricao">Descrição</label>
+                    <input type="text" class="form-control" id="descricao" name="descricao" maxlength="150"
+                           th:placeholder="'Levantamento patrimonial ' + ${anoSugerido}"/>
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label" for="observacao">Observação</label>
+                    <input type="text" class="form-control" id="observacao" name="observacao" maxlength="1000"/>
+                </div>
+                <div class="col-sm-2 d-grid">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-play-fill"></i> Abrir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================ LISTAGEM ============================ -->
+    <div class="card card-panel" style="overflow: hidden;">
+        <div class="table-responsive" th:if="${!levantamentos.isEmpty()}">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Ano</th>
+                        <th>Descrição</th>
+                        <th style="width: 260px;">Progresso</th>
+                        <th>Ocorrências</th>
+                        <th>Aberto</th>
+                        <th>Concluído</th>
+                        <th class="text-end" style="width: 140px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${levantamentos}">
+                        <td><span class="chip-tombo" th:text="${l.ano}"></span></td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary" th:text="${l.descricao}"></span>
+                                <span class="cell-secondary">
+                                    <span class="badge badge-plain"
+                                          th:classappend="${l.aberto()} ? 'text-bg-info' : 'text-bg-success'"
+                                          th:text="${l.aberto()} ? 'Em andamento' : 'Concluído'"></span>
+                                    <span th:if="${l.observacao}" th:text="' · ' + ${l.observacao}"></span>
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 6px;">
+                                    <div class="progress-bar" role="progressbar"
+                                         th:classappend="${l.percentual() == 100} ? 'bg-success' : ''"
+                                         th:style="'width:' + ${l.percentual()} + '%'"></div>
+                                </div>
+                                <span class="small text-muted tabular-nums text-nowrap"
+                                      th:text="${l.conferidos()} + '/' + ${l.total}"></span>
+                            </div>
+                        </td>
+                        <td class="small">
+                            <span class="badge badge-res AVARIADO badge-plain me-1" th:if="${l.avariados > 0}"
+                                  th:text="${l.avariados} + ' avariado(s)'"></span>
+                            <span class="badge badge-res NAO_LOCALIZADO badge-plain me-1" th:if="${l.naoLocalizados > 0}"
+                                  th:text="${l.naoLocalizados} + ' não localizado(s)'"></span>
+                            <span class="badge text-bg-secondary badge-plain" th:if="${l.divergenciasLocal > 0}"
+                                  th:text="${l.divergenciasLocal} + ' em outro local'"></span>
+                            <span class="text-muted" th:if="${l.ocorrencias() == 0}">—</span>
+                        </td>
+                        <td class="small">
+                            <div class="cell-stack">
+                                <span th:text="${l.abertoEm != null} ? ${#temporals.format(l.abertoEm, 'dd/MM/yyyy HH:mm')} : '—'"></span>
+                                <span class="cell-secondary" th:text="${l.abertoPor} ?: ''"></span>
+                            </div>
+                        </td>
+                        <td class="small">
+                            <div class="cell-stack" th:if="${l.concluidoEm != null}">
+                                <span th:text="${#temporals.format(l.concluidoEm, 'dd/MM/yyyy HH:mm')}"></span>
+                                <span class="cell-secondary" th:text="${l.concluidoPor} ?: ''"></span>
+                            </div>
+                            <span class="text-muted" th:if="${l.concluidoEm == null}">—</span>
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm" th:classappend="${l.aberto()} ? 'btn-primary' : 'btn-secondary'"
+                               th:href="@{'/levantamentos/' + ${l.id}}">
+                                <i class="bi" th:classappend="${l.aberto()} ? 'bi-list-check' : 'bi-eye'"></i>
+                                <span th:text="${l.aberto()} ? 'Conferir' : 'Ver'"></span>
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${levantamentos.isEmpty()}"
+             th:replace="~{fragments/ui-kit :: empty-state(
+                'bi-clipboard2-check',
+                'Nenhum levantamento registrado',
+                'Abra o levantamento do ano para começar a conferência dos bens por local.',
+                null, null)}"></div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

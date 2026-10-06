@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head(${lev.descricao})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/levantamentos}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title">
+                    <span th:text="${lev.descricao}">Levantamento</span>
+                    <span class="badge badge-plain ms-2 align-middle"
+                          th:classappend="${lev.aberto()} ? 'text-bg-info' : 'text-bg-success'"
+                          th:text="${lev.aberto()} ? 'Em andamento' : 'Concluído'"></span>
+                </h1>
+                <div class="page-subtitle">
+                    Aberto em <span th:text="${#temporals.format(lev.abertoEm, 'dd/MM/yyyy HH:mm')}"></span>
+                    <span th:if="${lev.abertoPor}"> por <span th:text="${lev.abertoPor}"></span></span>
+                    <span th:if="${lev.concluidoEm != null}">
+                        · concluído em <span th:text="${#temporals.format(lev.concluidoEm, 'dd/MM/yyyy HH:mm')}"></span>
+                        por <span th:text="${lev.concluidoPor}"></span>
+                    </span>
+                    <span th:if="${lev.observacao}" th:text="' · ' + ${lev.observacao}"></span>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-secondary" th:href="@{'/levantamentos/' + ${lev.id} + '/download'(formato='xlsx')}">
+                <i class="bi bi-filetype-xlsx"></i> Excel
+            </a>
+            <a class="btn btn-secondary" th:href="@{'/levantamentos/' + ${lev.id} + '/download'(formato='pdf')}">
+                <i class="bi bi-filetype-pdf"></i> PDF
+            </a>
+            <form th:action="@{'/levantamentos/' + ${lev.id} + '/concluir'}" method="post"
+                  sec:authorize="hasRole('ADMINISTRADOR')" th:if="${lev.aberto()}"
+                  data-confirm-title="Concluir levantamento"
+                  th:attr="data-confirm=${lev.pendentes > 0}
+                        ? 'Ainda há ' + ${lev.pendentes} + ' bem(ns) não conferido(s). Eles ficarão registrados como pendentes. Concluir mesmo assim?'
+                        : 'Concluir o levantamento? Depois disso as conferências não poderão ser alteradas.'"
+                  data-confirm-variant="primary">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-check2-circle"></i> Concluir
+                </button>
+            </form>
+            <form th:action="@{'/levantamentos/' + ${lev.id} + '/reabrir'}" method="post"
+                  sec:authorize="hasRole('ADMINISTRADOR')" th:if="${!lev.aberto()}"
+                  data-confirm="Reabrir este levantamento para novas conferências?"
+                  data-confirm-title="Reabrir levantamento" data-confirm-variant="primary">
+                <button class="btn btn-outline-secondary" type="submit">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reabrir
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================ KPIs ============================ -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-4 col-md-12">
+            <div class="card card-panel h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="kpi-icon kpi-icon-primary"><i class="bi bi-clipboard2-check"></i></div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="kpi-label">Bens conferidos</div>
+                            <div class="kpi-value tabular-nums">
+                                <span th:text="${lev.conferidos()}">0</span>
+                                <span class="text-muted fs-6">/ <span th:text="${lev.total}">0</span></span>
+                                <span class="text-muted fs-6 ms-1" th:text="'(' + ${lev.percentual()} + '%)'"></span>
+                            </div>
+                            <div class="progress mt-2" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar"
+                                     th:classappend="${lev.percentual() == 100} ? 'bg-success' : ''"
+                                     th:style="'width:' + ${lev.percentual()} + '%'"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-3 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="kpi-icon kpi-icon-success"><i class="bi bi-check-circle"></i></div>
+                    <div><div class="kpi-label">OK</div><div class="kpi-value tabular-nums" th:text="${lev.ok}">0</div></div>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-xl-2 col-md-3 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="kpi-icon kpi-icon-warning"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div><div class="kpi-label">Avariados</div><div class="kpi-value tabular-nums" th:text="${lev.avariados}">0</div></div>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-xl-2 col-md-3 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="kpi-icon kpi-icon-danger"><i class="bi bi-question-circle"></i></div>
+                    <div><div class="kpi-label">Não localizados</div><div class="kpi-value tabular-nums" th:text="${lev.naoLocalizados}">0</div></div>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-xl-2 col-md-3 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="kpi-icon kpi-icon-info"><i class="bi bi-geo-alt"></i></div>
+                    <div><div class="kpi-label">Em outro local</div><div class="kpi-value tabular-nums" th:text="${lev.divergenciasLocal}">0</div></div>
+                </div>
+            </div></div>
+        </div>
+    </div>
+
+    <!-- ============================ GUIA POR UPM / LOCAL ============================ -->
+    <div th:each="grupo : ${porUpm}" class="mb-4">
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-2 flex-wrap"
+             th:with="t=${totaisUpm[grupo.key]}">
+            <h2 class="h5 mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-building" style="color: var(--primary-600);"></i>
+                <span th:text="${grupo.key}">UPM</span>
+                <span class="badge text-bg-secondary badge-plain fw-normal"
+                      th:text="${grupo.value.size()} + ' local(is)'"></span>
+            </h2>
+            <div class="d-flex align-items-center gap-2 small text-muted" style="min-width: 220px;">
+                <div class="progress flex-grow-1" style="height: 6px;">
+                    <div class="progress-bar" role="progressbar"
+                         th:classappend="${t.percentual() == 100} ? 'bg-success' : ''"
+                         th:style="'width:' + ${t.percentual()} + '%'"></div>
+                </div>
+                <span class="tabular-nums text-nowrap" th:text="${t.conferidos()} + '/' + ${t.total}"></span>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-xl-3 col-lg-4 col-md-6" th:each="loc : ${grupo.value}">
+                <a class="card card-panel card-hover h-100 text-decoration-none lev-local-card"
+                   th:href="@{'/levantamentos/' + ${lev.id} + '/locais/' + ${loc.lotacaoId}}">
+                    <div class="card-body d-flex flex-column gap-2">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div class="fw-semibold text-body" th:text="${loc.nome}">Local</div>
+                            <i class="bi fs-5"
+                               th:classappend="${loc.concluido()} ? 'bi-check-circle-fill text-success' : 'bi-circle text-muted'"
+                               th:title="${loc.concluido()} ? 'Local totalmente conferido' : 'Conferência pendente'"></i>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar"
+                                 th:classappend="${loc.concluido()} ? 'bg-success' : ''"
+                                 th:style="'width:' + ${loc.percentual()} + '%'"></div>
+                        </div>
+                        <div class="small text-muted d-flex justify-content-between">
+                            <span th:text="${loc.conferidos()} + ' de ' + ${loc.total} + ' conferidos'"></span>
+                            <span class="tabular-nums" th:text="${loc.percentual()} + '%'"></span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1" th:if="${loc.possuiOcorrencias()}">
+                            <span class="badge badge-res AVARIADO badge-plain" th:if="${loc.avariados > 0}"
+                                  th:text="${loc.avariados} + ' avariado(s)'"></span>
+                            <span class="badge badge-res NAO_LOCALIZADO badge-plain" th:if="${loc.naoLocalizados > 0}"
+                                  th:text="${loc.naoLocalizados} + ' não localizado(s)'"></span>
+                            <span class="badge text-bg-info badge-plain" th:if="${loc.encontradosAqui > 0}"
+                                  th:text="${loc.encontradosAqui} + ' de outro local'"></span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${porUpm.isEmpty()}"
+         th:replace="~{fragments/ui-kit :: empty-state(
+            'bi-clipboard2-x', 'Sem itens', 'Este levantamento não possui bens para conferir.', null, null)}"></div>
+
+    <!-- ============================ OCORRÊNCIAS ============================ -->
+    <div class="card card-panel mt-2" style="overflow: hidden;" th:if="${!ocorrencias.isEmpty()}">
+        <div class="form-section pb-0">
+            <div th:replace="~{fragments/ui-kit :: section-header(
+                'bi-flag',
+                'Ocorrências',
+                'Bens avariados, não localizados ou encontrados em local diferente do cadastrado.')}"></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 110px;">Tombo</th>
+                        <th>Bem</th>
+                        <th>Local esperado</th>
+                        <th>Resultado</th>
+                        <th>Detalhe</th>
+                        <th class="text-end" style="width: 220px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="o : ${ocorrencias}">
+                        <td><span class="chip-tombo" th:text="${o.numeroTombo} ?: '#' + ${o.patrimonioId}"></span></td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary" th:text="${o.descricao}"></span>
+                                <span class="cell-secondary" th:text="${o.responsavelNome} ?: ''"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cell-stack">
+                                <span class="cell-primary" th:text="${o.lotacaoNome}"></span>
+                                <span class="cell-secondary" th:text="${o.lotacaoUpm}"></span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-res badge-plain" th:classappend="${o.resultado.name()}"
+                                  th:text="${o.resultado.rotulo}"></span>
+                        </td>
+                        <td class="small">
+                            <div th:if="${o.localDivergente()}" class="text-info">
+                                <i class="bi bi-geo-alt"></i>
+                                Encontrado em <strong th:text="${o.lotacaoEncontradaNome}"></strong>
+                                (<span th:text="${o.lotacaoEncontradaUpm}"></span>)
+                            </div>
+                            <div th:if="${o.descricaoAvaria}" class="text-warning-emphasis">
+                                <i class="bi bi-exclamation-triangle"></i> <span th:text="${o.descricaoAvaria}"></span>
+                            </div>
+                            <div th:if="${o.conservacaoVerificada != null}" class="text-muted">
+                                Conservação: <span th:text="${o.conservacaoAnterior != null ? o.conservacaoAnterior.name().replace('_','/') : '—'}"></span>
+                                → <span th:text="${o.conservacaoVerificada.name().replace('_','/')}"></span>
+                            </div>
+                            <div th:if="${o.observacao}" class="text-muted" th:text="${o.observacao}"></div>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a class="btn btn-sm btn-secondary btn-icon" title="Abrir checklist do local"
+                                   th:href="@{'/levantamentos/' + ${lev.id} + '/locais/' + ${o.localDivergente() ? o.lotacaoEncontradaId : o.lotacaoId}(todos=true)}">
+                                    <i class="bi bi-list-check"></i>
+                                </a>
+                                <a class="btn btn-sm btn-secondary btn-icon" title="Abrir patrimônio"
+                                   th:href="@{'/patrimonios/' + ${o.patrimonioId} + '/editar'}">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                                <form th:if="${o.localDivergente()}"
+                                      th:action="@{'/levantamentos/' + ${lev.id} + '/itens/' + ${o.id} + '/movimentar'}"
+                                      method="post" class="d-inline"
+                                      th:attr="data-confirm='Movimentar o bem para ' + ${o.lotacaoEncontradaNome} + ' (' + ${o.lotacaoEncontradaUpm} + ')?'"
+                                      data-confirm-title="Regularizar local" data-confirm-variant="primary">
+                                    <button class="btn btn-sm btn-primary" type="submit" title="Mover o bem para onde foi encontrado">
+                                        <i class="bi bi-arrow-left-right"></i> Mover
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

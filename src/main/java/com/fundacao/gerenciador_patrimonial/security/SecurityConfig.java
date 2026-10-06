@@ -92,6 +92,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/lotacoes/*/excluir").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/responsaveis/*/inativar").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/pendencias/*/descartar").hasRole("ADMINISTRADOR")
+                        // Levantamento patrimonial: abrir/concluir/reabrir só ADMIN; conferir é de todos os operadores
+                        .requestMatchers(HttpMethod.POST, "/levantamentos").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/levantamentos/*/concluir",
+                                                          "/levantamentos/*/reabrir").hasRole("ADMINISTRADOR")
 
                         // --- demais (inclui /pendencias/**) → operadores humanos ---
                         // O perfil INTEGRACAO é só para a API; não navega na interface web.
