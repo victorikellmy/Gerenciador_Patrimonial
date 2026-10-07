@@ -23,7 +23,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.test.context.support.WithMockUser;
+import com.fundacao.gerenciador_patrimonial.security.UsuarioAutenticado;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -34,6 +35,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -80,14 +82,32 @@ class IntegracaoAlmoxarifadoFluxoTest {
                     .build());
         }
         if (lotacaoId == null) {
-            Lotacao l = lotacaoRepo.save(Lotacao.builder()
-                    .upm("5 BPM").nome("NÚCLEO DE SAÚDE").cidade("Porto Nacional")
-                    .tipoLocal(TipoLocal.values()[0]).build());
+            // Idempotente: o contexto (e o H2) é compartilhado entre os métodos da classe,
+            // e (upm, nome) é único — reaproveita a lotação se já existir.
+            Lotacao l = lotacaoRepo.findByUpmAndNome("5 BPM", "NÚCLEO DE SAÚDE")
+                    .orElseGet(() -> lotacaoRepo.save(Lotacao.builder()
+                            .upm("5 BPM").nome("NÚCLEO DE SAÚDE").cidade("Porto Nacional")
+                            .tipoLocal(TipoLocal.values()[0]).build()));
             Responsavel r = responsavelRepo.save(Responsavel.builder()
                     .nomeCompleto("Sgt. João Silva").matricula("MAT-" + System.nanoTime()).lotacao(l).build());
             lotacaoId = l.getId();
             responsavelId = r.getId();
         }
+    }
+
+    /**
+     * Operador FISCAL como principal real ({@link UsuarioAutenticado}): o layout
+     * das telas lê {@code principal.usuario.perfil}, o que @WithMockUser não oferece.
+     */
+    private RequestPostProcessor fiscal() {
+        Usuario u = usuarioRepo.findByLogin("fiscal.teste").orElseGet(() -> usuarioRepo.save(Usuario.builder()
+                .nomeCompleto("Fiscal de teste")
+                .login("fiscal.teste")
+                .senhaHash(encoder.encode("segredo-teste"))
+                .perfil(Perfil.FISCAL)
+                .ativo(true)
+                .build()));
+        return user(new UsuarioAutenticado(u));
     }
 
     private String payload(long compraId, int quantidade, boolean comNf) {
@@ -177,7 +197,6 @@ class IntegracaoAlmoxarifadoFluxoTest {
     }
 
     @Test
-    @WithMockUser(username = "fiscal.teste", roles = "FISCAL")
     void patrimoniarPreenchePeloRecebimentoAnexaNfEConcluiPendencia() throws Exception {
         long compraId = 5151;
         MvcResult criado = mvc.perform(post(ENDPOINT)
@@ -190,13 +209,13 @@ class IntegracaoAlmoxarifadoFluxoTest {
         long pendenciaId = corpo.get("id").asLong();
 
         // Lista e sino mostram a pendência
-        mvc.perform(get("/pendencias"))
+        mvc.perform(get("/pendencias").with(fiscal()))
            .andExpect(status().isOk())
            .andExpect(model().attribute("pendenciasPendentes", org.hamcrest.Matchers.greaterThanOrEqualTo(1L)))
            .andExpect(content().string(org.hamcrest.Matchers.containsString("Impressora multifuncional Samsung")));
 
         // Formulário pré-preenchido
-        MvcResult form = mvc.perform(get("/pendencias/" + pendenciaId + "/patrimoniar"))
+        MvcResult form = mvc.perform(get("/pendencias/" + pendenciaId + "/patrimoniar").with(fiscal()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("patrimonios/form"))
                 .andReturn();
@@ -213,7 +232,7 @@ class IntegracaoAlmoxarifadoFluxoTest {
                                     .contains("Unidade 1 de 2");
 
         // 1ª unidade → continua pendente, volta para o formulário da 2ª
-        mvc.perform(post("/pendencias/" + pendenciaId + "/patrimoniar").with(csrf())
+        mvc.perform(post("/pendencias/" + pendenciaId + "/patrimoniar").with(csrf()).with(fiscal())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("numeroTombo", "T-5151-A")
                         .param("descricao", req.descricao())
@@ -231,7 +250,7 @@ class IntegracaoAlmoxarifadoFluxoTest {
         assertThat(meio.getQuantidadePatrimoniada()).isEqualTo(1);
 
         // 2ª unidade → conclui
-        mvc.perform(post("/pendencias/" + pendenciaId + "/patrimoniar").with(csrf())
+        mvc.perform(post("/pendencias/" + pendenciaId + "/patrimoniar").with(csrf()).with(fiscal())
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                         .param("numeroTombo", "T-5151-B")
                         .param("descricao", req.descricao())
@@ -256,7 +275,7 @@ class IntegracaoAlmoxarifadoFluxoTest {
         assertThat(anexosB.get(0).getNomeOriginal()).isEqualTo("NF 2.pdf");
 
         // Pendência concluída não aceita novo patrimoniamento
-        mvc.perform(get("/pendencias/" + pendenciaId + "/patrimoniar"))
+        mvc.perform(get("/pendencias/" + pendenciaId + "/patrimoniar").with(fiscal()))
            .andExpect(status().isOk())
            .andExpect(view().name("erro"));
     }

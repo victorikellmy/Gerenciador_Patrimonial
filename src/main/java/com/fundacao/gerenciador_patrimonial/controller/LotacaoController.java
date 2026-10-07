@@ -38,6 +38,12 @@ public class LotacaoController {
         return service.listar(pageable);
     }
 
+    /** Todas as lotações ordenadas por UPM/nome (dropdowns do app). */
+    @GetMapping("/todas")
+    public List<LotacaoResponse> todas() {
+        return service.listarParaSelect();
+    }
+
     @GetMapping("/{id}")
     public LotacaoResponse buscar(@PathVariable Long id) {
         return service.buscarPorId(id);

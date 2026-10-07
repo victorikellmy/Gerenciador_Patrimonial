@@ -65,6 +65,12 @@ public class PatrimonioController {
         return service.pesquisar(filtro.comSituacao(SituacaoPatrimonio.BAIXADO), pageable);
     }
 
+    /** Histórico de movimentações (mais recente primeiro). */
+    @GetMapping("/{id}/movimentacoes")
+    public java.util.List<com.fundacao.gerenciador_patrimonial.dto.response.MovimentacaoResponse> movimentacoes(@PathVariable Long id) {
+        return service.historico(id);
+    }
+
     @GetMapping("/{id}")
     public PatrimonioResponse buscar(@PathVariable Long id) {
         return service.buscarPorId(id);

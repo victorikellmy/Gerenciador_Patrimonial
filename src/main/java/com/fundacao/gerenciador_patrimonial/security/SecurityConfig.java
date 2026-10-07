@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -57,13 +59,23 @@ public class SecurityConfig {
                         // Integração com sistemas externos (Almoxarifado): usuário técnico INTEGRACAO
                         // ou um ADMINISTRADOR (testes manuais via curl).
                         .requestMatchers("/api/integracao/**").hasAnyRole("ADMINISTRADOR", "INTEGRACAO")
-                        // Escrita/alteração exige ADMINISTRADOR
+                        // Escrita/alteração exige ADMINISTRADOR (espelha as restrições da interface web)
                         .requestMatchers(HttpMethod.POST, "/api/importacao/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers("/api/usuarios/**", "/api/admin/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/levantamentos").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/levantamentos/*/concluir",
+                                                          "/api/levantamentos/*/reabrir").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/pendencias/*/descartar").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
                         // Restante da API: operadores humanos — o perfil INTEGRACAO fica de fora.
                         .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
                 )
-                .httpBasic(org.springframework.security.config.Customizer.withDefaults());
+                // Cliente REST (app Android) precisa de 401/403 puros — nunca redirect para /login.
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                        .accessDeniedHandler((req, res, ex) -> res.sendError(HttpStatus.FORBIDDEN.value())))
+                .httpBasic(basic -> basic.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
         return http.build();
     }
 

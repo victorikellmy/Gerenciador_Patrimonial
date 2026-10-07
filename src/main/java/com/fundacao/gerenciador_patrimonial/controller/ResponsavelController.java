@@ -34,6 +34,12 @@ public class ResponsavelController {
         return service.listar(pageable);
     }
 
+    /** Todos os responsáveis ativos para seleção (dropdowns do app). */
+    @GetMapping("/todos")
+    public List<ResponsavelResponse> todos() {
+        return service.listarParaSelect();
+    }
+
     @GetMapping("/{id}")
     public ResponsavelResponse buscar(@PathVariable Long id) {
         return service.buscarPorId(id);
