@@ -43,10 +43,11 @@ public class AuthWebController {
     // =========================================================================
 
     @GetMapping("/minha-conta/senha")
-    public String formSenha(Model model) {
+    public String formSenha(Model model, @AuthenticationPrincipal UsuarioAutenticado atual) {
         if (!model.containsAttribute("trocarSenhaForm")) {
             model.addAttribute("trocarSenhaForm", new TrocarSenhaRequest("", "", ""));
         }
+        model.addAttribute("obrigatoria", atual != null && atual.getUsuario().isSenhaProvisoria());
         return "auth/trocar-senha";
     }
 
@@ -56,16 +57,33 @@ public class AuthWebController {
                               @AuthenticationPrincipal UsuarioAutenticado atual,
                               RedirectAttributes redirect,
                               Model model) {
+        boolean obrigatoria = atual.getUsuario().isSenhaProvisoria();
         if (binding.hasErrors()) {
+            model.addAttribute("obrigatoria", obrigatoria);
             return "auth/trocar-senha";
         }
         try {
             usuarioService.trocarSenha(atual.getUsername(), request);
-            redirect.addFlashAttribute("sucesso", "Senha alterada com sucesso.");
-            return "redirect:/";
+            // O principal na sessão é uma cópia: libera a navegação sem exigir novo login.
+            atual.getUsuario().setSenhaProvisoria(false);
+            redirect.addFlashAttribute("sucesso", obrigatoria
+                    ? "Senha definida. Bem-vindo(a) ao Gerenciador Patrimonial!"
+                    : "Senha alterada com sucesso.");
+            return "redirect:" + destinoPadrao(atual);
         } catch (RuntimeException e) {
             model.addAttribute("erro", e.getMessage());
+            model.addAttribute("obrigatoria", obrigatoria);
             return "auth/trocar-senha";
         }
+    }
+
+    /** Mesma regra do login: motorista cai na frota, gerente no painel, presidente/financeiro nas diárias. */
+    private static String destinoPadrao(UsuarioAutenticado u) {
+        return switch (u.getUsuario().getPerfil()) {
+            case MOTORISTA -> "/frota";
+            case GERENTE -> "/frota/gestao";
+            case PRESIDENTE, FINANCEIRO -> "/diarias";
+            default -> "/";
+        };
     }
 }

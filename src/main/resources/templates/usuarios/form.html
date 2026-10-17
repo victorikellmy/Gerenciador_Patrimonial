@@ -77,6 +77,16 @@
                     <div class="invalid-feedback" th:if="${#fields.hasErrors('senha')}"
                          th:errors="*{senha}"></div>
                 </div>
+                <div class="col-md-12">
+                    <div class="form-check form-switch"
+                         style="padding: var(--space-2) var(--space-3); background: var(--bg-muted); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                        <input class="form-check-input" type="checkbox" th:field="*{exigirTrocaSenha}" id="exigirTrocaSwitch"/>
+                        <label class="form-check-label" for="exigirTrocaSwitch" style="margin-left: 4px;">
+                            Exigir troca de senha no primeiro acesso
+                            <span class="text-muted small d-block">A senha informada aqui é provisória: o usuário define a dele ao entrar.</span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
 

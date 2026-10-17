@@ -18,8 +18,8 @@ host) ou como database dentro do protocantins-db (compose.banco-existente.yaml).
 deploy/README.md, docker-compose.yml, .env.example e docs/PROMPT_SERVIDOR_FROTA.md do Patrimônio.
 
 O QUE MUDA NESTA VERSÃO
-- Migrations Flyway V8 (frota), V9 (nota fiscal dos lançamentos) e V10 (diárias, cautelas,
-  titulares) rodam sozinhas no boot. O Patrimônio agora tem TUDO que o Transportes tinha:
+- Migrations Flyway V8 (frota), V9 (nota fiscal dos lançamentos), V10 (diárias, cautelas,
+  titulares) e V11 (senha provisória / troca obrigatória no primeiro acesso) rodam sozinhas no boot. O Patrimônio agora tem TUDO que o Transportes tinha:
   frota (saídas, abastecimentos, manutenções, cautelas com termo PDF), diárias com o fluxo
   solicitada → confirmada → deferida/indeferida → paga, profissionais, tabela de valores e a
   base de titulares para autocomplete.
@@ -71,6 +71,10 @@ PASSO A PASSO
    NÃO migram (o Patrimônio tem a própria tabela de usuários); crie de novo, mapeando o perfil:
    Transportes "Motorista" → MOTORISTA; "Coordenação" → FISCAL; "Presidente" → PRESIDENTE;
    "Financeiro" → FINANCEIRO; "Administrador" → ADMINISTRADOR; gerentes → GERENTE.
+   A senha que você digitar no cadastro é PROVISÓRIA: no primeiro login a pessoa é obrigada a
+   definir a própria senha antes de ver qualquer tela (migration V11). Entregue login + senha
+   provisória a cada um; não precisa trocar depois. O mesmo vale se o admin redefinir a senha
+   de alguém. Atenção: o admin inicial criado pelo sistema também entra com senha provisória.
    Ajuste a lotação/responsável dos veículos importados (entram em "FROTA / <cidade>" com
    responsável "SETOR DE TRANSPORTES - FPTO").
 7. Validação funcional: motorista registra saída, chegada, abastecimento com foto da NF,

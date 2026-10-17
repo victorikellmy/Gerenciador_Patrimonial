@@ -61,6 +61,8 @@ public class UsuarioService {
                 .senhaHash(passwordEncoder.encode(req.senha()))
                 .perfil(req.perfil())
                 .ativo(req.ativo() == null || req.ativo())
+                // Senha definida pelo administrador é provisória: troca obrigatória no primeiro acesso.
+                .senhaProvisoria(req.exigirTrocaSenha() == null || req.exigirTrocaSenha())
                 .build();
         return UsuarioResponse.from(repo.save(u));
     }
@@ -80,9 +82,12 @@ public class UsuarioService {
         u.setPerfil(req.perfil());
         if (req.ativo() != null) u.setAtivo(req.ativo());
 
-        // Senha só é alterada se informada
+        // Senha só é alterada se informada; redefinida pelo admin volta a ser provisória.
         if (req.senha() != null && !req.senha().isBlank()) {
             u.setSenhaHash(passwordEncoder.encode(req.senha()));
+            u.setSenhaProvisoria(req.exigirTrocaSenha() == null || req.exigirTrocaSenha());
+        } else if (Boolean.TRUE.equals(req.exigirTrocaSenha())) {
+            u.setSenhaProvisoria(true);
         }
         return UsuarioResponse.from(repo.save(u));
     }
@@ -111,7 +116,11 @@ public class UsuarioService {
         if (!passwordEncoder.matches(req.senhaAtual(), u.getSenhaHash())) {
             throw new RegraDeNegocioException("Senha atual incorreta.");
         }
+        if (req.novaSenha().equals(req.senhaAtual())) {
+            throw new RegraDeNegocioException("A nova senha deve ser diferente da senha atual.");
+        }
         u.setSenhaHash(passwordEncoder.encode(req.novaSenha()));
+        u.setSenhaProvisoria(false);
         repo.save(u);
     }
 

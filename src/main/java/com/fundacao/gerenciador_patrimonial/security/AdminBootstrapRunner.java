@@ -58,6 +58,7 @@ public class AdminBootstrapRunner {
                     .senhaHash(encoder.encode(senha))
                     .perfil(Perfil.ADMINISTRADOR)
                     .ativo(true)
+                    .senhaProvisoria(true) // obriga a troca no primeiro login
                     .build();
             repo.save(admin);
 
