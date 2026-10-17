@@ -19,7 +19,7 @@
                 <a class="btn btn-secondary" th:href="@{/frota/manutencoes/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},formato='xlsx')}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
                 <a class="btn btn-secondary" th:href="@{/frota/manutencoes/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},formato='pdf')}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
             </div>
-            <a class="btn btn-primary" th:href="@{/frota/manutencoes/novo}"><i class="bi bi-plus-lg"></i> Nova manutenção</a>
+            <a class="btn btn-primary" th:href="@{/frota/manutencoes/novo}" sec:authorize="!hasRole('GERENTE')"><i class="bi bi-plus-lg"></i> Nova manutenção</a>
         </div>
     </div>
 
@@ -47,7 +47,12 @@
                             <span th:if="${m.proximaRevisaoData != null}" th:text="(${m.proximaRevisaoKm != null} ? ' / ' : '') + ${#temporals.format(m.proximaRevisaoData, 'dd/MM/yyyy')}"></span>
                             <span th:if="${m.proximaRevisaoKm == null and m.proximaRevisaoData == null}">—</span>
                         </td>
-                        <td th:text="${m.motorista}"></td>
+                        <td>
+                            <span th:text="${m.motorista}"></span>
+                            <a class="ms-1" th:if="${m.possuiNotaFiscal}" target="_blank" title="Abrir nota fiscal"
+                               th:href="@{'/frota/manutencoes/' + ${m.id} + '/nota-fiscal'}"><i class="bi bi-receipt"></i></a>
+                            <span class="badge badge-plain text-bg-light text-muted ms-1" th:unless="${m.possuiNotaFiscal}">sem NF</span>
+                        </td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
                                 <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/manutencoes/' + ${m.id} + '/editar'}" title="Editar"><i class="bi bi-pencil"></i></a>

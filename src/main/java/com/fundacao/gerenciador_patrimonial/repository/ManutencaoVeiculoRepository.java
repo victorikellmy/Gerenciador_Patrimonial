@@ -33,4 +33,16 @@ public interface ManutencaoVeiculoRepository extends JpaRepository<ManutencaoVei
     Optional<ManutencaoVeiculo> findFirstByVeiculoIdAndProximaRevisaoKmNotNullOrderByDataDescIdDesc(Long veiculoId);
 
     Optional<ManutencaoVeiculo> findFirstByVeiculoIdAndProximaRevisaoDataNotNullOrderByDataDescIdDesc(Long veiculoId);
+
+    Optional<ManutencaoVeiculo> findFirstByVeiculoIdOrderByDataDescIdDesc(Long veiculoId);
+
+    /** {veiculoId, soma valor, quantidade} por veículo no período. */
+    @Query("select m.veiculo.id, coalesce(sum(m.valor), 0), count(m) " +
+           "from ManutencaoVeiculo m where m.data between :de and :ate group by m.veiculo.id")
+    List<Object[]> totaisPorVeiculo(LocalDate de, LocalDate ate);
+
+    /** {ano, mês, soma valor} a partir de uma data. */
+    @Query("select year(m.data), month(m.data), coalesce(sum(m.valor), 0) from ManutencaoVeiculo m " +
+           "where m.data >= :de group by year(m.data), month(m.data) order by year(m.data), month(m.data)")
+    List<Object[]> totaisPorMes(LocalDate de);
 }

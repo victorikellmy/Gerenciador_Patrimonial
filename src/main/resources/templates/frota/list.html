@@ -17,7 +17,7 @@
                 Veículos da fundação (cada um é um patrimônio) com o histórico de saídas, abastecimentos e manutenções.
             </div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-wrap" sec:authorize="!hasRole('GERENTE')">
             <a class="btn btn-secondary" th:href="@{/frota/deslocamentos/novo}">
                 <i class="bi bi-signpost-2"></i> Registrar saída
             </a>
@@ -90,7 +90,7 @@
                             <td th:text="${d.motorista}"></td>
                             <td class="text-end" th:text="${d.kmInicial} ?: '—'"></td>
                             <td class="text-end">
-                                <a class="btn btn-sm btn-warning" th:href="@{'/frota/' + ${d.veiculoId}}">
+                                <a class="btn btn-sm btn-warning" th:href="@{'/frota/' + ${d.veiculoId}}" sec:authorize="!hasRole('GERENTE')">
                                     <i class="bi bi-box-arrow-in-left"></i> Registrar chegada
                                 </a>
                             </td>
@@ -160,9 +160,9 @@
                         <td class="text-end">
                             <div class="d-inline-flex gap-1">
                                 <a class="btn btn-sm btn-primary btn-icon" th:href="@{'/frota/' + ${v.id}}" title="Ficha e histórico"><i class="bi bi-clock-history"></i></a>
-                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/' + ${v.id} + '/deslocamentos/novo'}" title="Registrar saída"><i class="bi bi-signpost-2"></i></a>
-                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/' + ${v.id} + '/abastecimentos/novo'}" title="Abastecimento"><i class="bi bi-fuel-pump"></i></a>
-                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/' + ${v.id} + '/manutencoes/novo'}" title="Manutenção / revisão"><i class="bi bi-wrench-adjustable"></i></a>
+                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/' + ${v.id} + '/deslocamentos/novo'}" title="Registrar saída" sec:authorize="!hasRole('GERENTE')"><i class="bi bi-signpost-2"></i></a>
+                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/' + ${v.id} + '/abastecimentos/novo'}" title="Abastecimento" sec:authorize="!hasRole('GERENTE')"><i class="bi bi-fuel-pump"></i></a>
+                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/' + ${v.id} + '/manutencoes/novo'}" title="Manutenção / revisão" sec:authorize="!hasRole('GERENTE')"><i class="bi bi-wrench-adjustable"></i></a>
                                 <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/' + ${v.id} + '/editar'}" title="Editar"
                                    sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')"><i class="bi bi-pencil"></i></a>
                             </div>

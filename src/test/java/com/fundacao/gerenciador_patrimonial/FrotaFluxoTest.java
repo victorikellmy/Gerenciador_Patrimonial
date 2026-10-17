@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -39,6 +40,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -56,7 +58,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "app.importacao.habilitada=false",
         "app.storage.pasta-raiz=build/test-uploads",
         "app.integracao.almoxarifado.senha=",
-        "app.frota.transportes.url="
+        "app.frota.transportes.url=",
+        "app.frota.seed=false"
 })
 @AutoConfigureMockMvc
 class FrotaFluxoTest {
@@ -223,6 +226,103 @@ class FrotaFluxoTest {
         // 6) Patrimônio continua acessível pela tela de patrimônios (é um bem como outro qualquer)
         mvc.perform(get("/patrimonios/" + p.getId() + "/editar")).andExpect(status().isOk())
                 .andExpect(content().string(containsString(placa)));
+    }
+
+    @Test
+    void motoristaPrecisaAnexarNotaFiscal() throws Exception {
+        // veículo cadastrado pelo admin (default do MockMvc)
+        mvc.perform(post("/frota").with(csrf())
+                        .param("placa", placa).param("modelo", "SAVEIRO").param("combustivelPadrao", "ETANOL")
+                        .param("lotacaoId", lotacao.getId().toString())
+                        .param("responsavelId", responsavel.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+        Veiculo v = veiculoRepo.findByPlacaIgnoreCase(placa).orElseThrow();
+
+        // Motorista sem NF → volta ao formulário com erro, nada gravado
+        mvc.perform(multipart("/frota/abastecimentos").with(csrf()).with(user(motorista))
+                        .param("veiculoId", v.getId().toString()).param("data", LocalDate.now().toString())
+                        .param("combustivel", "ETANOL").param("valor", "120.00").param("motorista", "Motorista Demo"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Anexe a nota fiscal")));
+        assertThat(abastecimentoRepo.countByVeiculoId(v.getId())).isZero();
+
+        // Com NF (foto) → grava e a NF fica disponível para download
+        MockMultipartFile foto = new MockMultipartFile("notaFiscalArquivo", "cupom.jpg", "image/jpeg", "jpegdata".getBytes());
+        mvc.perform(multipart("/frota/abastecimentos").file(foto).with(csrf()).with(user(motorista))
+                        .param("veiculoId", v.getId().toString()).param("data", LocalDate.now().toString())
+                        .param("km", "1000").param("combustivel", "ETANOL").param("quantidadeLitros", "30")
+                        .param("valor", "120.00").param("motorista", "Motorista Demo"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/frota/" + v.getId()));
+        var abast = abastecimentoRepo.findByVeiculoIdOrderByDataDescIdDesc(v.getId()).get(0);
+        assertThat(abast.possuiNotaFiscal()).isTrue();
+        assertThat(abast.getNfNomeOriginal()).isEqualTo("cupom.jpg");
+        mvc.perform(get("/frota/abastecimentos/" + abast.getId() + "/nota-fiscal").with(user(motorista)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_JPEG));
+
+        // Tipo de arquivo inválido é recusado
+        MockMultipartFile exe = new MockMultipartFile("notaFiscalArquivo", "x.exe", "application/octet-stream", "mz".getBytes());
+        mvc.perform(multipart("/frota/manutencoes").file(exe).with(csrf()).with(user(motorista))
+                        .param("veiculoId", v.getId().toString()).param("data", LocalDate.now().toString())
+                        .param("servico", "PNEUS").param("valor", "900.00").param("motorista", "Motorista Demo"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("PDF ou foto")));
+
+        // Admin pode lançar sem NF (registro antigo) e a ficha marca "sem NF"
+        mvc.perform(multipart("/frota/manutencoes").with(csrf())
+                        .param("veiculoId", v.getId().toString()).param("data", LocalDate.now().toString())
+                        .param("servico", "PNEUS").param("valor", "900.00").param("motorista", "Admin"))
+                .andExpect(status().is3xxRedirection());
+        mvc.perform(get("/frota/" + v.getId())).andExpect(status().isOk())
+                .andExpect(content().string(containsString("sem NF")))
+                .andExpect(content().string(containsString("nota-fiscal")));
+    }
+
+    @Test
+    void gerenteSoLeEVePainelGerencial() throws Exception {
+        UsuarioAutenticado gerente = new UsuarioAutenticado(usuario("gerente.teste", Perfil.GERENTE));
+
+        // Admin cadastra um veículo e o envia para manutenção
+        mvc.perform(post("/frota").with(csrf())
+                        .param("placa", placa).param("modelo", "AMB JUMPY")
+                        .param("lotacaoId", lotacao.getId().toString())
+                        .param("responsavelId", responsavel.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+        Veiculo v = veiculoRepo.findByPlacaIgnoreCase(placa).orElseThrow();
+        mvc.perform(post("/frota/" + v.getId() + "/manutencao-status").with(csrf())
+                        .param("emManutencao", "true").param("motivo", "Troca de embreagem"))
+                .andExpect(status().is3xxRedirection());
+        assertThat(patrimonioRepo.findById(v.getPatrimonio().getId()).orElseThrow().getSituacao().name()).isEqualTo("MANUTENCAO");
+
+        // Gerente enxerga o painel gerencial com o veículo em manutenção, listas, dashboard e relatórios
+        mvc.perform(get("/frota/gestao").with(user(gerente))).andExpect(status().isOk())
+                .andExpect(content().string(containsString("Em manutenção")))
+                .andExpect(content().string(containsString(placa)));
+        mvc.perform(get("/frota").with(user(gerente))).andExpect(status().isOk());
+        mvc.perform(get("/frota/" + v.getId()).with(user(gerente))).andExpect(status().isOk());
+        mvc.perform(get("/frota/deslocamentos").with(user(gerente))).andExpect(status().isOk());
+        mvc.perform(get("/").with(user(gerente))).andExpect(status().isOk());
+        mvc.perform(get("/relatorios").with(user(gerente))).andExpect(status().isOk());
+        mvc.perform(get("/patrimonios").with(user(gerente))).andExpect(status().isOk());
+        mvc.perform(get("/frota/gestao/download").param("formato", "xlsx").with(user(gerente))).andExpect(status().isOk());
+
+        // ...mas não altera nada
+        mvc.perform(get("/frota/novo").with(user(gerente))).andExpect(status().isForbidden());
+        mvc.perform(get("/patrimonios/novo").with(user(gerente))).andExpect(status().isForbidden());
+        mvc.perform(get("/usuarios").with(user(gerente))).andExpect(status().isForbidden());
+        mvc.perform(multipart("/frota/abastecimentos").with(csrf()).with(user(gerente))
+                        .param("veiculoId", v.getId().toString()).param("data", LocalDate.now().toString())
+                        .param("combustivel", "DIESEL").param("valor", "10.00").param("motorista", "X"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/frota/" + v.getId() + "/manutencao-status").with(csrf()).with(user(gerente))
+                        .param("emManutencao", "false"))
+                .andExpect(status().isForbidden());
+
+        // Retorno da manutenção pelo admin
+        mvc.perform(post("/frota/" + v.getId() + "/manutencao-status").with(csrf()).param("emManutencao", "false"))
+                .andExpect(status().is3xxRedirection());
+        assertThat(patrimonioRepo.findById(v.getPatrimonio().getId()).orElseThrow().getSituacao().name()).isEqualTo("ATIVO");
     }
 
     @Test

@@ -29,4 +29,14 @@ public interface AbastecimentoRepository extends JpaRepository<Abastecimento, Lo
     BigDecimal litrosVeiculoPeriodo(Long veiculoId, LocalDate de, LocalDate ate);
 
     long countByVeiculoId(Long veiculoId);
+
+    /** {veiculoId, soma valor, soma litros} por veículo no período. */
+    @Query("select a.veiculo.id, coalesce(sum(a.valor), 0), coalesce(sum(a.quantidadeLitros), 0) " +
+           "from Abastecimento a where a.data between :de and :ate group by a.veiculo.id")
+    List<Object[]> totaisPorVeiculo(LocalDate de, LocalDate ate);
+
+    /** {ano, mês, soma valor} a partir de uma data. */
+    @Query("select year(a.data), month(a.data), coalesce(sum(a.valor), 0) from Abastecimento a " +
+           "where a.data >= :de group by year(a.data), month(a.data) order by year(a.data), month(a.data)")
+    List<Object[]> totaisPorMes(LocalDate de);
 }

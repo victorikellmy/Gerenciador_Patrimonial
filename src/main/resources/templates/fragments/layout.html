@@ -76,7 +76,7 @@
         </div>
 
         <nav class="sidebar-nav" data-nav-auto-active>
-            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE')">
                 <div class="sidebar-section-title">Visão geral</div>
                 <a class="sidebar-link" th:href="@{/}" data-nav-match="/" data-nav-exact>
                     <i class="bi bi-speedometer2"></i>
@@ -86,6 +86,11 @@
 
             <div class="sidebar-section">
                 <div class="sidebar-section-title">Frota</div>
+                <a class="sidebar-link" th:href="@{/frota/gestao}" data-nav-match="/frota/gestao"
+                   sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE')">
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="sidebar-link-label">Gestão da frota</span>
+                </a>
                 <a class="sidebar-link" th:href="@{/frota}" data-nav-match="/frota" data-nav-exact>
                     <i class="bi bi-truck-front"></i>
                     <span class="sidebar-link-label">Veículos</span>
@@ -138,8 +143,12 @@
                 </a>
             </div>
 
-            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE')">
                 <div class="sidebar-section-title">Análises</div>
+                <a class="sidebar-link" th:href="@{/patrimonios}" data-nav-match="/patrimonios" sec:authorize="hasRole('GERENTE')">
+                    <i class="bi bi-box-seam"></i>
+                    <span class="sidebar-link-label">Patrimônios</span>
+                </a>
                 <a class="sidebar-link" th:href="@{/relatorios}" data-nav-match="/relatorios">
                     <i class="bi bi-file-earmark-bar-graph"></i>
                     <span class="sidebar-link-label">Relatórios</span>

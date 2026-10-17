@@ -18,7 +18,8 @@
     </div>
 
     <form th:action="${editando} ? @{'/frota/manutencoes/' + ${regId}} : @{/frota/manutencoes}"
-          th:object="${manutencaoForm}" method="post" class="card card-panel" style="overflow:hidden; max-width: 900px;">
+          th:object="${manutencaoForm}" method="post" enctype="multipart/form-data"
+          class="card card-panel" style="overflow:hidden; max-width: 900px;">
         <div class="form-section">
             <div class="row g-3">
                 <div class="col-md-8">
@@ -76,6 +77,22 @@
                     <label class="form-label required">Responsável pelo registro</label>
                     <input type="text" class="form-control" th:field="*{motorista}" maxlength="160" required th:classappend="${#fields.hasErrors('motorista')} ? 'is-invalid'"/>
                     <div class="invalid-feedback" th:if="${#fields.hasErrors('motorista')}" th:errors="*{motorista}"></div>
+                </div>
+            </div>
+        </div>
+        <div class="form-section" th:with="motorista=${#authorization.expression('hasRole(''MOTORISTA'')')}">
+            <div th:replace="~{fragments/ui-kit :: section-header('bi-receipt', 'Nota fiscal do serviço',
+                'Foto ou PDF da nota da oficina / peças. Obrigatório para motoristas.')}"></div>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label" th:classappend="${motorista or !editando} ? 'required'">Arquivo (PDF, JPG, PNG, WEBP)</label>
+                    <input type="file" class="form-control" name="notaFiscalArquivo"
+                           accept="application/pdf,image/jpeg,image/png,image/webp" capture="environment"
+                           th:required="${motorista and !editando}"/>
+                    <div class="form-text" th:if="${editando}">
+                        <span th:if="${nfAtual != null}">NF atual: <a th:href="@{'/frota/manutencoes/' + ${regId} + '/nota-fiscal'}" target="_blank" th:text="${nfAtual}"></a>. Enviar outro arquivo substitui.</span>
+                        <span th:if="${nfAtual == null}">Sem nota fiscal anexada.</span>
+                    </div>
                 </div>
             </div>
         </div>

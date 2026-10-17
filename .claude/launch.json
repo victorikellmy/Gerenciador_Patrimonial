@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "patrimonio-dev",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "C:/Users/victorikellmy/IdeaProjects/Gerenciador_Patrimonial/run-dev.cmd"],
+      "port": 8080
+    }
+  ]
+}

@@ -18,7 +18,8 @@ public record HistoricoVeiculoItem(
         Integer km,
         BigDecimal valor,
         String motorista,
-        boolean emAndamento
+        boolean emAndamento,
+        boolean possuiNotaFiscal
 ) {
     public enum Tipo { ABASTECIMENTO, MANUTENCAO, DESLOCAMENTO }
 }

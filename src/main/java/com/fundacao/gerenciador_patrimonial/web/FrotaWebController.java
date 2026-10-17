@@ -32,7 +32,15 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import com.fundacao.gerenciador_patrimonial.domain.enums.Perfil;
+import com.fundacao.gerenciador_patrimonial.security.UsuarioAutenticado;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -74,6 +82,39 @@ public class FrotaWebController {
         model.addAttribute("todos", todos);
         model.addAttribute("importacaoConfigurada", importador.configurado());
         return "frota/list";
+    }
+
+    /** Painel gerencial: quem está com qual viatura, manutenções, revisões e gastos. */
+    @GetMapping("/gestao")
+    public String gestao(Model model) {
+        model.addAttribute("g", frota.gestao());
+        return "frota/gestao";
+    }
+
+    @GetMapping("/gestao/download")
+    public void baixarGestao(@RequestParam(defaultValue = "xlsx") String formato, HttpServletResponse response) throws IOException {
+        var g = frota.gestao();
+        List<List<Object>> linhas = new ArrayList<>();
+        for (var x : g.gastosPorVeiculo()) {
+            linhas.add(Arrays.asList(x.placa(), x.modelo(), x.combustivel(), x.litros(), x.manutencao(), x.manutencoes(),
+                    x.total(), x.kmRodados(), x.saidas(), x.custoPorKm()));
+        }
+        enviar(new Tabela("Gastos da frota por veículo — " + g.hoje().getYear(),
+                        "Combustível R$ " + g.combustivelAno() + " · Manutenção R$ " + g.manutencaoAno() + " · " + g.kmAno() + " km rodados",
+                        List.of("Placa", "Modelo", "Combustível (R$)", "Litros", "Manutenção (R$)", "Nº manutenções", "Total (R$)",
+                                "Km rodados", "Saídas", "R$/km"), linhas), "gestao-frota", formato, response);
+    }
+
+    @PostMapping("/{id}/manutencao-status")
+    public String manutencaoStatus(@PathVariable Long id, @RequestParam boolean emManutencao,
+                                   @RequestParam(required = false) String motivo, RedirectAttributes redirect) {
+        try {
+            frota.marcarManutencao(id, emManutencao, motivo);
+            redirect.addFlashAttribute("sucesso", emManutencao ? "Veículo marcado como em manutenção." : "Veículo de volta à operação.");
+        } catch (RuntimeException e) {
+            redirect.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/frota/" + id;
     }
 
     @GetMapping("/novo")
@@ -218,14 +259,20 @@ public class FrotaWebController {
 
     @PostMapping("/abastecimentos")
     public String criarAbastecimento(@Valid @ModelAttribute("abastecimentoForm") AbastecimentoRequest req,
-                                     BindingResult binding, RedirectAttributes redirect, Model model) {
+                                     BindingResult binding,
+                                     @RequestParam(value = "notaFiscalArquivo", required = false) MultipartFile nf,
+                                     @AuthenticationPrincipal UsuarioAutenticado logado,
+                                     RedirectAttributes redirect, Model model) {
         if (req.veiculoId() == null) binding.rejectValue("veiculoId", "obrigatorio", "Selecione o veículo");
-        if (binding.hasErrors()) {
+        String faltaNf = validarNfObrigatoria(logado, nf, false);
+        if (binding.hasErrors() || faltaNf != null) {
+            if (faltaNf != null) model.addAttribute("erro", faltaNf);
             prepararFormLancamento(model, req.veiculoId(), "abastecimento", null);
             return "frota/abastecimento-form";
         }
         try {
             AbastecimentoResponse a = frota.registrarAbastecimento(req.veiculoId(), req);
+            if (nf != null && !nf.isEmpty()) frota.anexarNotaFiscal(HistoricoVeiculoItem.Tipo.ABASTECIMENTO, a.id(), nf);
             redirect.addFlashAttribute("sucesso", "Abastecimento registrado para " + a.placa() + ".");
             return "redirect:/frota/" + req.veiculoId();
         } catch (RuntimeException e) {
@@ -243,19 +290,23 @@ public class FrotaWebController {
                     a.combustivel(), a.quantidadeLitros(), a.valor(), a.postoCidade(), a.motorista(), a.observacao()));
         }
         prepararFormLancamento(model, a.veiculoId(), "abastecimento", regId);
+        model.addAttribute("nfAtual", a.possuiNotaFiscal() ? a.nfNomeOriginal() : null);
         return "frota/abastecimento-form";
     }
 
     @PostMapping("/abastecimentos/{regId}")
     public String atualizarAbastecimento(@PathVariable Long regId,
                                          @Valid @ModelAttribute("abastecimentoForm") AbastecimentoRequest req,
-                                         BindingResult binding, RedirectAttributes redirect, Model model) {
+                                         BindingResult binding,
+                                         @RequestParam(value = "notaFiscalArquivo", required = false) MultipartFile nf,
+                                         RedirectAttributes redirect, Model model) {
         if (binding.hasErrors()) {
             prepararFormLancamento(model, req.veiculoId(), "abastecimento", regId);
             return "frota/abastecimento-form";
         }
         try {
             AbastecimentoResponse a = frota.atualizarAbastecimento(regId, req);
+            if (nf != null && !nf.isEmpty()) frota.anexarNotaFiscal(HistoricoVeiculoItem.Tipo.ABASTECIMENTO, regId, nf);
             redirect.addFlashAttribute("sucesso", "Abastecimento atualizado.");
             return "redirect:/frota/" + a.veiculoId() + "?tipo=ABASTECIMENTO";
         } catch (RuntimeException e) {
@@ -315,14 +366,20 @@ public class FrotaWebController {
 
     @PostMapping("/manutencoes")
     public String criarManutencao(@Valid @ModelAttribute("manutencaoForm") ManutencaoVeiculoRequest req,
-                                  BindingResult binding, RedirectAttributes redirect, Model model) {
+                                  BindingResult binding,
+                                  @RequestParam(value = "notaFiscalArquivo", required = false) MultipartFile nf,
+                                  @AuthenticationPrincipal UsuarioAutenticado logado,
+                                  RedirectAttributes redirect, Model model) {
         if (req.veiculoId() == null) binding.rejectValue("veiculoId", "obrigatorio", "Selecione o veículo");
-        if (binding.hasErrors()) {
+        String faltaNf = validarNfObrigatoria(logado, nf, false);
+        if (binding.hasErrors() || faltaNf != null) {
+            if (faltaNf != null) model.addAttribute("erro", faltaNf);
             prepararFormLancamento(model, req.veiculoId(), "manutencao", null);
             return "frota/manutencao-form";
         }
         try {
             ManutencaoVeiculoResponse m = frota.registrarManutencao(req.veiculoId(), req);
+            if (nf != null && !nf.isEmpty()) frota.anexarNotaFiscal(HistoricoVeiculoItem.Tipo.MANUTENCAO, m.id(), nf);
             redirect.addFlashAttribute("sucesso", m.servico().getRotulo() + " registrada para " + m.placa() + ".");
             return "redirect:/frota/" + req.veiculoId();
         } catch (RuntimeException e) {
@@ -341,19 +398,23 @@ public class FrotaWebController {
                     m.proximaRevisaoData(), m.motorista()));
         }
         prepararFormLancamento(model, m.veiculoId(), "manutencao", regId);
+        model.addAttribute("nfAtual", m.possuiNotaFiscal() ? m.nfNomeOriginal() : null);
         return "frota/manutencao-form";
     }
 
     @PostMapping("/manutencoes/{regId}")
     public String atualizarManutencao(@PathVariable Long regId,
                                       @Valid @ModelAttribute("manutencaoForm") ManutencaoVeiculoRequest req,
-                                      BindingResult binding, RedirectAttributes redirect, Model model) {
+                                      BindingResult binding,
+                                      @RequestParam(value = "notaFiscalArquivo", required = false) MultipartFile nf,
+                                      RedirectAttributes redirect, Model model) {
         if (binding.hasErrors()) {
             prepararFormLancamento(model, req.veiculoId(), "manutencao", regId);
             return "frota/manutencao-form";
         }
         try {
             ManutencaoVeiculoResponse m = frota.atualizarManutencao(regId, req);
+            if (nf != null && !nf.isEmpty()) frota.anexarNotaFiscal(HistoricoVeiculoItem.Tipo.MANUTENCAO, regId, nf);
             redirect.addFlashAttribute("sucesso", "Manutenção atualizada.");
             return "redirect:/frota/" + m.veiculoId() + "?tipo=MANUTENCAO";
         } catch (RuntimeException e) {
@@ -492,6 +553,37 @@ public class FrotaWebController {
         frota.excluirDeslocamento(regId);
         redirect.addFlashAttribute("sucesso", "Deslocamento excluído.");
         return "redirect:/frota/" + veiculoId + "?tipo=DESLOCAMENTO";
+    }
+
+    // =========================================================================
+    // Nota fiscal (download inline)
+    // =========================================================================
+
+    @GetMapping({"/abastecimentos/{regId}/nota-fiscal", "/manutencoes/{regId}/nota-fiscal"})
+    public ResponseEntity<Resource> notaFiscal(@PathVariable Long regId, jakarta.servlet.http.HttpServletRequest request) {
+        HistoricoVeiculoItem.Tipo tipo = request.getRequestURI().contains("/manutencoes/")
+                ? HistoricoVeiculoItem.Tipo.MANUTENCAO : HistoricoVeiculoItem.Tipo.ABASTECIMENTO;
+        FrotaService.NotaFiscalArquivo nf = frota.notaFiscal(tipo, regId);
+        String nome = nf.nomeOriginal() != null ? nf.nomeOriginal() : "nota-fiscal";
+        String nomeAscii = nome.replaceAll("[^\\x20-\\x7E]", "_");
+        String nomeUtf8 = java.net.URLEncoder.encode(nome, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+        MediaType mt = MediaType.APPLICATION_OCTET_STREAM;
+        try { if (nf.contentType() != null) mt = MediaType.parseMediaType(nf.contentType()); } catch (RuntimeException ignored) { }
+        return ResponseEntity.ok()
+                .contentType(mt)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + nomeAscii + "\"; filename*=UTF-8''" + nomeUtf8)
+                .body(nf.recurso());
+    }
+
+    /**
+     * Motorista só registra abastecimento/manutenção com a nota fiscal (PDF ou foto).
+     * ADMINISTRADOR/FISCAL podem lançar sem (registros antigos, NF entregue em papel).
+     */
+    private static String validarNfObrigatoria(UsuarioAutenticado logado, MultipartFile nf, boolean editando) {
+        boolean motorista = logado != null && logado.getUsuario().getPerfil() == Perfil.MOTORISTA;
+        if (!motorista || editando) return null;
+        if (nf == null || nf.isEmpty()) return "Anexe a nota fiscal (PDF ou foto) para registrar o lançamento.";
+        return null;
     }
 
     // =========================================================================

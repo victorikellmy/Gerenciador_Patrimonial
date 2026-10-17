@@ -121,6 +121,36 @@ public class FrotaController {
         return frota.atualizarDeslocamento(id, req);
     }
 
+    // --- nota fiscal (multipart "arquivo": PDF ou foto). Obrigatória para MOTORISTA no app. ---
+
+    @PostMapping(value = "/abastecimentos/{id}/nota-fiscal", consumes = "multipart/form-data")
+    public AbastecimentoResponse nfAbastecimento(@PathVariable Long id,
+                                                 @RequestParam("arquivo") org.springframework.web.multipart.MultipartFile arquivo) {
+        frota.anexarNotaFiscal(HistoricoVeiculoItem.Tipo.ABASTECIMENTO, id, arquivo);
+        return frota.buscarAbastecimento(id);
+    }
+
+    @PostMapping(value = "/manutencoes/{id}/nota-fiscal", consumes = "multipart/form-data")
+    public ManutencaoVeiculoResponse nfManutencao(@PathVariable Long id,
+                                                  @RequestParam("arquivo") org.springframework.web.multipart.MultipartFile arquivo) {
+        frota.anexarNotaFiscal(HistoricoVeiculoItem.Tipo.MANUTENCAO, id, arquivo);
+        return frota.buscarManutencao(id);
+    }
+
+    @GetMapping({"/abastecimentos/{id}/nota-fiscal", "/manutencoes/{id}/nota-fiscal"})
+    public ResponseEntity<org.springframework.core.io.Resource> notaFiscal(@PathVariable Long id,
+                                                                            jakarta.servlet.http.HttpServletRequest request) {
+        HistoricoVeiculoItem.Tipo tipo = request.getRequestURI().contains("/manutencoes/")
+                ? HistoricoVeiculoItem.Tipo.MANUTENCAO : HistoricoVeiculoItem.Tipo.ABASTECIMENTO;
+        FrotaService.NotaFiscalArquivo nf = frota.notaFiscal(tipo, id);
+        org.springframework.http.MediaType mt = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+        try { if (nf.contentType() != null) mt = org.springframework.http.MediaType.parseMediaType(nf.contentType()); } catch (RuntimeException ignored) { }
+        return ResponseEntity.ok().contentType(mt)
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + (nf.nomeOriginal() != null ? nf.nomeOriginal().replaceAll("[^\\x20-\\x7E]", "_") : "nota-fiscal") + "\"")
+                .body(nf.recurso());
+    }
+
     @DeleteMapping("/abastecimentos/{id}")
     public ResponseEntity<Void> excluirAbastecimento(@PathVariable Long id) {
         frota.excluirAbastecimento(id);

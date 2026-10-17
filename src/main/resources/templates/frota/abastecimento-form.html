@@ -18,7 +18,8 @@
     </div>
 
     <form th:action="${editando} ? @{'/frota/abastecimentos/' + ${regId}} : @{/frota/abastecimentos}"
-          th:object="${abastecimentoForm}" method="post" class="card card-panel" style="overflow:hidden; max-width: 900px;">
+          th:object="${abastecimentoForm}" method="post" enctype="multipart/form-data"
+          class="card card-panel" style="overflow:hidden; max-width: 900px;">
         <div class="form-section">
             <div class="row g-3">
                 <div class="col-md-8">
@@ -69,6 +70,22 @@
                 <div class="col-12">
                     <label class="form-label">Observação</label>
                     <input type="text" class="form-control" th:field="*{observacao}" maxlength="500"/>
+                </div>
+            </div>
+        </div>
+        <div class="form-section" th:with="motorista=${#authorization.expression('hasRole(''MOTORISTA'')')}">
+            <div th:replace="~{fragments/ui-kit :: section-header('bi-receipt', 'Nota fiscal / cupom',
+                'Foto ou PDF do comprovante do abastecimento. Obrigatório para motoristas.')}"></div>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label" th:classappend="${motorista or !editando} ? 'required'">Arquivo (PDF, JPG, PNG, WEBP)</label>
+                    <input type="file" class="form-control" name="notaFiscalArquivo"
+                           accept="application/pdf,image/jpeg,image/png,image/webp" capture="environment"
+                           th:required="${motorista and !editando}"/>
+                    <div class="form-text" th:if="${editando and abastecimentoForm != null}">
+                        <span th:if="${nfAtual != null}">NF atual: <a th:href="@{'/frota/abastecimentos/' + ${regId} + '/nota-fiscal'}" target="_blank" th:text="${nfAtual}"></a>. Enviar outro arquivo substitui.</span>
+                        <span th:if="${nfAtual == null}">Sem nota fiscal anexada.</span>
+                    </div>
                 </div>
             </div>
         </div>
