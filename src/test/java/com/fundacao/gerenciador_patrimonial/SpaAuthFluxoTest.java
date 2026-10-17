@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -60,6 +61,10 @@ class SpaAuthFluxoTest {
         mvc.perform(get("/app/levantamentos/3/locais/7")).andExpect(status().isOk()).andExpect(forwardedUrl("/app/index.html"));
         // sem sessão a API responde 401 puro (nunca redirect para /login)
         mvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
+        // rotas antigas da interface Thymeleaf e a raiz levam para a SPA
+        mvc.perform(get("/")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/app"));
+        mvc.perform(get("/login")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/app/login"));
+        mvc.perform(get("/frota")).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/app"));
     }
 
     @Test

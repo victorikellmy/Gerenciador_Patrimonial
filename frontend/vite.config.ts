@@ -20,7 +20,6 @@ export default defineConfig({
       '/css': 'http://localhost:8080',
       '/js': 'http://localhost:8080',
       '/images': 'http://localhost:8080',
-      '/frota/titulares': 'http://localhost:8080',
     },
   },
 })

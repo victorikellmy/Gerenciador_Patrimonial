@@ -35,18 +35,17 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Diárias (profissional → solicitação → confirmar → deferir → pagar, com perfis
+ * Diárias pela API (profissional → solicitação → confirmar → deferir → pagar, com perfis
  * PRESIDENTE e FINANCEIRO), PDF, relatório de pagas; cautela com termo em PDF e
  * encerramento; autocomplete de titulares.
  */
@@ -101,84 +100,96 @@ class DiariasECautelasFluxoTest {
 
         // 1) Fiscal cadastra o profissional
         String cpf = "529.982.247-25";
-        mvc.perform(post("/diarias/profissionais").with(csrf()).with(user(fiscal))
-                        .param("nome", "Sgt. Teste Diária").param("matricula", "M-" + UUID.randomUUID().toString().substring(0, 5))
-                        .param("lotacao", "1º BPM - PALMAS").param("nivelId", nivelId.toString()).param("cpf", "52998224725")
-                        .param("dadosBancarios", "BB 1234 / 56789-0"))
-                .andExpect(status().is3xxRedirection());
+        mvc.perform(post("/api/diarias/profissionais").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nome":"Sgt. Teste Diária","matricula":"M-%s","lotacao":"1º BPM - PALMAS","nivelId":%d,
+                                 "cpf":"52998224725","dadosBancarios":"BB 1234 / 56789-0"}"""
+                                .formatted(UUID.randomUUID().toString().substring(0, 5), nivelId)))
+                .andExpect(status().isCreated());
         var prof = profissionalRepo.findFirstByCpf(cpf).orElseThrow();
         assertThat(prof.getNome()).isEqualTo("SGT. TESTE DIÁRIA");
 
         // Valores da tabela para o formulário
-        mvc.perform(get("/diarias/valores/" + prof.getId()).with(user(fiscal)))
+        mvc.perform(get("/api/diarias/valores/" + prof.getId()).with(user(fiscal)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.capitais").isNumber());
+                .andExpect(jsonPath("$.valorCapitais").isNumber());
 
         // 2) Fiscal abre a solicitação (2 diárias × valor interior do Estado)
-        mvc.perform(post("/diarias").with(csrf()).with(user(fiscal))
-                        .param("profissionalId", prof.getId().toString()).param("itinerario", "Palmas → Gurupi → Palmas")
-                        .param("partida", LocalDate.now().plusDays(2).toString()).param("horaSaida", "06:00")
-                        .param("retorno", LocalDate.now().plusDays(3).toString()).param("horaChegada", "20:00")
-                        .param("meioTransporte", "VEICULO_OFICIAL").param("recurso", "PROPRIO")
-                        .param("numeroDiarias", "2").param("valorUnitario", "243.23").param("finalidade", "Instrução"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("/diarias/*"));
+        mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"profissionalId":%d,"itinerario":"Palmas → Gurupi → Palmas","partida":"%s","horaSaida":"06:00",
+                                 "retorno":"%s","horaChegada":"20:00","meioTransporte":"VEICULO_OFICIAL","recurso":"PROPRIO",
+                                 "numeroDiarias":2,"valorUnitario":243.23,"finalidade":"Instrução"}"""
+                                .formatted(prof.getId(), LocalDate.now().plusDays(2), LocalDate.now().plusDays(3))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("SOLICITADO"))
+                .andExpect(jsonPath("$.valorTotal").value(486.46));
         Diaria d = diariaRepo.findAll().stream().filter(x -> x.getProfissional().getId().equals(prof.getId())).findFirst().orElseThrow();
-        assertThat(d.getStatus()).isEqualTo(StatusDiaria.SOLICITADO);
-        assertThat(d.getValorTotal()).isEqualByComparingTo("486.46");
 
         // Retorno antes da partida é recusado
-        mvc.perform(post("/diarias").with(csrf()).with(user(fiscal))
-                        .param("profissionalId", prof.getId().toString()).param("itinerario", "X")
-                        .param("partida", LocalDate.now().plusDays(5).toString()).param("retorno", LocalDate.now().toString())
-                        .param("meioTransporte", "AEREO").param("recurso", "PROPRIO")
-                        .param("numeroDiarias", "1").param("valorUnitario", "100"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("não pode ser antes da partida")));
+        mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"profissionalId":%d,"itinerario":"X","partida":"%s","retorno":"%s","meioTransporte":"AEREO",
+                                 "recurso":"PROPRIO","numeroDiarias":1,"valorUnitario":100}"""
+                                .formatted(prof.getId(), LocalDate.now().plusDays(5), LocalDate.now())))
+                .andExpect(status().is4xxClientError());
 
         // 3) Presidente não pode deferir ainda (precisa estar confirmada); fiscal não confirma; admin confirma
-        mvc.perform(post("/diarias/" + d.getId() + "/deferir").with(csrf()).with(user(presidente))).andExpect(status().is3xxRedirection());
+        mvc.perform(post("/api/diarias/" + d.getId() + "/deferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().is4xxClientError());
         assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.SOLICITADO);
-        mvc.perform(post("/diarias/" + d.getId() + "/confirmar").with(csrf()).with(user(fiscal))).andExpect(status().isForbidden());
-        mvc.perform(post("/diarias/" + d.getId() + "/confirmar").with(csrf())).andExpect(status().is3xxRedirection());
-        assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.CONFIRMADO);
+        mvc.perform(post("/api/diarias/" + d.getId() + "/confirmar").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/diarias/" + d.getId() + "/confirmar").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMADO"));
 
         // Presidente vê as confirmadas por padrão e defere; financeiro não pode deferir
-        mvc.perform(get("/diarias").with(user(presidente))).andExpect(status().isOk())
-                .andExpect(content().string(containsString("Palmas → Gurupi → Palmas")));
-        mvc.perform(post("/diarias/" + d.getId() + "/deferir").with(csrf()).with(user(financeiro))).andExpect(status().isForbidden());
-        mvc.perform(post("/diarias/" + d.getId() + "/indeferir").with(csrf()).with(user(presidente))).andExpect(status().is3xxRedirection());
-        assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.CONFIRMADO); // sem motivo não indefere
-        mvc.perform(post("/diarias/" + d.getId() + "/deferir").with(csrf()).with(user(presidente)).param("observacao", "OK"))
-                .andExpect(status().is3xxRedirection());
-        assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.DEFERIDO);
+        mvc.perform(get("/api/diarias").param("padraoDoPerfil", "true").with(user(presidente))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.id == %d)].itinerario".formatted(d.getId())).value("Palmas → Gurupi → Palmas"))
+                .andExpect(jsonPath("$.content[*].status").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("CONFIRMADO"))));
+        mvc.perform(post("/api/diarias/" + d.getId() + "/deferir").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/diarias/" + d.getId() + "/indeferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().is4xxClientError()); // sem motivo não indefere
+        assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.CONFIRMADO);
+        mvc.perform(post("/api/diarias/" + d.getId() + "/deferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"observacao\":\"OK\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DEFERIDO"));
 
-        // 4) Financeiro paga; data futura é recusada; diária paga não se edita
-        mvc.perform(post("/diarias/" + d.getId() + "/pagar").with(csrf()).with(user(financeiro))
-                        .param("dataPagamento", LocalDate.now().plusDays(1).toString())).andExpect(status().is3xxRedirection());
+        // 4) Financeiro paga; data futura é recusada; diária paga não se exclui
+        mvc.perform(post("/api/diarias/" + d.getId() + "/pagar").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dataPagamento\":\"%s\"}".formatted(LocalDate.now().plusDays(1))))
+                .andExpect(status().is4xxClientError());
         assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.DEFERIDO);
-        mvc.perform(post("/diarias/" + d.getId() + "/pagar").with(csrf()).with(user(financeiro))
-                        .param("dataPagamento", LocalDate.now().toString())).andExpect(status().is3xxRedirection());
+        mvc.perform(post("/api/diarias/" + d.getId() + "/pagar").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"dataPagamento\":\"%s\"}".formatted(LocalDate.now())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAGO"));
         Diaria paga = diariaRepo.findById(d.getId()).orElseThrow();
-        assertThat(paga.getStatus()).isEqualTo(StatusDiaria.PAGO);
         assertThat(paga.getDataPagamento()).isEqualTo(LocalDate.now());
-        mvc.perform(post("/diarias/" + d.getId() + "/excluir").with(csrf())).andExpect(status().is3xxRedirection());
+        mvc.perform(delete("/api/diarias/" + d.getId())).andExpect(status().is4xxClientError());
         assertThat(diariaRepo.findById(d.getId())).isPresent();
 
         // 5) Detalhe com histórico, PDF e relatório de pagas
-        mvc.perform(get("/diarias/" + d.getId())).andExpect(status().isOk())
-                .andExpect(content().string(containsString("Paga")))
-                .andExpect(content().string(containsString("Solicitação aberta.")));
-        mvc.perform(get("/diarias/" + d.getId() + "/pdf")).andExpect(status().isOk())
+        mvc.perform(get("/api/diarias/" + d.getId())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAGO"))
+                .andExpect(jsonPath("$.editavel").value(false));
+        mvc.perform(get("/api/diarias/" + d.getId() + "/historico")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].paraStatus").exists());
+        mvc.perform(get("/api/diarias/" + d.getId() + "/pdf")).andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
-        mvc.perform(get("/diarias/pagas").with(user(financeiro))).andExpect(status().isOk())
-                .andExpect(content().string(containsString("SGT. TESTE DIÁRIA")));
-        mvc.perform(get("/diarias/pagas/download").param("formato", "xlsx")).andExpect(status().isOk());
+        mvc.perform(get("/api/diarias/pagas").with(user(financeiro))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.lista[?(@.id == %d)].profissionalNome".formatted(d.getId())).value("SGT. TESTE DIÁRIA"));
+        mvc.perform(get("/api/diarias/pagas/download").param("formato", "xlsx")).andExpect(status().isOk());
 
-        // Presidente/financeiro não abrem solicitação nem acessam patrimônios
-        mvc.perform(get("/diarias/nova").with(user(presidente))).andExpect(status().isForbidden());
-        mvc.perform(get("/patrimonios/novo").with(user(financeiro))).andExpect(status().isForbidden());
-        mvc.perform(get("/").with(user(presidente))).andExpect(status().isOk());
+        // Presidente/financeiro não abrem solicitação nem cadastram patrimônios
+        mvc.perform(post("/api/diarias").with(user(presidente)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/patrimonios").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/me/resumo").with(user(presidente))).andExpect(status().isOk());
     }
 
     @Test
@@ -186,45 +197,47 @@ class DiariasECautelasFluxoTest {
         String sufixo = UUID.randomUUID().toString().substring(0, 4).toUpperCase();
         Lotacao lot = lotacaoRepo.save(Lotacao.builder().upm("FROTA CAUTELA " + sufixo).nome("GARAGEM").tipoLocal(TipoLocal.INTERNO).build());
         Responsavel resp = responsavelRepo.save(Responsavel.builder().nomeCompleto("Resp Cautela " + sufixo).matricula("RC-" + sufixo).ativo(true).build());
-        mvc.perform(post("/frota").with(csrf()).param("placa", "CAU-" + sufixo).param("modelo", "SAVEIRO")
-                        .param("lotacaoId", lot.getId().toString()).param("responsavelId", resp.getId().toString()))
-                .andExpect(status().is3xxRedirection());
+        mvc.perform(post("/api/frota/veiculos").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"placa":"CAU-%s","modelo":"SAVEIRO","lotacaoId":%d,"responsavelId":%d}""".formatted(sufixo, lot.getId(), resp.getId())))
+                .andExpect(status().isCreated());
         Veiculo v = veiculoRepo.findByPlacaIgnoreCase("CAU-" + sufixo).orElseThrow();
 
         titularRepo.save(Titular.builder().nome("CARLOS AUGUSTO PEREIRA").tipoCadastro("M").build());
-        mvc.perform(get("/frota/titulares").param("termo", "carlos aug")).andExpect(status().isOk())
+        mvc.perform(get("/api/frota/titulares").param("termo", "carlos aug")).andExpect(status().isOk())
                 .andExpect(jsonPath("$[0]").value("CARLOS AUGUSTO PEREIRA"));
 
         // CPF inválido é recusado
-        mvc.perform(post("/frota/cautelas").with(csrf())
-                        .param("veiculoId", v.getId().toString()).param("dataViagem", LocalDate.now().toString())
-                        .param("destino", "9º BPM").param("motivo", "Cautela").param("kmInicial", "100")
-                        .param("motoristaNome", "Cb. Carlos").param("rg", "123").param("cpf", "123").param("fone", "63 9999").param("lotacao", "9º BPM"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("CPF do condutor")));
+        mvc.perform(post("/api/frota/cautelas").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"veiculoId":%d,"dataViagem":"%s","destino":"9º BPM","motivo":"Cautela","kmInicial":100,
+                                 "motoristaNome":"Cb. Carlos","rg":"123","cpf":"123","fone":"63 9999","lotacao":"9º BPM"}"""
+                                .formatted(v.getId(), LocalDate.now())))
+                .andExpect(status().is4xxClientError());
 
         // Cautela aberta, termo em PDF, segunda cautela recusada, encerramento
-        mvc.perform(post("/frota/cautelas").with(csrf())
-                        .param("veiculoId", v.getId().toString()).param("dataViagem", LocalDate.now().toString())
-                        .param("destino", "9º BPM").param("motivo", "Cautela").param("horaSaida", "07:00").param("kmInicial", "100")
-                        .param("motoristaNome", "Cb. Carlos Augusto").param("rg", "1234567").param("cpf", "52998224725")
-                        .param("fone", "(63) 99999-0000").param("lotacao", "9º BPM - ARAGUATINS"))
-                .andExpect(status().is3xxRedirection());
+        mvc.perform(post("/api/frota/cautelas").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"veiculoId":%d,"dataViagem":"%s","destino":"9º BPM","motivo":"Cautela","horaSaida":"07:00","kmInicial":100,
+                                 "motoristaNome":"Cb. Carlos Augusto","rg":"1234567","cpf":"52998224725","fone":"(63) 99999-0000",
+                                 "lotacao":"9º BPM - ARAGUATINS"}""".formatted(v.getId(), LocalDate.now())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.cpf").value("529.982.247-25"));
         var cautela = cautelaRepo.findFirstByVeiculoIdAndKmFinalIsNullOrderByDataViagemDescIdDesc(v.getId()).orElseThrow();
-        assertThat(cautela.getCpf()).isEqualTo("529.982.247-25");
-        mvc.perform(get("/frota/cautelas/" + cautela.getId() + "/termo")).andExpect(status().isOk())
+        mvc.perform(get("/api/frota/cautelas/" + cautela.getId() + "/termo")).andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
-        mvc.perform(get("/frota/cautelas")).andExpect(status().isOk())
+        mvc.perform(get("/api/frota/cautelas").param("veiculoId", v.getId().toString())).andExpect(status().isOk())
                 .andExpect(content().string(containsString("CB. CARLOS AUGUSTO")));
-        mvc.perform(post("/frota/cautelas").with(csrf())
-                        .param("veiculoId", v.getId().toString()).param("dataViagem", LocalDate.now().toString())
-                        .param("destino", "Outro").param("motivo", "Cautela")
-                        .param("motoristaNome", "X").param("rg", "1").param("cpf", "52998224725").param("fone", "1").param("lotacao", "Y"))
+        mvc.perform(post("/api/frota/cautelas").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"veiculoId":%d,"dataViagem":"%s","destino":"Outro","motivo":"Cautela",
+                                 "motoristaNome":"X","rg":"1","cpf":"52998224725","fone":"1","lotacao":"Y"}""".formatted(v.getId(), LocalDate.now())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem", containsString("cautela em aberto")));
+        mvc.perform(post("/api/frota/cautelas/" + cautela.getId() + "/finalizar").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horaChegada\":\"18:00\",\"kmFinal\":250}"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("cautela em aberto")));
-        mvc.perform(post("/frota/cautelas/" + cautela.getId() + "/finalizar").with(csrf())
-                        .param("horaChegada", "18:00").param("kmFinal", "250")).andExpect(status().is3xxRedirection());
-        assertThat(cautelaRepo.findById(cautela.getId()).orElseThrow().getKmRodados()).isEqualTo(150);
+                .andExpect(jsonPath("$.kmRodados").value(150));
         assertThat(veiculoRepo.findById(v.getId()).orElseThrow().getKmAtual()).isEqualTo(250);
     }
 }

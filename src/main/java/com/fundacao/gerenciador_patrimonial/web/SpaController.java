@@ -6,7 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 /**
  * Entrega a SPA React (build em {@code classpath:/static/app/index.html}) para
  * qualquer rota de {@code /app} que não seja um arquivo estático, deixando o
- * roteamento com o React Router.
+ * roteamento com o React Router. As rotas antigas da interface Thymeleaf
+ * ({@code /}, {@code /login}, {@code /logout}) redirecionam para a SPA.
  */
 @Controller
 public class SpaController {
@@ -15,5 +16,15 @@ public class SpaController {
                  "/app/{path:[^.]*}/{sub:[^.]*}/{x:[^.]*}/{y:[^.]*}"})
     public String spa() {
         return "forward:/app/index.html";
+    }
+
+    @GetMapping({"/", "/index", "/index.html"})
+    public String raiz() {
+        return "redirect:/app";
+    }
+
+    @GetMapping({"/login", "/logout"})
+    public String login() {
+        return "redirect:/app/login";
     }
 }

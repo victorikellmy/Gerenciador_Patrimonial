@@ -54,7 +54,7 @@ export default function Dashboard() {
         <div className="col-lg-5">
           <Card><div className="card-body"><h6 className="section-title mb-3">Por categoria</h6>
             <div className="table-responsive table-livre"><table className="table table-sm table-compacta mb-0"><thead><tr><th>Categoria</th><th className="text-end">Qtd.</th><th className="text-end">Valor</th></tr></thead>
-              <tbody>{d.porCategoria.map(c => <tr key={c.chave}><td>{c.chave}</td><td className="text-end">{numero(c.quantidade)}</td><td className="text-end">{moeda(c.valor)}</td></tr>)}</tbody></table></div>
+              <tbody>{d.porCategoria.map(c => <tr key={c.chave}><td>{c.chave}</td><td className="text-end">{numero(c.quantidade)}</td><td className="text-end">{moeda(c.valorTotal)}</td></tr>)}</tbody></table></div>
           </div></Card>
         </div>
         <div className="col-lg-7">

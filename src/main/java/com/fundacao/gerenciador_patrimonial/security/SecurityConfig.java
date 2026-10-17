@@ -21,9 +21,9 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
  *
  * <p>Estratégia:</p>
  * <ul>
- *   <li>Interface web → sessão + form login + CSRF habilitado</li>
- *   <li>Endpoints /api → HTTP Basic + stateless (CSRF desabilitado apenas para /api)</li>
- *   <li>Recursos estáticos (/css, /js) e H2-console (dev) → públicos</li>
+ *   <li>SPA React em /app → pública; autentica por POST /api/auth/login (sessão por cookie)</li>
+ *   <li>Endpoints /api → sessão da SPA ou HTTP Basic (app Android/scripts), sem CSRF</li>
+ *   <li>Recursos estáticos (/css, /images) e H2-console (dev) → públicos; o resto é negado</li>
  * </ul>
  *
  * <p>As regras de autorização granular nos controllers são feitas via
@@ -34,6 +34,9 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private static final String[] LEITURA = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO"};
+    private static final String[] TODOS_HUMANOS = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO", "MOTORISTA"};
 
     /** BCrypt com cost 10 (default) — resistente a brute force. */
     @Bean
@@ -52,8 +55,8 @@ public class SecurityConfig {
     // Filter chain #1 — API REST (/api/**)
     // =========================================================================
     //
-    // Ordem baixa (0) para ser avaliada ANTES da chain web. Usa HTTP Basic,
-    // sem sessão e sem CSRF (padrão para APIs consumidas por scripts/curl).
+    // Ordem baixa (1) para ser avaliada ANTES da chain da SPA. Aceita a sessão
+    // aberta pela SPA (POST /api/auth/login) ou HTTP Basic (app Android, curl).
     //
     @Bean
     @org.springframework.core.annotation.Order(1)
@@ -71,21 +74,21 @@ public class SecurityConfig {
                         // Integração com sistemas externos (Almoxarifado): usuário técnico INTEGRACAO
                         // ou um ADMINISTRADOR (testes manuais via curl).
                         .requestMatchers("/api/integracao/**").hasAnyRole("ADMINISTRADOR", "INTEGRACAO")
-                        // --- Frota (espelho das regras web) ---
+                        // --- Frota ---
                         .requestMatchers(HttpMethod.DELETE, "/api/frota/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/frota/importar-transportes", "/api/frota/veiculos/*/ativo").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/frota/veiculos", "/api/frota/veiculos/*/manutencao-status").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.PUT, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.GET, "/api/frota/gestao", "/api/frota/gestao/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
-                        // --- Diárias (espelho das regras web) ---
+                        .requestMatchers(HttpMethod.GET, "/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        // --- Diárias: abrir/editar ADMIN e FISCAL; confirmar ADMIN; deferir/indeferir PRESIDENTE; pagar FINANCEIRO ---
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/confirmar", "/api/diarias/niveis/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/diarias/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/deferir", "/api/diarias/*/indeferir").hasAnyRole("ADMINISTRADOR", "PRESIDENTE")
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/pagar").hasAnyRole("ADMINISTRADOR", "FINANCEIRO")
                         .requestMatchers(HttpMethod.POST, "/api/diarias", "/api/diarias/profissionais/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.PUT, "/api/diarias/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.GET, "/api/diarias/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE", "FINANCEIRO", "GERENTE")
-                        // Escrita/alteração exige ADMINISTRADOR (espelha as restrições da interface web)
+                        .requestMatchers(HttpMethod.GET, "/api/diarias/**").hasAnyRole(LEITURA)
+                        // --- Escrita/alteração exige ADMINISTRADOR ---
                         .requestMatchers(HttpMethod.POST, "/api/importacao/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/usuarios/**", "/api/admin/**").hasRole("ADMINISTRADOR")
@@ -94,17 +97,17 @@ public class SecurityConfig {
                                                           "/api/levantamentos/*/reabrir").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/pendencias/*/descartar").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
-                        // Frota (app Android): motoristas também lançam
-                        // GERENTE lê frota, relatórios, dashboard e patrimônios pela API; MOTORISTA lê e lança na frota
+                        // --- Leitura: GERENTE/PRESIDENTE/FINANCEIRO consultam; MOTORISTA só a frota ---
                         .requestMatchers(HttpMethod.GET, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA")
-                        .requestMatchers(HttpMethod.GET, "/api/relatorios/**", "/api/dashboard/**",
-                                                         "/api/patrimonios/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
-                        .requestMatchers("/api/me/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA", "GERENTE", "PRESIDENTE", "FINANCEIRO")
+                        .requestMatchers(HttpMethod.GET, "/api/relatorios/**", "/api/dashboard/**", "/api/patrimonios/**",
+                                                         "/api/catalogos/**", "/api/lotacoes/**", "/api/responsaveis/**",
+                                                         "/api/anexos/**").hasAnyRole(LEITURA)
+                        .requestMatchers("/api/me/**", "/api/auth/**").hasAnyRole(TODOS_HUMANOS)
                         .requestMatchers("/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA")
                         // Restante da API: operadores humanos — o perfil INTEGRACAO fica de fora.
                         .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
                 )
-                // Cliente REST (app Android) precisa de 401/403 puros — nunca redirect para /login.
+                // Clientes REST precisam de 401/403 puros — nunca redirect.
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler((req, res, ex) -> res.sendError(HttpStatus.FORBIDDEN.value())))
@@ -113,102 +116,38 @@ public class SecurityConfig {
     }
 
     // =========================================================================
-    // Filter chain #2 — Interface web
+    // Filter chain #2 — SPA React e recursos estáticos
     // =========================================================================
+    //
+    // A interface é a SPA em /app (pública: a própria SPA decide o que mostrar e
+    // usa /api/auth/login). Não há mais telas renderizadas no servidor: "/" e
+    // "/login" redirecionam para a SPA (SpaController). Qualquer outra rota fora
+    // de /api e /app é negada.
+    //
     @Bean
     @org.springframework.core.annotation.Order(2)
     public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // --- recursos estáticos e públicos ---
                         .requestMatchers(
-                                "/login", "/css/**", "/js/**", "/images/**",
-                                "/webjars/**", "/favicon.ico",
-                                "/app", "/app/**"   // SPA React: a própria SPA controla o login via /api/auth
+                                "/", "/index", "/index.html", "/login", "/logout",
+                                "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/error",
+                                "/app", "/app/**"
                         ).permitAll()
-                        // H2 console (dev)
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")).permitAll()
-
-                        // --- áreas restritas ao ADMINISTRADOR ---
-                        .requestMatchers("/usuarios/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers("/importacao/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/patrimonios/*/excluir").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/patrimonios/anexos/*/excluir").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/lotacoes/*/excluir").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/responsaveis/*/inativar").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/pendencias/*/descartar").hasRole("ADMINISTRADOR")
-                        // Levantamento patrimonial: abrir/concluir/reabrir só ADMIN; conferir é de todos os operadores
-                        .requestMatchers(HttpMethod.POST, "/levantamentos").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/levantamentos/*/concluir",
-                                                          "/levantamentos/*/reabrir").hasRole("ADMINISTRADOR")
-
-                        // --- Frota: motoristas lançam; editar/cadastrar veículo é de ADMIN/FISCAL; excluir só ADMIN ---
-                        .requestMatchers(HttpMethod.POST, "/frota/*/*/excluir", "/frota/importar-transportes",
-                                                          "/frota/*/ativo").hasRole("ADMINISTRADOR")
-                        .requestMatchers("/frota/novo", "/frota/*/editar", "/frota/*/*/editar").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.POST, "/frota", "/frota/{id:\\d+}", "/frota/*/manutencao-status",
-                                                          "/frota/abastecimentos/{id:\\d+}",
-                                                          "/frota/manutencoes/{id:\\d+}",
-                                                          "/frota/deslocamentos/{id:\\d+}").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        // --- Diárias: abrir/editar ADMIN e FISCAL; confirmar ADMIN; deferir/indeferir PRESIDENTE; pagar FINANCEIRO ---
-                        .requestMatchers(HttpMethod.POST, "/diarias/*/confirmar", "/diarias/*/excluir",
-                                                          "/diarias/niveis/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/diarias/*/deferir", "/diarias/*/indeferir").hasAnyRole("ADMINISTRADOR", "PRESIDENTE")
-                        .requestMatchers(HttpMethod.POST, "/diarias/*/pagar").hasAnyRole("ADMINISTRADOR", "FINANCEIRO")
-                        .requestMatchers("/diarias/nova", "/diarias/*/editar", "/diarias/profissionais/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.POST, "/diarias", "/diarias/{id:\\d+}").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.GET, "/diarias/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE", "FINANCEIRO", "GERENTE")
-                        // --- Cautelas: motoristas registram; excluir só ADMIN ---
-                        .requestMatchers(HttpMethod.POST, "/frota/cautelas/*/excluir").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.GET, "/frota/cautelas", "/frota/cautelas/*/termo", "/frota/titulares")
-                                .hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA")
-                        // --- GERENTE: somente leitura (painel gerencial, listas, relatórios, dashboard) ---
-                        .requestMatchers(HttpMethod.GET, "/frota/gestao", "/frota/gestao/download").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
-                        .requestMatchers(HttpMethod.GET, "/frota", "/frota/{id:\\d+}", "/frota/{id:\\d+}/historico/download",
-                                                         "/frota/abastecimentos", "/frota/manutencoes", "/frota/deslocamentos",
-                                                         "/frota/*/download", "/frota/*/*/nota-fiscal",
-                                                         "/minha-conta/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA")
-                        .requestMatchers(HttpMethod.GET, "/", "/relatorios/**", "/patrimonios",
-                                                         "/patrimonios/*/historico").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO")
-                        .requestMatchers("/minha-conta/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA", "PRESIDENTE", "FINANCEIRO")
-                        .requestMatchers("/frota/**", "/minha-conta/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA")
-
-                        // --- demais (inclui /pendencias/**) → operadores humanos ---
-                        // O perfil INTEGRACAO é só para a API; não navega na interface web.
-                        .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .anyRequest().denyAll()
                 )
-                .formLogin(form -> form
-                        .loginPage("/login")
-                        // Motorista cai direto na frota (não tem acesso ao dashboard).
-                        .successHandler((req, res, auth) -> {
-                            // Senha provisória (primeiro acesso): troca antes de qualquer outra tela.
-                            if (auth.getPrincipal() instanceof UsuarioAutenticado u && u.getUsuario().isSenhaProvisoria()) {
-                                res.sendRedirect(req.getContextPath() + TrocaSenhaObrigatoriaInterceptor.ROTA_TROCA + "?obrigatoria");
-                                return;
-                            }
-                            boolean motorista = auth.getAuthorities().stream()
-                                    .anyMatch(a -> "ROLE_MOTORISTA".equals(a.getAuthority()));
-                            boolean gerente = auth.getAuthorities().stream()
-                                    .anyMatch(a -> "ROLE_GERENTE".equals(a.getAuthority()));
-                            boolean diarias = auth.getAuthorities().stream()
-                                    .anyMatch(a -> "ROLE_PRESIDENTE".equals(a.getAuthority()) || "ROLE_FINANCEIRO".equals(a.getAuthority()));
-                            res.sendRedirect(req.getContextPath()
-                                    + (motorista ? "/frota" : gerente ? "/frota/gestao" : diarias ? "/diarias" : "/"));
-                        })
-                        .failureUrl("/login?erro")
-                        .permitAll()
-                )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?desconectado")
-                        .deleteCookies("JSESSIONID")
-                        .permitAll()
-                )
+                // Só há GETs de arquivos estáticos nesta cadeia; sem formulários não há o que proteger com CSRF.
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                // Rota antiga (/frota, /diarias...) ou desconhecida: leva para a SPA em vez de página de erro.
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint((req, res, ex) -> res.sendRedirect(req.getContextPath() + "/app"))
+                        .accessDeniedHandler((req, res, ex) -> res.sendRedirect(req.getContextPath() + "/app")))
                 // H2 console usa frames — liberar apenas em mesmo origem
-                .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                // CSRF habilitado por padrão, mas desabilitado no H2 console (dev)
-                .csrf(c -> c.ignoringRequestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")));
+                .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
         return http.build();
     }
 }

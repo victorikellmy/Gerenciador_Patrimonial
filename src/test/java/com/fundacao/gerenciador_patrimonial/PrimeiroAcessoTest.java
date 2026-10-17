@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -17,20 +19,18 @@ import org.springframework.web.context.WebApplicationContext;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Primeiro acesso: usuário criado pelo administrador entra com senha provisória,
- * é levado à troca de senha, não navega em mais nada até trocar, e depois segue normalmente.
+ * Primeiro acesso pela SPA: usuário criado pelo administrador entra com senha provisória,
+ * {@code GET /api/me} avisa a SPA (que o leva à troca de senha), a troca recusa senha igual,
+ * e depois a flag some. Redefinir a senha pelo admin volta a marcar como provisória.
  */
 @SpringBootTest(properties = {
         "app.importacao.habilitada=false",
@@ -64,47 +64,47 @@ class PrimeiroAcessoTest {
     void usuarioNovoPrecisaTrocarSenhaAntesDeNavegar() throws Exception {
         String login = "motorista." + UUID.randomUUID().toString().substring(0, 6);
 
-        // 1) Admin cadastra com senha provisória (padrão do formulário)
-        mvc.perform(post("/usuarios").with(csrf())
-                        .param("nomeCompleto", "Motorista Novo").param("login", login).param("senha", "provisoria1")
-                        .param("perfil", "MOTORISTA").param("ativo", "true").param("exigirTrocaSenha", "true"))
-                .andExpect(status().is3xxRedirection());
+        // 1) Admin cadastra com senha provisória (padrão do formulário da SPA)
+        mvc.perform(post("/api/usuarios").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nomeCompleto":"Motorista Novo","login":"%s","senha":"provisoria1",
+                                 "perfil":"MOTORISTA","ativo":true,"exigirTrocaSenha":true}""".formatted(login)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.senhaProvisoria").value(true));
         Usuario novo = usuarioRepo.findByLogin(login).orElseThrow();
         assertThat(novo.isSenhaProvisoria()).isTrue();
 
-        // 2) Login de verdade pelo formulário → cai na troca de senha
-        var sessao = mvcSessao.perform(formLogin("/login").user(login).password("provisoria1"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/minha-conta/senha?obrigatoria"))
-                .andReturn().getRequest().getSession();
-
-        // 3) Qualquer outra página redireciona enquanto a senha for provisória
-        mvcSessao.perform(get("/frota").session((org.springframework.mock.web.MockHttpSession) sessao))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/minha-conta/senha?obrigatoria"));
-        mvcSessao.perform(get("/minha-conta/senha").session((org.springframework.mock.web.MockHttpSession) sessao))
+        // 2) Login de verdade pela SPA → a resposta já avisa que a senha é provisória
+        MockHttpSession sessao = (MockHttpSession) mvcSessao.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"%s\",\"senha\":\"provisoria1\"}".formatted(login)))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Primeiro acesso")));
+                .andExpect(jsonPath("$.senhaProvisoria").value(true))
+                .andReturn().getRequest().getSession(false);
+        assertThat(sessao).isNotNull();
+        mvcSessao.perform(get("/api/me").session(sessao)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.senhaProvisoria").value(true));
 
-        // Nova senha igual à provisória é recusada
-        mvcSessao.perform(post("/minha-conta/senha").with(csrf()).session((org.springframework.mock.web.MockHttpSession) sessao)
-                        .param("senhaAtual", "provisoria1").param("novaSenha", "provisoria1").param("confirmacao", "provisoria1"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("diferente da senha atual")));
+        // 3) Nova senha igual à provisória é recusada
+        mvcSessao.perform(post("/api/me/senha").session(sessao).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"senhaAtual\":\"provisoria1\",\"novaSenha\":\"provisoria1\",\"confirmacao\":\"provisoria1\"}"))
+                .andExpect(status().is4xxClientError());
+        assertThat(usuarioRepo.findByLogin(login).orElseThrow().isSenhaProvisoria()).isTrue();
 
-        // 4) Troca → liberado, motorista cai na frota
-        mvcSessao.perform(post("/minha-conta/senha").with(csrf()).session((org.springframework.mock.web.MockHttpSession) sessao)
-                        .param("senhaAtual", "provisoria1").param("novaSenha", "minhaSenha2").param("confirmacao", "minhaSenha2"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/frota"));
+        // 4) Troca → flag liberada na sessão e no banco; motorista segue usando a frota
+        mvcSessao.perform(post("/api/me/senha").session(sessao).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"senhaAtual\":\"provisoria1\",\"novaSenha\":\"minhaSenha2\",\"confirmacao\":\"minhaSenha2\"}"))
+                .andExpect(status().is2xxSuccessful());
         assertThat(usuarioRepo.findByLogin(login).orElseThrow().isSenhaProvisoria()).isFalse();
-        mvcSessao.perform(get("/frota").session((org.springframework.mock.web.MockHttpSession) sessao)).andExpect(status().isOk());
+        mvcSessao.perform(get("/api/me").session(sessao)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.senhaProvisoria").value(false));
+        mvcSessao.perform(get("/api/frota/veiculos").session(sessao)).andExpect(status().isOk());
 
         // 5) Admin redefine a senha → volta a ser provisória
-        mvc.perform(post("/usuarios/" + novo.getId()).with(csrf())
-                        .param("nomeCompleto", "Motorista Novo").param("login", login).param("senha", "outra123")
-                        .param("perfil", "MOTORISTA").param("ativo", "true").param("exigirTrocaSenha", "true"))
-                .andExpect(status().is3xxRedirection());
+        mvc.perform(put("/api/usuarios/" + novo.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nomeCompleto":"Motorista Novo","login":"%s","senha":"outra123",
+                                 "perfil":"MOTORISTA","ativo":true,"exigirTrocaSenha":true}""".formatted(login)))
+                .andExpect(status().isOk());
         assertThat(usuarioRepo.findByLogin(login).orElseThrow().isSenhaProvisoria()).isTrue();
     }
 }

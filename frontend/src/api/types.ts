@@ -55,7 +55,7 @@ export interface Movimentacao {
 }
 export interface Anexo { id: number; nomeOriginal: string; tipo: TipoAnexo; contentType?: string; tamanhoBytes?: number; criadoEm?: string }
 
-export interface Agrupamento { chave: string; quantidade: number; valor?: number }
+export interface Agrupamento { chave: string; quantidade: number; valorTotal?: number }
 export interface DashboardMetrics {
   totalPatrimonios: number; contagemPorSituacao: Record<string, number>; totalLotacoes: number; totalResponsaveis: number
   valorTotalAtivos: number; depreciacaoAcumuladaTotal: number; valorContabilLiquidoTotal: number
