@@ -57,14 +57,16 @@ export default function FrotaGestao() {
           </Section></Card>
         </div>
       </div>
-      <div className="row g-3">
+      <div className="row g-3 align-items-start">
         <div className="col-xl-6">
-          <Card className="h-100"><Section icon="bi-bar-chart" titulo="Gastos por mês" desc="Últimos 12 meses." semBorda>
-            <Bar data={{ labels: g.gastosPorMes.map(m => m.rotulo), datasets: [{ label: 'Combustível', data: g.gastosPorMes.map(m => Number(m.combustivel)), backgroundColor: '#1f6f5f' }, { label: 'Manutenção', data: g.gastosPorMes.map(m => Number(m.manutencao)), backgroundColor: '#f4b740' }] }} options={{ responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }} />
+          <Card><Section icon="bi-bar-chart" titulo="Gastos por mês" desc="Últimos 12 meses." semBorda>
+            <div style={{ height: 320 }}>
+              <Bar data={{ labels: g.gastosPorMes.map(m => m.rotulo), datasets: [{ label: 'Combustível', data: g.gastosPorMes.map(m => Number(m.combustivel)), backgroundColor: '#1f6f5f' }, { label: 'Manutenção', data: g.gastosPorMes.map(m => Number(m.manutencao)), backgroundColor: '#f4b740' }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }} />
+            </div>
           </Section></Card>
         </div>
         <div className="col-xl-6">
-          <Card className="h-100"><Section icon="bi-cash-coin" titulo="Gasto por veículo no ano" semBorda>
+          <Card><Section icon="bi-cash-coin" titulo="Gasto por veículo no ano" semBorda>
             <div className="table-responsive table-livre"><table className="table table-compacta mb-0">
               <thead><tr><th>Veículo</th><th className="text-end">Combustível</th><th className="text-end">Litros</th><th className="text-end">Manutenção</th><th className="text-end">Total</th><th className="text-end">Km</th><th className="text-end">R$/km</th></tr></thead>
               <tbody>{g.gastosPorVeiculo.map(v => <tr key={v.veiculoId}><td><Link to={`/frota/${v.veiculoId}`}>{v.placa}</Link> <span className="text-muted small">{v.modelo}</span></td><td className="text-end">{moeda(v.combustivel)}</td><td className="text-end">{numero(v.litros, 1)}</td><td className="text-end">{moeda(v.manutencao)} <span className="text-muted small">({v.manutencoes})</span></td><td className="text-end fw-semibold">{moeda(v.total)}</td><td className="text-end">{numero(v.kmRodados)}</td><td className="text-end">{v.custoPorKm ? moeda(v.custoPorKm) : '—'}</td></tr>)}</tbody>

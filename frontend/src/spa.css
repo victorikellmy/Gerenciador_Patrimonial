@@ -25,6 +25,10 @@
 .login-footer { text-align: center; color: rgba(255,255,255,0.55); font-size: 0.75rem; margin-top: var(--space-5); }
 .login-card .input-group .input-group-text { background: var(--bg-muted); border-color: var(--border); color: var(--text-muted); }
 
+/* app.css define .texto-limitado como inline-block; numa <td> isso tira a célula do layout
+   da tabela (aparece um bloco solto). Em célula, mantém table-cell e só corta o texto. */
+td.texto-limitado { display: table-cell; vertical-align: inherit; }
+
 /* Botões de ação com texto escondido em telas pequenas */
 .btn-check-item { min-width: 42px; }
 .lista-ocorrencias .foto-mini { width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-sm); }
