@@ -41,6 +41,13 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /** Exposto para o login por JSON da SPA ({@code POST /api/auth/login}). */
+    @Bean
+    public org.springframework.security.authentication.AuthenticationManager authenticationManager(
+            org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
     // =========================================================================
     // Filter chain #1 — API REST (/api/**)
     // =========================================================================
@@ -53,12 +60,31 @@ public class SecurityConfig {
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/api/**")
+                // CSRF desligado: o app Android usa Basic sem sessão e a SPA usa sessão com cookie
+                // SameSite=Lax (server.servlet.session.cookie.same-site), o que bloqueia POST cross-site.
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // IF_REQUIRED: a SPA React (/app) loga por POST /api/auth/login e segue na sessão;
+                // chamadas com Basic (Android) continuam sem criar sessão útil.
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/login").permitAll()
                         // Integração com sistemas externos (Almoxarifado): usuário técnico INTEGRACAO
                         // ou um ADMINISTRADOR (testes manuais via curl).
                         .requestMatchers("/api/integracao/**").hasAnyRole("ADMINISTRADOR", "INTEGRACAO")
+                        // --- Frota (espelho das regras web) ---
+                        .requestMatchers(HttpMethod.DELETE, "/api/frota/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/frota/importar-transportes", "/api/frota/veiculos/*/ativo").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/frota/veiculos", "/api/frota/veiculos/*/manutencao-status").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .requestMatchers(HttpMethod.PUT, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .requestMatchers(HttpMethod.GET, "/api/frota/gestao", "/api/frota/gestao/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        // --- Diárias (espelho das regras web) ---
+                        .requestMatchers(HttpMethod.POST, "/api/diarias/*/confirmar", "/api/diarias/niveis/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/diarias/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.POST, "/api/diarias/*/deferir", "/api/diarias/*/indeferir").hasAnyRole("ADMINISTRADOR", "PRESIDENTE")
+                        .requestMatchers(HttpMethod.POST, "/api/diarias/*/pagar").hasAnyRole("ADMINISTRADOR", "FINANCEIRO")
+                        .requestMatchers(HttpMethod.POST, "/api/diarias", "/api/diarias/profissionais/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .requestMatchers(HttpMethod.PUT, "/api/diarias/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .requestMatchers(HttpMethod.GET, "/api/diarias/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE", "FINANCEIRO", "GERENTE")
                         // Escrita/alteração exige ADMINISTRADOR (espelha as restrições da interface web)
                         .requestMatchers(HttpMethod.POST, "/api/importacao/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMINISTRADOR")
@@ -97,7 +123,8 @@ public class SecurityConfig {
                         // --- recursos estáticos e públicos ---
                         .requestMatchers(
                                 "/login", "/css/**", "/js/**", "/images/**",
-                                "/webjars/**", "/favicon.ico"
+                                "/webjars/**", "/favicon.ico",
+                                "/app", "/app/**"   // SPA React: a própria SPA controla o login via /api/auth
                         ).permitAll()
                         // H2 console (dev)
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")).permitAll()

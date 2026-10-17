@@ -43,3 +43,8 @@ uploads/
 .env
 .claude/settings.local.json
 *.log
+
+### Front-end React (Vite) ###
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/

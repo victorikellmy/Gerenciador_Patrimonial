@@ -1,0 +1,32 @@
+/* Complementos da SPA ao design system (css/app.css). */
+.login-page {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-5);
+  background:
+    radial-gradient(circle at 15% 20%, rgba(69,147,201,0.25) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(23,90,138,0.35) 0%, transparent 55%),
+    linear-gradient(135deg, var(--primary-900) 0%, var(--primary-700) 100%);
+}
+[data-theme="dark"] .login-page {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(69,147,201,0.12) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(23,90,138,0.20) 0%, transparent 55%),
+    #050a14;
+}
+.login-wrapper { width: 100%; max-width: 420px; }
+.brand-block { text-align: center; color: #fff; margin-bottom: var(--space-6); }
+.brand-logo { margin: 0 auto var(--space-4); display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.25)); }
+.brand-logo img { height: 110px; width: auto; max-width: 280px; }
+.brand-title { font-size: 1.05rem; font-weight: 600; color: #fff; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: var(--space-1); }
+.brand-sub { color: rgba(255,255,255,0.65); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.login-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-3); padding: var(--space-6); }
+.login-title { font-size: 1rem; font-weight: 600; margin-bottom: var(--space-5); color: var(--text-primary); }
+.login-footer { text-align: center; color: rgba(255,255,255,0.55); font-size: 0.75rem; margin-top: var(--space-5); }
+.login-card .input-group .input-group-text { background: var(--bg-muted); border-color: var(--border); color: var(--text-muted); }
+
+/* Botões de ação com texto escondido em telas pequenas */
+.btn-check-item { min-width: 42px; }
+.lista-ocorrencias .foto-mini { width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-sm); }
+.resumo-valor { font-variant-numeric: tabular-nums; }
+.obs-pre { white-space: pre-wrap; }
