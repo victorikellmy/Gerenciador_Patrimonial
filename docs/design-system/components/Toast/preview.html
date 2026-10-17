@@ -1,0 +1,39 @@
+<!-- @dsCard group="Feedback" height=260 subtitle="Toasts de sucesso e erro (flash messages) e alerta de contexto" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>body{margin:0;padding:var(--space-5) var(--space-6)} .toast-container{position:static;display:flex;flex-direction:column;gap:var(--space-3);max-width:420px;margin-bottom:var(--space-4)}</style>
+</head>
+<body>
+<div class="toast-container">
+  <div class="toast-modern toast-success" role="alert">
+    <div class="toast-icon"><i class="bi bi-check-lg"></i></div>
+    <div class="toast-body-modern">
+      <div class="toast-title">Sucesso</div>
+      <div class="toast-desc">Levantamento aberto com 1.284 bem(ns) para conferir.</div>
+    </div>
+    <button type="button" class="toast-close" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="toast-modern toast-danger" role="alert">
+    <div class="toast-icon"><i class="bi bi-exclamation-triangle"></i></div>
+    <div class="toast-body-modern">
+      <div class="toast-title">Atenção</div>
+      <div class="toast-desc">Descreva a avaria encontrada no bem.</div>
+    </div>
+    <button type="button" class="toast-close" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+  </div>
+</div>
+<div class="alert alert-info d-flex align-items-center justify-content-between gap-3 mb-0 flex-wrap" role="alert" style="max-width:760px">
+  <div class="d-flex align-items-center gap-2 flex-grow-1">
+    <i class="bi bi-clipboard2-check fs-5"></i>
+    <div class="flex-grow-1">
+      <strong>Levantamento patrimonial 2026</strong> em andamento: 793 de 1.284 bens conferidos
+      <div class="progress mt-1" style="height:5px;max-width:420px"><div class="progress-bar bg-info" style="width:62%"></div></div>
+    </div>
+  </div>
+  <a class="btn btn-sm btn-info" href="#"><i class="bi bi-list-check"></i> Continuar conferência</a>
+</div>
+</body>
+</html>

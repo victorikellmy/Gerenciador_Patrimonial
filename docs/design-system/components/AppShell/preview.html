@@ -1,0 +1,86 @@
+<!-- @dsCard group="Layout" height=420 subtitle="Sidebar fixa + topbar (renderização estática do fragments/layout.html)" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { height: 100%; margin: 0; }
+  .demo { position: relative; height: 400px; overflow: hidden; }
+  .demo .app-sidebar, .demo .app-topbar { position: absolute; }
+  .demo .app-topbar { left: var(--sidebar-w); right: 0; }
+  .demo main { position: absolute; top: var(--topbar-h); left: var(--sidebar-w); right: 0; bottom: 0; padding: var(--space-5) var(--space-6); overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="demo">
+  <aside class="app-sidebar" aria-label="Navegação principal">
+    <div class="sidebar-brand">
+      <a class="sidebar-brand-link" href="#">
+        <img src="../../assets/Logos/logo-color.png" alt="Fundação Pró-Tocantins" class="sidebar-brand-logo sidebar-brand-logo-light">
+        <img src="../../assets/Logos/logo-white.png" alt="Fundação Pró-Tocantins" class="sidebar-brand-logo sidebar-brand-logo-dark">
+        <span class="sidebar-brand-text"><span class="sidebar-brand-title">Patrimônio</span></span>
+      </a>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Visão geral</div>
+        <a class="sidebar-link" href="#"><i class="bi bi-speedometer2"></i><span class="sidebar-link-label">Dashboard</span></a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Operacional</div>
+        <a class="sidebar-link" href="#"><i class="bi bi-inbox"></i><span class="sidebar-link-label">Pendências</span>
+          <span class="badge rounded-pill text-bg-danger ms-auto badge-plain">3</span></a>
+        <a class="sidebar-link active" href="#"><i class="bi bi-grid-3x3-gap"></i><span class="sidebar-link-label">Patrimônios</span></a>
+        <a class="sidebar-link" href="#"><i class="bi bi-building"></i><span class="sidebar-link-label">Lotações</span></a>
+        <a class="sidebar-link" href="#"><i class="bi bi-person-badge"></i><span class="sidebar-link-label">Responsáveis</span></a>
+        <a class="sidebar-link" href="#"><i class="bi bi-clipboard2-check"></i><span class="sidebar-link-label">Levantamento</span>
+          <span class="badge rounded-pill text-bg-info ms-auto badge-plain">62%</span></a>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Análises</div>
+        <a class="sidebar-link" href="#"><i class="bi bi-file-earmark-bar-graph"></i><span class="sidebar-link-label">Relatórios</span></a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <span class="nav-avatar">A</span>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name">admin</span>
+          <span class="sidebar-user-role">ADMINISTRADOR</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <header class="app-topbar">
+    <button type="button" class="topbar-icon-btn" title="Alternar menu"><i class="bi bi-layout-sidebar"></i></button>
+    <div class="topbar-breadcrumb">
+      <span class="bc-item">Operacional</span><i class="bi bi-chevron-right bc-sep"></i><span class="bc-item bc-current">Patrimônios</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <a class="topbar-icon-btn position-relative text-decoration-none" href="#" title="3 bens a patrimoniar">
+      <i class="bi bi-bell-fill"></i>
+      <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger badge-plain" style="font-size:.65rem;margin-left:-6px;margin-top:6px;">3</span>
+    </a>
+    <button type="button" class="topbar-icon-btn theme-toggle" title="Alternar tema"><i class="bi bi-moon-stars"></i></button>
+    <div class="topbar-divider"></div>
+    <button type="button" class="topbar-user-btn dropdown-toggle">
+      <span class="nav-avatar">A</span>
+      <span class="d-flex flex-column text-start lh-sm"><span class="small fw-semibold">admin</span><span class="topbar-user-role">ADMINISTRADOR</span></span>
+    </button>
+  </header>
+
+  <main>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Patrimônios</h1>
+        <div class="page-subtitle">1.284 bens ativos em 16 unidades</div>
+      </div>
+      <a class="btn btn-primary" href="#"><i class="bi bi-plus-lg"></i> Novo patrimônio</a>
+    </div>
+    <div class="card card-panel"><div class="card-body text-muted small">Conteúdo da página</div></div>
+  </main>
+</div>
+</body>
+</html>

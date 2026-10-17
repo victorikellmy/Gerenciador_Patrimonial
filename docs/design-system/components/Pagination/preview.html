@@ -1,0 +1,26 @@
+<!-- @dsCard group="Dados" height=140 subtitle="Paginação compacta e filtro por botões (btn-group)" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>body{margin:0;padding:var(--space-5) var(--space-6)}</style>
+</head>
+<body>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+  <div class="btn-group" role="group" aria-label="Filtro de situação">
+    <a href="#" class="btn btn-sm btn-primary">Pendentes <span class="badge text-bg-light ms-1">12</span></a>
+    <a href="#" class="btn btn-sm btn-secondary">Concluídas</a>
+    <a href="#" class="btn btn-sm btn-secondary">Descartadas</a>
+    <a href="#" class="btn btn-sm btn-secondary">Todas <span class="badge text-bg-light ms-1">41</span></a>
+  </div>
+  <nav aria-label="Paginação">
+    <ul class="pagination pagination-sm mb-0">
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+      <li class="page-item disabled"><span class="page-link">1 / 7</span></li>
+      <li class="page-item"><a class="page-link" href="#">&raquo;</a></li>
+    </ul>
+  </nav>
+</div>
+</body>
+</html>

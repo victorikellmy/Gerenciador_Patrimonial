@@ -1,0 +1,54 @@
+<!-- @dsCard group="Layout" height=330 subtitle="card-panel com seções de formulário (form-section)" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>body{margin:0;padding:var(--space-5) var(--space-6)}</style>
+</head>
+<body>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card card-panel" style="overflow:hidden">
+      <div class="form-section">
+        <div class="form-section-header">
+          <div class="form-section-icon"><i class="bi bi-receipt"></i></div>
+          <div>
+            <h3 class="form-section-title">Dados do recebimento</h3>
+            <div class="form-section-desc">Informações registradas pelo setor de Compras no Almoxarifado.</div>
+          </div>
+        </div>
+        <dl class="row mb-0 small">
+          <dt class="col-sm-4">Fornecedor</dt><dd class="col-sm-8">Papelaria Central Ltda.</dd>
+          <dt class="col-sm-4">Nota fiscal</dt><dd class="col-sm-8">NF 10.482 <a href="#" class="ms-2"><i class="bi bi-file-earmark-pdf"></i> nf-10482.pdf</a></dd>
+          <dt class="col-sm-4">Valor total</dt><dd class="col-sm-8 tabular-nums">R$ 8.367,20</dd>
+        </dl>
+      </div>
+      <div class="form-section">
+        <div class="form-section-header">
+          <div class="form-section-icon"><i class="bi bi-list-check"></i></div>
+          <div>
+            <h3 class="form-section-title">Itens recebidos</h3>
+            <div class="form-section-desc">Cada unidade vira um patrimônio. A NF é anexada a todos.</div>
+          </div>
+        </div>
+        <div class="text-muted small">2 itens · 3 unidades</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card card-panel card-hover">
+      <div class="card-body">
+        <div class="card-title">Andamento</div>
+        <div class="d-flex align-items-baseline gap-2 mb-2"><span class="fs-3 fw-semibold tabular-nums">1</span><span class="text-muted">de 3 unidade(s)</span></div>
+        <div class="progress mb-3" style="height:6px"><div class="progress-bar" style="width:33%"></div></div>
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary" type="button"><i class="bi bi-box-seam"></i> Patrimoniar próximo</button>
+          <button class="btn btn-secondary" type="button"><i class="bi bi-check2-circle"></i> Concluir manualmente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

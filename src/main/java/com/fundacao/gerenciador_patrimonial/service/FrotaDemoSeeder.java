@@ -6,6 +6,9 @@ import com.fundacao.gerenciador_patrimonial.domain.entity.ManutencaoVeiculo;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Responsavel;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Usuario;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Combustivel;
+import com.fundacao.gerenciador_patrimonial.domain.enums.MeioTransporte;
+import com.fundacao.gerenciador_patrimonial.domain.enums.RecursoDiaria;
+import com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Conservacao;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Perfil;
 import com.fundacao.gerenciador_patrimonial.domain.enums.TipoLocal;
@@ -70,6 +73,8 @@ public class FrotaDemoSeeder implements ApplicationRunner {
     private final UsuarioRepository usuarioRepo;
     private final PasswordEncoder encoder;
     private final FrotaService frota;
+    private final DiariaService diarias;
+    private final CautelaService cautelas;
     private final StorageService storage;
 
     @Value("${app.frota.seed-senha-motorista:trocar123}")
@@ -109,6 +114,12 @@ public class FrotaDemoSeeder implements ApplicationRunner {
         usuarioRepo.findByLogin("gerente.demo").orElseGet(() -> usuarioRepo.save(Usuario.builder()
                 .nomeCompleto("Gerente Demonstração").login("gerente.demo")
                 .senhaHash(encoder.encode(senhaMotorista)).perfil(Perfil.GERENTE).ativo(true).build()));
+        usuarioRepo.findByLogin("presidente.demo").orElseGet(() -> usuarioRepo.save(Usuario.builder()
+                .nomeCompleto("Presidente Demonstração").login("presidente.demo")
+                .senhaHash(encoder.encode(senhaMotorista)).perfil(Perfil.PRESIDENTE).ativo(true).build()));
+        usuarioRepo.findByLogin("financeiro.demo").orElseGet(() -> usuarioRepo.save(Usuario.builder()
+                .nomeCompleto("Financeiro Demonstração").login("financeiro.demo")
+                .senhaHash(encoder.encode(senhaMotorista)).perfil(Perfil.FINANCEIRO).ativo(true).build()));
 
         LocalDate hoje = LocalDate.now();
         int indice = 0;
@@ -177,7 +188,59 @@ public class FrotaDemoSeeder implements ApplicationRunner {
             }
             indice++;
         }
-        log.warn("Seed da frota aplicado: {} veículos com histórico de demonstração; usuário 'motorista.demo' criado.", CARROS.size());
+        seedDiariasECautelas(hoje);
+        log.warn("Seed da frota aplicado: {} veículos com histórico de demonstração; usuários motorista.demo, gerente.demo, presidente.demo e financeiro.demo criados.", CARROS.size());
+    }
+
+    /** Diárias em cada etapa do fluxo e uma cautela em aberto. */
+    private void seedDiariasECautelas(LocalDate hoje) {
+        var niveis = diarias.niveisAtivos();
+        if (niveis.isEmpty()) return;
+        Long nivelSgt = niveis.stream().filter(n -> n.descricao().contains("Sgt")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
+        Long nivelCap = niveis.stream().filter(n -> n.descricao().contains("Capitão")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
+        Long nivelCb = niveis.stream().filter(n -> n.descricao().contains("Cabo")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
+
+        var p1 = diarias.salvarProfissional(null, new com.fundacao.gerenciador_patrimonial.dto.request.ProfissionalRequest(
+                "João da Silva", "12345-1", "1º BPM - PALMAS", nivelSgt, "111.444.777-35", "1234567", "SSP-TO", "BB ag 1234 cc 56789-0"));
+        var p2 = diarias.salvarProfissional(null, new com.fundacao.gerenciador_patrimonial.dto.request.ProfissionalRequest(
+                "Maria Souza", "22334-2", "FPTO - PALMAS", nivelCap, "222.555.888-19", "7654321", "SSP-TO", "CEF ag 0001 cc 12345-6"));
+        var p3 = diarias.salvarProfissional(null, new com.fundacao.gerenciador_patrimonial.dto.request.ProfissionalRequest(
+                "Pedro Lima", "33445-3", "2º BPM - ARAGUAINA", nivelCb, "333.666.999-03", null, null, null));
+
+        var d1 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p1.id(), "Palmas → Araguaína → Palmas",
+                hoje.plusDays(3), LocalTime.of(6, 0), hoje.plusDays(5), LocalTime.of(19, 0), MeioTransporte.VEICULO_OFICIAL,
+                RecursoDiaria.PROPRIO, new BigDecimal("2.5"), p1.valorInteriorEstado(), "Instrução no 2º BPM"));
+        var d2 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p2.id(), "Palmas → Brasília → Palmas",
+                hoje.plusDays(7), LocalTime.of(8, 0), hoje.plusDays(9), LocalTime.of(21, 0), MeioTransporte.AEREO,
+                RecursoDiaria.CONVENIO, new BigDecimal("2"), p2.valorCapitais(), "Reunião no Ministério da Saúde"));
+        var d3 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p3.id(), "Araguaína → Gurupi → Araguaína",
+                hoje.minusDays(20), LocalTime.of(5, 30), hoje.minusDays(18), LocalTime.of(22, 0), MeioTransporte.RODOVIARIO,
+                RecursoDiaria.PROPRIO, new BigDecimal("2"), p3.valorInteriorEstado(), "Apoio ao Levantamento patrimonial"));
+        var d4 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p1.id(), "Palmas → Porto Nacional → Palmas",
+                hoje.minusDays(40), LocalTime.of(7, 0), hoje.minusDays(40), LocalTime.of(18, 0), MeioTransporte.VEICULO_OFICIAL,
+                RecursoDiaria.PROPRIO, new BigDecimal("0.5"), p1.valorInteriorEstado(), "Entrega de documentos"));
+        var d5 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p2.id(), "Palmas → Goiânia → Palmas",
+                hoje.minusDays(30), null, hoje.minusDays(28), null, MeioTransporte.RODOVIARIO,
+                RecursoDiaria.PROPRIO, new BigDecimal("2"), p2.valorInteriorOutroEstado(), "Curso de capacitação"));
+        // d1 fica solicitada; d2 confirmada; d3 deferida; d4 paga; d5 indeferida
+        diarias.transicionar(d2.id(), StatusDiaria.CONFIRMADO, null, null);
+        diarias.transicionar(d3.id(), StatusDiaria.CONFIRMADO, null, null);
+        diarias.transicionar(d3.id(), StatusDiaria.DEFERIDO, "Deferido conforme Portaria 004/2018", null);
+        diarias.transicionar(d4.id(), StatusDiaria.CONFIRMADO, null, null);
+        diarias.transicionar(d4.id(), StatusDiaria.DEFERIDO, null, null);
+        diarias.transicionar(d4.id(), StatusDiaria.PAGO, "Pago via TED", hoje.minusDays(35));
+        diarias.transicionar(d5.id(), StatusDiaria.CONFIRMADO, null, null);
+        diarias.transicionar(d5.id(), StatusDiaria.INDEFERIDO, "Sem previsão orçamentária no mês", null);
+
+        // Cautela em aberto do veículo 1 (SAVEIRO) para condutor externo
+        var veiculos = veiculoRepo.findByAtivoTrueOrderByPlacaAsc();
+        if (veiculos.size() > 1) {
+            var v = veiculos.get(1);
+            cautelas.criar(new com.fundacao.gerenciador_patrimonial.dto.request.CautelaRequest(v.getId(), hoje.minusDays(1), "9º BPM - Araguatins",
+                    "Cautela", "Sgt. João Silva", null, LocalTime.of(7, 0), v.getKmAtual(), null, null,
+                    "Cb. Carlos Pereira", "4455667", "444.777.000-61", "(63) 99999-0000", "9º BPM - ARAGUATINS",
+                    "Apoio à operação de fim de semana"));
+        }
     }
 
     /** Gera um PDF simples de nota fiscal fictícia e grava como NF do lançamento. */

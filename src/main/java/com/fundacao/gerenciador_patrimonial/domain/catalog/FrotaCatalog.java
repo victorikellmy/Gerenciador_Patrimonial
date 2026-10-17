@@ -20,6 +20,16 @@ public final class FrotaCatalog {
             "Mecânica",
             "Outro");
 
+    /** Motivos de cautela (entrega do veículo a condutor externo). */
+    public static final List<String> MOTIVOS_CAUTELA = List.of(
+            "Cautela",
+            "Apoio",
+            "Assistência",
+            "Entregar/buscar Documentos",
+            "Lava-Jato",
+            "Mecânica",
+            "Outro");
+
     /** Unidades usadas como lotação de deslocamentos (lista do Transportes FPTO). */
     public static final List<String> LOTACOES = List.of(
             "FPTO - PALMAS",

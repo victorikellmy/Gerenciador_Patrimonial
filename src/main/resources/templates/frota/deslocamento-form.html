@@ -54,7 +54,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Titular (militar / servidor atendido)</label>
-                    <input type="text" class="form-control" th:field="*{titular}" maxlength="160"/>
+                    <input type="text" class="form-control" th:field="*{titular}" maxlength="160" data-autocomplete="titulares" autocomplete="off"/>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Assistido</label>
@@ -107,5 +107,6 @@
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
+<div th:replace="~{frota/filtro :: autocompleteTitulares}"></div>
 </body>
 </html>

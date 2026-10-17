@@ -1,0 +1,45 @@
+<!-- @dsCard group="Formulários" height=300 subtitle="Campos, select, upload de foto, validação e textarea" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>body{margin:0;padding:var(--space-5) var(--space-6)}</style>
+</head>
+<body>
+<form class="row g-3" style="max-width:760px" onsubmit="return false">
+  <div class="col-sm-4">
+    <label class="form-label" for="tombo">Número de tombo</label>
+    <input type="text" class="form-control" id="tombo" value="PM-00123" maxlength="30">
+  </div>
+  <div class="col-sm-8">
+    <label class="form-label" for="desc">Descrição <span class="text-danger">*</span></label>
+    <input type="text" class="form-control is-invalid" id="desc" placeholder="Ex.: Notebook Dell Latitude 5440">
+    <div class="invalid-feedback">Descrição é obrigatória</div>
+  </div>
+  <div class="col-sm-4">
+    <label class="form-label" for="cons">Conservação</label>
+    <select class="form-select" id="cons">
+      <option value="">Manter como está</option>
+      <option>NOVO</option><option>OTIMO</option><option selected>BOM</option><option>REGULAR</option><option>RUIM</option><option>INSERVIVEL</option>
+    </select>
+  </div>
+  <div class="col-sm-4">
+    <label class="form-label" for="valor">Valor de compra (R$)</label>
+    <input type="number" class="form-control" id="valor" step="0.01" value="4350.00">
+  </div>
+  <div class="col-sm-4">
+    <label class="form-label" for="foto">Foto atualizada</label>
+    <input type="file" class="form-control" id="foto" accept="image/*" capture="environment">
+  </div>
+  <div class="col-12">
+    <label class="form-label" for="obs">Observação</label>
+    <textarea class="form-control form-control-sm" id="obs" rows="2" maxlength="1000" placeholder="Ex.: tela trincada, pé quebrado, não liga..."></textarea>
+  </div>
+  <div class="col-12 d-flex justify-content-end gap-2">
+    <button class="btn btn-secondary" type="button">Cancelar</button>
+    <button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> Salvar</button>
+  </div>
+</form>
+</body>
+</html>

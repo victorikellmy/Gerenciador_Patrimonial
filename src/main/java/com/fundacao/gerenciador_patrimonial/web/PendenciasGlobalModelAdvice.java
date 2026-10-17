@@ -25,6 +25,30 @@ public class PendenciasGlobalModelAdvice {
 
     private final PendenciaPatrimoniamentoService pendenciaService;
     private final LevantamentoService levantamentoService;
+    private final com.fundacao.gerenciador_patrimonial.service.DiariaService diariaService;
+
+    /**
+     * Diárias aguardando a ação de quem está logado: ADMIN → solicitadas (confirmar);
+     * PRESIDENTE → confirmadas (deferir); FINANCEIRO → deferidas (pagar). Badge do menu.
+     */
+    @ModelAttribute("diariasPendentes")
+    public long diariasPendentes() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (!autenticado()) return 0L;
+        try {
+            if (auth.getPrincipal() instanceof com.fundacao.gerenciador_patrimonial.security.UsuarioAutenticado u) {
+                return switch (u.getUsuario().getPerfil()) {
+                    case ADMINISTRADOR -> diariaService.contar(com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.SOLICITADO);
+                    case PRESIDENTE    -> diariaService.contar(com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.CONFIRMADO);
+                    case FINANCEIRO    -> diariaService.contar(com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.DEFERIDO);
+                    default -> 0L;
+                };
+            }
+        } catch (RuntimeException e) {
+            log.debug("Não foi possível contar diárias pendentes: {}", e.getMessage());
+        }
+        return 0L;
+    }
 
     @ModelAttribute("pendenciasPendentes")
     public long pendenciasPendentes() {

@@ -1,0 +1,35 @@
+<!-- @dsCard group="Ações" height=230 subtitle="Variantes, tamanhos, ícone e grupo de decisão" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>body{margin:0;padding:var(--space-5) var(--space-6)} .row-demo{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;margin-bottom:var(--space-4)} .lbl{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);width:100%;margin-bottom:var(--space-1)}</style>
+</head>
+<body>
+<div class="row-demo">
+  <div class="lbl">Variantes</div>
+  <button class="btn btn-primary" type="button"><i class="bi bi-plus-lg"></i> Novo patrimônio</button>
+  <button class="btn btn-secondary" type="button"><i class="bi bi-filetype-xlsx"></i> Excel</button>
+  <button class="btn btn-outline-secondary" type="button"><i class="bi bi-arrow-counterclockwise"></i> Desfazer</button>
+  <button class="btn btn-outline-danger" type="button"><i class="bi bi-x-circle"></i> Descartar</button>
+  <button class="btn btn-warning" type="button">Reprovar</button>
+  <button class="btn btn-primary" type="button" disabled>Salvando…</button>
+</div>
+<div class="row-demo">
+  <div class="lbl">Tamanhos e ícone</div>
+  <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-box-seam"></i> Patrimoniar</button>
+  <button class="btn btn-secondary btn-sm btn-icon" type="button" title="Detalhes"><i class="bi bi-eye"></i></button>
+  <button class="btn btn-secondary btn-icon" type="button" title="Voltar"><i class="bi bi-arrow-left"></i></button>
+  <button class="btn btn-secondary btn-xs" type="button">Limpar filtros</button>
+</div>
+<div class="row-demo">
+  <div class="lbl">Grupo de decisão (checklist no celular)</div>
+  <div class="btn-group w-100 lev-form" role="group" style="max-width:520px">
+    <input type="radio" class="btn-check" name="r" id="ok" checked><label class="btn btn-sm btn-outline-success" for="ok"><i class="bi bi-check-circle"></i> OK</label>
+    <input type="radio" class="btn-check" name="r" id="av"><label class="btn btn-sm btn-outline-warning" for="av"><i class="bi bi-exclamation-triangle"></i> Avaria</label>
+    <input type="radio" class="btn-check" name="r" id="nl"><label class="btn btn-sm btn-outline-danger" for="nl"><i class="bi bi-question-circle"></i> Não localizado</label>
+  </div>
+</div>
+</body>
+</html>

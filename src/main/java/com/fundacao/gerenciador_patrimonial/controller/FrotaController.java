@@ -51,6 +51,7 @@ import java.util.Map;
 public class FrotaController {
 
     private final FrotaService frota;
+    private final com.fundacao.gerenciador_patrimonial.repository.TitularRepository titularRepo;
 
     public record Ficha(VeiculoResponse veiculo, VeiculoResumo resumo) {}
 
@@ -187,6 +188,14 @@ public class FrotaController {
     public Page<DeslocamentoResponse> deslocamentos(@ModelAttribute FiltroFrota filtro,
                                                     @PageableDefault(size = 25) Pageable pageable) {
         return frota.listarDeslocamentos(filtro, pageable);
+    }
+
+    /** Autocomplete de titulares (base de militares/pensionistas) para o app. */
+    @GetMapping("/titulares")
+    public List<String> titulares(@RequestParam(defaultValue = "") String termo) {
+        String t = termo.trim().toLowerCase();
+        if (t.length() < 2) return List.of();
+        return titularRepo.sugerirNomes("%" + t + "%", org.springframework.data.domain.PageRequest.of(0, 8));
     }
 
     @GetMapping("/catalogos")
