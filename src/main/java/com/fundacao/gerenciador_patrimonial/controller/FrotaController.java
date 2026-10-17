@@ -52,11 +52,114 @@ public class FrotaController {
 
     private final FrotaService frota;
     private final com.fundacao.gerenciador_patrimonial.repository.TitularRepository titularRepo;
+    private final com.fundacao.gerenciador_patrimonial.service.ImportadorTransportesService importador;
+    private final com.fundacao.gerenciador_patrimonial.service.report.exporter.FrotaExporter exporter;
 
     public record Ficha(VeiculoResponse veiculo, VeiculoResumo resumo) {}
 
     @GetMapping("/resumo")
     public FrotaResumo resumo() { return frota.resumoFrota(); }
+
+    /** Painel gerencial (GERENTE/ADMIN/FISCAL). */
+    @GetMapping("/gestao")
+    public com.fundacao.gerenciador_patrimonial.dto.response.GestaoFrotaResponse gestao() { return frota.gestao(); }
+
+    @PostMapping("/veiculos/{id}/manutencao-status")
+    public VeiculoResponse manutencaoStatus(@PathVariable Long id, @RequestParam boolean emManutencao,
+                                            @RequestParam(required = false) String motivo) {
+        return frota.marcarManutencao(id, emManutencao, motivo);
+    }
+
+    @PostMapping("/veiculos/{id}/ativo")
+    public VeiculoResponse ativo(@PathVariable Long id, @RequestParam boolean ativo) {
+        frota.alterarAtivo(id, ativo);
+        return frota.buscarVeiculo(id);
+    }
+
+    @GetMapping("/patrimonios-disponiveis")
+    public List<com.fundacao.gerenciador_patrimonial.dto.response.PatrimonioResponse> patrimoniosDisponiveis() {
+        return frota.patrimoniosVeiculoSemFicha();
+    }
+
+    @PostMapping("/importar-transportes")
+    public com.fundacao.gerenciador_patrimonial.service.ImportadorTransportesService.Resultado importarTransportes() {
+        return importador.importar();
+    }
+
+    @GetMapping("/importacao-configurada")
+    public Map<String, Boolean> importacaoConfigurada() { return Map.of("configurada", importador.configurado()); }
+
+    /** Exportação das listagens (xlsx|pdf): tipo = abastecimentos | manutencoes | deslocamentos | gestao | historico/{veiculoId}. */
+    @GetMapping("/export/{tipo}")
+    public void exportar(@PathVariable String tipo, @RequestParam(required = false) Long veiculoId,
+                         @ModelAttribute FiltroFrota filtro, @RequestParam(defaultValue = "xlsx") String formato,
+                         jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        com.fundacao.gerenciador_patrimonial.service.report.exporter.FrotaExporter.Tabela tabela;
+        String nome;
+        java.util.List<java.util.List<Object>> linhas = new java.util.ArrayList<>();
+        switch (tipo) {
+            case "abastecimentos" -> {
+                for (AbastecimentoResponse a : frota.listarAbastecimentos(filtro, Pageable.unpaged()).getContent())
+                    linhas.add(Arrays.asList(a.data(), a.placa() + " - " + a.modelo(), a.km(), a.combustivel().getRotulo(),
+                            a.quantidadeLitros(), a.valor(), a.precoLitro(), a.postoCidade(), a.motorista()));
+                tabela = new com.fundacao.gerenciador_patrimonial.service.report.exporter.FrotaExporter.Tabela("Abastecimentos", null,
+                        List.of("Data", "Veículo", "Km", "Combustível", "Litros", "Valor (R$)", "R$/litro", "Posto / cidade", "Motorista"), linhas);
+                nome = "abastecimentos";
+            }
+            case "manutencoes" -> {
+                for (ManutencaoVeiculoResponse m : frota.listarManutencoes(filtro, Pageable.unpaged()).getContent())
+                    linhas.add(Arrays.asList(m.data(), m.placa() + " - " + m.modelo(), m.servico().getRotulo(), m.km(), m.descricao(),
+                            m.fornecedor(), m.notaFiscal(), m.valor(), m.proximaRevisaoKm(), m.proximaRevisaoData(), m.motorista()));
+                tabela = new com.fundacao.gerenciador_patrimonial.service.report.exporter.FrotaExporter.Tabela("Manutenções e revisões", null,
+                        List.of("Data", "Veículo", "Serviço", "Km", "Descrição", "Fornecedor", "NF", "Valor (R$)", "Próx. revisão (km)",
+                                "Próx. revisão (data)", "Responsável"), linhas);
+                nome = "manutencoes";
+            }
+            case "deslocamentos" -> {
+                for (DeslocamentoResponse d : frota.listarDeslocamentos(filtro, Pageable.unpaged()).getContent())
+                    linhas.add(Arrays.asList(d.dataViagem(), d.placa() + " - " + d.modelo(), d.destino(), d.motivo(), d.titular(),
+                            d.horaSaida(), d.kmInicial(), d.horaChegada(), d.kmFinal(), d.kmRodados(), d.motorista(), d.lotacao(),
+                            d.emAndamento() ? "Em andamento" : "Finalizado"));
+                tabela = new com.fundacao.gerenciador_patrimonial.service.report.exporter.FrotaExporter.Tabela("Deslocamentos", null,
+                        List.of("Data", "Veículo", "Destino", "Motivo", "Titular", "Saída", "Km inicial", "Chegada", "Km final",
+                                "Km rodados", "Motorista", "Lotação", "Situação"), linhas);
+                nome = "deslocamentos";
+            }
+            case "gestao" -> {
+                var g = frota.gestao();
+                for (var x : g.gastosPorVeiculo())
+                    linhas.add(Arrays.asList(x.placa(), x.modelo(), x.combustivel(), x.litros(), x.manutencao(), x.manutencoes(),
+                            x.total(), x.kmRodados(), x.saidas(), x.custoPorKm()));
+                tabela = new com.fundacao.gerenciador_patrimonial.service.report.exporter.FrotaExporter.Tabela(
+                        "Gastos da frota por veículo — " + g.hoje().getYear(), null,
+                        List.of("Placa", "Modelo", "Combustível (R$)", "Litros", "Manutenção (R$)", "Nº manutenções", "Total (R$)",
+                                "Km rodados", "Saídas", "R$/km"), linhas);
+                nome = "gestao-frota";
+            }
+            case "historico" -> {
+                VeiculoResponse v = frota.buscarVeiculo(veiculoId);
+                for (HistoricoVeiculoItem h : frota.historico(veiculoId))
+                    linhas.add(Arrays.asList(h.data(), h.hora(), h.titulo(), h.detalhe(), h.km(), h.valor(), h.motorista(),
+                            h.emAndamento() ? "Em andamento" : ""));
+                tabela = new com.fundacao.gerenciador_patrimonial.service.report.exporter.FrotaExporter.Tabela(
+                        "Histórico do veículo " + v.placa() + " - " + v.modelo(), "Patrimônio #" + v.patrimonioId(),
+                        List.of("Data", "Hora", "Lançamento", "Detalhe", "Km", "Valor (R$)", "Motorista", "Situação"), linhas);
+                nome = "historico-" + v.placa();
+            }
+            default -> throw new com.fundacao.gerenciador_patrimonial.exception.RecursoNaoEncontradoException("Exportação", 0L);
+        }
+        String data = java.time.LocalDate.now().toString();
+        if ("pdf".equalsIgnoreCase(formato)) {
+            response.setContentType("application/pdf");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + nome + "-" + data + ".pdf\"");
+            exporter.pdf(tabela, response.getOutputStream());
+        } else {
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + nome + "-" + data + ".xlsx\"");
+            exporter.xlsx(tabela, response.getOutputStream());
+        }
+        response.flushBuffer();
+    }
 
     @GetMapping("/veiculos")
     public List<VeiculoResponse> veiculos(@RequestParam(defaultValue = "false") boolean todos) {

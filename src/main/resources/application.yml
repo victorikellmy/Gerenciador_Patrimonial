@@ -17,6 +17,12 @@ spring:
       max-file-size: 10MB       # limite por arquivo anexado
       max-request-size: 25MB    # limite do request inteiro (múltiplos anexos)
 
+server:
+  servlet:
+    session:
+      cookie:
+        same-site: lax          # protege os POSTs da SPA (/api sem CSRF) contra requisições cross-site
+
 # Pastas de upload (Sprint 3 — StorageService local)
 app:
   storage:

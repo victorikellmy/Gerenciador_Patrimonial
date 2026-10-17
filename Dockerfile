@@ -16,13 +16,17 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /workspace
 
+# Node para compilar a SPA React (pasta frontend/)
+RUN apk add --no-cache nodejs npm
+
 # Cache de dependências
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
 RUN ./gradlew --no-daemon dependencies > /dev/null 2>&1 || true
 
-# Código fonte
+# Código fonte (back-end e front-end React)
 COPY src ./src
+COPY frontend ./frontend
 RUN ./gradlew --no-daemon clean bootJar -x test
 
 # ----- STAGE 2: runtime -----

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerenciador Patrimonial</title>
+    <link rel="icon" type="image/png" href="/images/logo-color-vert.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" crossorigin="anonymous" />
+    <!-- Mesmo design system do app (servido pelo Spring) -->
+    <link rel="stylesheet" href="/css/app.css" />
+    <script>
+      // Aplica tema e estado da sidebar antes do render para evitar "flash".
+      (function () {
+        try {
+          var t = localStorage.getItem('gp-theme');
+          if (t) document.documentElement.setAttribute('data-theme', t);
+          if (localStorage.getItem('gp-sidebar') === 'collapsed') document.documentElement.classList.add('sidebar-collapsed');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -25,7 +25,7 @@ public class TrocaSenhaObrigatoriaInterceptor implements WebMvcConfigurer, Handl
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(this)
                 .addPathPatterns("/**")
-                .excludePathPatterns(ROTA_TROCA, "/login", "/logout", "/error", "/api/**",
+                .excludePathPatterns(ROTA_TROCA, "/login", "/logout", "/error", "/api/**", "/app", "/app/**",
                                      "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/h2-console/**");
     }
 
