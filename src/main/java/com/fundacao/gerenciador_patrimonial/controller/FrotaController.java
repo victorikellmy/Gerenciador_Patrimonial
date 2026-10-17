@@ -16,8 +16,13 @@ import com.fundacao.gerenciador_patrimonial.dto.response.HistoricoVeiculoItem;
 import com.fundacao.gerenciador_patrimonial.dto.response.ManutencaoVeiculoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.VeiculoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.VeiculoResumo;
+import com.fundacao.gerenciador_patrimonial.domain.enums.Perfil;
+import com.fundacao.gerenciador_patrimonial.exception.RegraDeNegocioException;
+import com.fundacao.gerenciador_patrimonial.security.UsuarioAutenticado;
 import com.fundacao.gerenciador_patrimonial.service.FrotaService;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -189,14 +194,49 @@ public class FrotaController {
 
     @PostMapping("/veiculos/{id}/abastecimentos")
     @ResponseStatus(HttpStatus.CREATED)
-    public AbastecimentoResponse abastecer(@PathVariable Long id, @Valid @RequestBody AbastecimentoRequest req) {
+    public AbastecimentoResponse abastecer(@PathVariable Long id, @Valid @RequestBody AbastecimentoRequest req,
+                                           @AuthenticationPrincipal UsuarioAutenticado logado) {
+        exigirNfDeMotorista(logado, null);
         return frota.registrarAbastecimento(id, req);
+    }
+
+    /** Variante multipart: parte "dados" (JSON) + "arquivo" (NF em PDF ou foto). MOTORISTA só lança com NF. */
+    @PostMapping(value = "/veiculos/{id}/abastecimentos", consumes = "multipart/form-data")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AbastecimentoResponse abastecerComNf(@PathVariable Long id, @Valid @RequestPart("dados") AbastecimentoRequest req,
+                                                @RequestPart(value = "arquivo", required = false) MultipartFile arquivo,
+                                                @AuthenticationPrincipal UsuarioAutenticado logado) {
+        exigirNfDeMotorista(logado, arquivo);
+        AbastecimentoResponse a = frota.registrarAbastecimento(id, req);
+        if (arquivo != null && !arquivo.isEmpty()) frota.anexarNotaFiscal(HistoricoVeiculoItem.Tipo.ABASTECIMENTO, a.id(), arquivo);
+        return frota.buscarAbastecimento(a.id());
     }
 
     @PostMapping("/veiculos/{id}/manutencoes")
     @ResponseStatus(HttpStatus.CREATED)
-    public ManutencaoVeiculoResponse manutencao(@PathVariable Long id, @Valid @RequestBody ManutencaoVeiculoRequest req) {
+    public ManutencaoVeiculoResponse manutencao(@PathVariable Long id, @Valid @RequestBody ManutencaoVeiculoRequest req,
+                                                @AuthenticationPrincipal UsuarioAutenticado logado) {
+        exigirNfDeMotorista(logado, null);
         return frota.registrarManutencao(id, req);
+    }
+
+    @PostMapping(value = "/veiculos/{id}/manutencoes", consumes = "multipart/form-data")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ManutencaoVeiculoResponse manutencaoComNf(@PathVariable Long id, @Valid @RequestPart("dados") ManutencaoVeiculoRequest req,
+                                                     @RequestPart(value = "arquivo", required = false) MultipartFile arquivo,
+                                                     @AuthenticationPrincipal UsuarioAutenticado logado) {
+        exigirNfDeMotorista(logado, arquivo);
+        ManutencaoVeiculoResponse m = frota.registrarManutencao(id, req);
+        if (arquivo != null && !arquivo.isEmpty()) frota.anexarNotaFiscal(HistoricoVeiculoItem.Tipo.MANUTENCAO, m.id(), arquivo);
+        return frota.buscarManutencao(m.id());
+    }
+
+    /** Regra de negócio: motorista não registra abastecimento/manutenção sem a nota fiscal. */
+    private static void exigirNfDeMotorista(UsuarioAutenticado logado, MultipartFile nf) {
+        boolean motorista = logado != null && logado.getUsuario().getPerfil() == Perfil.MOTORISTA;
+        if (motorista && (nf == null || nf.isEmpty())) {
+            throw new RegraDeNegocioException("Anexe a nota fiscal (PDF ou foto) para registrar o lançamento.");
+        }
     }
 
     @PostMapping("/veiculos/{id}/deslocamentos")

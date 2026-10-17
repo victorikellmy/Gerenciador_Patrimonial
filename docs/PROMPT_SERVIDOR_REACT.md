@@ -18,9 +18,13 @@ Leia primeiro deploy/README.md, docker-compose.yml, Dockerfile, .env.example e
 docs/PROMPT_SERVIDOR_REACT.md.
 
 O QUE MUDA NESTA VERSÃO
-- Nova SPA React em /app (pasta frontend/ do repositório). O Spring continua servindo as
-  telas antigas (Thymeleaf) nas rotas de sempre (/, /frota, /diarias...) e a SPA em /app.
-  Durante a homologação as duas convivem; a SPA conversa só com a API /api/**.
+- Nova SPA React em /app (pasta frontend/ do repositório). As telas antigas (Thymeleaf)
+  FORAM REMOVIDAS: "/" e "/login" redirecionam para /app; qualquer rota antiga (/frota,
+  /diarias, /patrimonios...) responde 404. A SPA conversa só com a API /api/**.
+- Nota fiscal do MOTORISTA agora é exigida pela própria API (antes só a tela validava):
+  POST /api/frota/veiculos/{id}/abastecimentos e .../manutencoes recusam motorista sem a
+  parte multipart "arquivo". O app Android, se for usado por motorista, precisa enviar a NF
+  junto (multipart com as partes "dados" JSON e "arquivo").
 - O Dockerfile instala Node/npm no estágio de build e o Gradle compila a SPA
   (tarefas npmInstall → buildFrontend → processResources). O build do container demora
   mais (~2 a 4 min a mais na primeira vez, por causa do npm ci). Não precisa de Node no host.
@@ -67,11 +71,14 @@ PASSO A PASSO
    NF num abastecimento como MOTORISTA (é obrigatória), abrir uma diária e deferir/pagar com
    os perfis certos, exportar Excel/PDF em /app/frota/gestao e /app/relatorios, e o tema
    escuro (botão da lua na barra superior).
-5. Se algo da SPA falhar, as telas antigas continuam no ar nas rotas sem /app — use-as
-   enquanto reportar o problema. Para voltar à versão anterior do container:
+   Conferir também:
+     curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" http://localhost:8082/        # 302 → /app
+     curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" http://localhost:8082/login   # 302 → /app/login
+     curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8082/frota                   # 404 (tela antiga não existe mais)
+5. Se algo falhar, volte ao commit anterior (ainda tinha as telas antigas em paralelo):
      git log --oneline -5  → git checkout <commit anterior> → up -d --build app
-6. Quando a SPA for validada pelo usuário, a próxima etapa (não fazer agora) é apontar a
-   raiz "/" para /app e remover os templates Thymeleaf.
+   O Dockerfile preservado pelo motor já é o novo (com Node), então o rollback não precisa
+   mexer nele.
 
 SEGURANÇA
 - Não comitar .env. Não imprimir senhas em logs ou no chat.

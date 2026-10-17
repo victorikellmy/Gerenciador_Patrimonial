@@ -91,10 +91,11 @@ export const api = {
     abastecimentos: (f: Record<string, unknown>, page = 0, size = 25) => http.get<T.Page<T.Abastecimento>>('/api/frota/abastecimentos' + qs({ ...f, ...pageParams(page, size, 'data,desc') })),
     manutencoes: (f: Record<string, unknown>, page = 0, size = 25) => http.get<T.Page<T.Manutencao>>('/api/frota/manutencoes' + qs({ ...f, ...pageParams(page, size, 'data,desc') })),
     deslocamentos: (f: Record<string, unknown>, page = 0, size = 25) => http.get<T.Page<T.Deslocamento>>('/api/frota/deslocamentos' + qs({ ...f, ...pageParams(page, size, 'dataViagem,desc') })),
-    abastecer: (veiculoId: number, r: T.AbastecimentoRequest) => http.post<T.Abastecimento>(`/api/frota/veiculos/${veiculoId}/abastecimentos`, limparVazios(r)),
+    // Com nota fiscal vai em multipart (parte "dados" JSON + "arquivo"); o back-end exige a NF do MOTORISTA.
+    abastecer: (veiculoId: number, r: T.AbastecimentoRequest, nf?: File | null) => http.post<T.Abastecimento>(`/api/frota/veiculos/${veiculoId}/abastecimentos`, nf ? comArquivo(limparVazios(r), nf) : limparVazios(r)),
     atualizarAbastecimento: (id: number, r: T.AbastecimentoRequest) => http.put<T.Abastecimento>(`/api/frota/abastecimentos/${id}`, limparVazios(r)),
     excluirAbastecimento: (id: number) => http.del<void>(`/api/frota/abastecimentos/${id}`),
-    manutencao: (veiculoId: number, r: T.ManutencaoRequest) => http.post<T.Manutencao>(`/api/frota/veiculos/${veiculoId}/manutencoes`, limparVazios(r)),
+    manutencao: (veiculoId: number, r: T.ManutencaoRequest, nf?: File | null) => http.post<T.Manutencao>(`/api/frota/veiculos/${veiculoId}/manutencoes`, nf ? comArquivo(limparVazios(r), nf) : limparVazios(r)),
     atualizarManutencao: (id: number, r: T.ManutencaoRequest) => http.put<T.Manutencao>(`/api/frota/manutencoes/${id}`, limparVazios(r)),
     excluirManutencao: (id: number) => http.del<void>(`/api/frota/manutencoes/${id}`),
     deslocar: (veiculoId: number, r: T.DeslocamentoRequest) => http.post<T.Deslocamento>(`/api/frota/veiculos/${veiculoId}/deslocamentos`, limparVazios(r)),
@@ -153,6 +154,14 @@ export const api = {
     termoUrl: (responsavelId: number) => `/api/relatorios/termo-responsabilidade/${responsavelId}`,
     levantamentoUrl: (id: number, formato: string) => `/api/levantamentos/${id}/download?formato=${formato}`,
   },
+}
+
+/** Monta multipart com os dados em JSON (parte "dados") e o arquivo (parte "arquivo"). */
+function comArquivo(dados: object, arquivo: File): FormData {
+  const fd = new FormData()
+  fd.append('dados', new Blob([JSON.stringify(dados)], { type: 'application/json' }))
+  fd.append('arquivo', arquivo)
+  return fd
 }
 
 /** Converte '' em null para o Jackson/Bean Validation do back-end. */

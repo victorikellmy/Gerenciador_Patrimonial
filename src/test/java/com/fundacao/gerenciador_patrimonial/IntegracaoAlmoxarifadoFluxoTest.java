@@ -208,19 +208,20 @@ class IntegracaoAlmoxarifadoFluxoTest {
         JsonNode corpo = json.readTree(criado.getResponse().getContentAsString());
         long pendenciaId = corpo.get("id").asLong();
 
-        // Lista e sino mostram a pendência
-        mvc.perform(get("/pendencias").with(fiscal()))
+        // Lista e resumo da sessão (badge/sino da SPA) mostram a pendência
+        mvc.perform(get("/api/pendencias").param("status", "PENDENTE").with(fiscal()))
            .andExpect(status().isOk())
-           .andExpect(model().attribute("pendenciasPendentes", org.hamcrest.Matchers.greaterThanOrEqualTo(1L)))
            .andExpect(content().string(org.hamcrest.Matchers.containsString("Impressora multifuncional Samsung")));
+        mvc.perform(get("/api/me/resumo").with(fiscal()))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.pendenciasPatrimoniamento", org.hamcrest.Matchers.greaterThanOrEqualTo(1)));
 
-        // Formulário pré-preenchido
-        MvcResult form = mvc.perform(get("/pendencias/" + pendenciaId + "/patrimoniar").with(fiscal()))
+        // Formulário pré-preenchido (PatrimonioRequest montado a partir do recebimento)
+        MvcResult form = mvc.perform(get("/api/pendencias/" + pendenciaId + "/preparar").with(fiscal()))
                 .andExpect(status().isOk())
-                .andExpect(view().name("patrimonios/form"))
                 .andReturn();
-        var req = (com.fundacao.gerenciador_patrimonial.dto.request.PatrimonioRequest)
-                form.getModelAndView().getModel().get("patrimonioForm");
+        var req = json.readValue(form.getResponse().getContentAsByteArray(),
+                com.fundacao.gerenciador_patrimonial.dto.request.PatrimonioRequest.class);
         assertThat(req.descricao()).isEqualTo("Impressora multifuncional Samsung");
         assertThat(req.valorCompra()).isEqualByComparingTo("320.00");
         assertThat(req.notaFiscal()).isEqualTo("00000002");
@@ -231,35 +232,26 @@ class IntegracaoAlmoxarifadoFluxoTest {
                                     .contains("Parte/Ofício 001/2026")
                                     .contains("Unidade 1 de 2");
 
-        // 1ª unidade → continua pendente, volta para o formulário da 2ª
-        mvc.perform(post("/pendencias/" + pendenciaId + "/patrimoniar").with(csrf()).with(fiscal())
-                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .param("numeroTombo", "T-5151-A")
-                        .param("descricao", req.descricao())
-                        .param("dataCompra", "2026-10-03")
-                        .param("valorCompra", "320.00")
-                        .param("notaFiscal", req.notaFiscal())
-                        .param("observacao", req.observacao())
-                        .param("lotacaoId", lotacaoId.toString())
-                        .param("responsavelId", responsavelId.toString()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/pendencias/" + pendenciaId + "/patrimoniar"));
+        // 1ª unidade → continua pendente
+        mvc.perform(post("/api/pendencias/" + pendenciaId + "/patrimoniar").with(fiscal())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(new com.fundacao.gerenciador_patrimonial.dto.request.PatrimonioRequest(
+                                "T-5151-A", req.descricao(), req.categoria(), req.subcategoria(), req.dataCompra(), req.valorCompra(),
+                                req.conservacao(), req.notaFiscal(), null, null, req.observacao(), null, lotacaoId, responsavelId))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numeroTombo").value("T-5151-A"));
 
         var meio = pendenciaRepo.findById(pendenciaId).orElseThrow();
         assertThat(meio.getStatus()).isEqualTo(StatusPendencia.PENDENTE);
         assertThat(meio.getQuantidadePatrimoniada()).isEqualTo(1);
 
         // 2ª unidade → conclui
-        mvc.perform(post("/pendencias/" + pendenciaId + "/patrimoniar").with(csrf()).with(fiscal())
-                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .param("numeroTombo", "T-5151-B")
-                        .param("descricao", req.descricao())
-                        .param("dataCompra", "2026-10-03")
-                        .param("valorCompra", "320.00")
-                        .param("lotacaoId", lotacaoId.toString())
-                        .param("responsavelId", responsavelId.toString()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/pendencias"));
+        mvc.perform(post("/api/pendencias/" + pendenciaId + "/patrimoniar").with(fiscal())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(new com.fundacao.gerenciador_patrimonial.dto.request.PatrimonioRequest(
+                                "T-5151-B", req.descricao(), null, null, req.dataCompra(), req.valorCompra(),
+                                null, null, null, null, null, null, lotacaoId, responsavelId))))
+                .andExpect(status().isCreated());
 
         var fim = pendenciaRepo.findById(pendenciaId).orElseThrow();
         assertThat(fim.getStatus()).isEqualTo(StatusPendencia.CONCLUIDA);
@@ -275,8 +267,7 @@ class IntegracaoAlmoxarifadoFluxoTest {
         assertThat(anexosB.get(0).getNomeOriginal()).isEqualTo("NF 2.pdf");
 
         // Pendência concluída não aceita novo patrimoniamento
-        mvc.perform(get("/pendencias/" + pendenciaId + "/patrimoniar").with(fiscal()))
-           .andExpect(status().isOk())
-           .andExpect(view().name("erro"));
+        mvc.perform(get("/api/pendencias/" + pendenciaId + "/preparar").with(fiscal()))
+           .andExpect(status().is4xxClientError());
     }
 }
