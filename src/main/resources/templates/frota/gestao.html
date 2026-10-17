@@ -115,13 +115,13 @@
 
     <div class="row g-4">
         <!-- ============================ QUEM ESTÁ COM QUAL VIATURA ============================ -->
-        <div class="col-xl-7">
+        <div class="col-12">
             <div class="card card-panel" style="overflow:hidden;">
                 <div class="form-section" style="border-bottom:none; padding-bottom:0;">
                     <div th:replace="~{fragments/ui-kit :: section-header('bi-people', 'Situação das viaturas', 'Quem está com cada veículo agora, o que está na oficina e o último uso.')}"></div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                <div class="table-responsive table-livre">
+                    <table class="table table-hover table-compacta align-middle mb-0">
                         <thead><tr>
                             <th>Veículo</th><th>Situação</th><th>Motorista / destino</th><th class="text-end">Km</th><th>Última manutenção</th><th>Próx. revisão</th>
                         </tr></thead>
@@ -144,13 +144,13 @@
                                 <td>
                                     <div class="cell-stack">
                                         <span class="cell-primary" th:text="${s.motorista} ?: '—'"></span>
-                                        <span class="cell-secondary" th:if="${s.destino != null}" th:text="'→ ' + ${s.destino}"></span>
+                                        <span class="cell-secondary texto-limitado" th:if="${s.destino != null}" th:text="'→ ' + ${s.destino}" th:title="${s.destino}"></span>
                                         <span class="cell-secondary" th:if="${s.destino == null and s.ultimaSaida != null}" th:text="'última saída ' + ${#temporals.format(s.ultimaSaida, 'dd/MM/yyyy')}"></span>
                                     </div>
                                 </td>
-                                <td class="text-end" th:text="${s.kmAtual != null} ? ${#numbers.formatInteger(s.kmAtual, 1, 'POINT')} : '—'"></td>
+                                <td class="text-end" th:text="${s.kmAtual != null and s.kmAtual > 0} ? ${#numbers.formatInteger(s.kmAtual, 1, 'POINT')} : '—'"></td>
                                 <td class="small">
-                                    <span th:text="${s.ultimaManutencao} ?: '—'"></span>
+                                    <span class="texto-limitado" th:text="${s.ultimaManutencao} ?: '—'" th:title="${s.ultimaManutencao}"></span>
                                     <div class="text-muted" th:if="${s.dataUltimaManutencao != null}" th:text="${#temporals.format(s.dataUltimaManutencao, 'dd/MM/yyyy')}"></div>
                                 </td>
                                 <td class="small" th:classappend="${s.revisaoVencida} ? 'text-danger fw-semibold'">
@@ -167,20 +167,23 @@
         </div>
 
         <!-- ============================ GASTOS ============================ -->
-        <div class="col-xl-5">
-            <div class="card card-panel mb-4" style="overflow:hidden;">
+        <div class="col-xl-6">
+            <div class="card card-panel" style="overflow:hidden;">
                 <div class="form-section">
                     <div th:replace="~{fragments/ui-kit :: section-header('bi-bar-chart', 'Gastos por mês', 'Combustível e manutenção nos últimos 12 meses.')}"></div>
                     <canvas id="chartGastosMes" height="170"></canvas>
                 </div>
             </div>
 
+            </div>
+        <div class="col-xl-6">
+
             <div class="card card-panel" style="overflow:hidden;">
                 <div class="form-section" style="border-bottom:none; padding-bottom:0;">
                     <div th:replace="~{fragments/ui-kit :: section-header('bi-cash-stack', 'Gasto por veículo no ano', 'Ordenado do mais caro para o mais barato.')}"></div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0">
+                <div class="table-responsive table-livre">
+                    <table class="table table-sm table-compacta align-middle mb-0">
                         <thead><tr><th>Veículo</th><th class="text-end">Combustível</th><th class="text-end">Manutenção</th><th class="text-end">Total</th><th class="text-end">Km</th><th class="text-end">R$/km</th></tr></thead>
                         <tbody>
                             <tr th:each="x : ${g.gastosPorVeiculo}">
