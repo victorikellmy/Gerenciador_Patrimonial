@@ -36,4 +36,14 @@ public interface DeslocamentoRepository extends JpaRepository<Deslocamento, Long
            "where d.veiculo.id = :veiculoId and d.kmFinal is not null and d.kmInicial is not null " +
            "and d.dataViagem between :de and :ate")
     Long kmRodadosVeiculoPeriodo(Long veiculoId, LocalDate de, LocalDate ate);
+
+    /** {veiculoId, km rodados, quantidade de saídas} por veículo no período (só saídas fechadas). */
+    @Query("select d.veiculo.id, coalesce(sum(d.kmFinal - d.kmInicial), 0), count(d) from Deslocamento d " +
+           "where d.kmFinal is not null and d.kmInicial is not null and d.dataViagem between :de and :ate " +
+           "group by d.veiculo.id")
+    List<Object[]> kmPorVeiculo(LocalDate de, LocalDate ate);
+
+    @Query("select coalesce(sum(d.kmFinal - d.kmInicial), 0) from Deslocamento d " +
+           "where d.kmFinal is not null and d.kmInicial is not null and d.dataViagem between :de and :ate")
+    Long kmRodadosPeriodo(LocalDate de, LocalDate ate);
 }

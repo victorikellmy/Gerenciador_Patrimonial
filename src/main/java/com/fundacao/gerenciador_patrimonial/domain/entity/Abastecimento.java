@@ -67,6 +67,21 @@ public class Abastecimento {
     @Column(name = "id_transportes")
     private Integer idTransportes;
 
+    // --- Nota fiscal (PDF/foto) no StorageService ---
+    @Column(name = "nf_nome_original", length = 255)
+    private String nfNomeOriginal;
+
+    @Column(name = "nf_content_type", length = 100)
+    private String nfContentType;
+
+    @Column(name = "nf_tamanho_bytes")
+    private Long nfTamanhoBytes;
+
+    @Column(name = "nf_caminho", length = 500)
+    private String nfCaminho;
+
+    public boolean possuiNotaFiscal() { return nfCaminho != null && !nfCaminho.isBlank(); }
+
     public BigDecimal getPrecoLitro() {
         if (valor == null || quantidadeLitros == null || quantidadeLitros.signum() == 0) return null;
         return valor.divide(quantidadeLitros, 3, RoundingMode.HALF_UP);

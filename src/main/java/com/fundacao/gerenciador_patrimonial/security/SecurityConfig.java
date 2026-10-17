@@ -69,7 +69,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/pendencias/*/descartar").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
                         // Frota (app Android): motoristas também lançam
-                        .requestMatchers("/api/frota/**", "/api/me/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA")
+                        // GERENTE lê frota, relatórios, dashboard e patrimônios pela API; MOTORISTA lê e lança na frota
+                        .requestMatchers(HttpMethod.GET, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA")
+                        .requestMatchers(HttpMethod.GET, "/api/relatorios/**", "/api/dashboard/**",
+                                                         "/api/patrimonios/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        .requestMatchers("/api/me/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA", "GERENTE")
+                        .requestMatchers("/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA")
                         // Restante da API: operadores humanos — o perfil INTEGRACAO fica de fora.
                         .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
                 )
@@ -114,12 +119,20 @@ public class SecurityConfig {
                         // --- Frota: motoristas lançam; editar/cadastrar veículo é de ADMIN/FISCAL; excluir só ADMIN ---
                         .requestMatchers(HttpMethod.POST, "/frota/*/*/excluir", "/frota/importar-transportes",
                                                           "/frota/*/ativo").hasRole("ADMINISTRADOR")
-                        .requestMatchers("/frota/novo", "/frota/*/editar", "/frota/*/*/editar",
-                                         "/frota/*/historico/download", "/frota/*/download").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.POST, "/frota", "/frota/{id:\\d+}",
+                        .requestMatchers("/frota/novo", "/frota/*/editar", "/frota/*/*/editar").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .requestMatchers(HttpMethod.POST, "/frota", "/frota/{id:\\d+}", "/frota/*/manutencao-status",
                                                           "/frota/abastecimentos/{id:\\d+}",
                                                           "/frota/manutencoes/{id:\\d+}",
                                                           "/frota/deslocamentos/{id:\\d+}").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        // --- GERENTE: somente leitura (painel gerencial, listas, relatórios, dashboard) ---
+                        .requestMatchers(HttpMethod.GET, "/frota/gestao", "/frota/gestao/download").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        .requestMatchers(HttpMethod.GET, "/frota", "/frota/{id:\\d+}", "/frota/{id:\\d+}/historico/download",
+                                                         "/frota/abastecimentos", "/frota/manutencoes", "/frota/deslocamentos",
+                                                         "/frota/*/download", "/frota/*/*/nota-fiscal",
+                                                         "/minha-conta/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA")
+                        .requestMatchers(HttpMethod.GET, "/", "/relatorios/**", "/patrimonios",
+                                                         "/patrimonios/*/historico").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        .requestMatchers(HttpMethod.POST, "/minha-conta/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA")
                         .requestMatchers("/frota/**", "/minha-conta/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA")
 
                         // --- demais (inclui /pendencias/**) → operadores humanos ---
@@ -132,7 +145,9 @@ public class SecurityConfig {
                         .successHandler((req, res, auth) -> {
                             boolean motorista = auth.getAuthorities().stream()
                                     .anyMatch(a -> "ROLE_MOTORISTA".equals(a.getAuthority()));
-                            res.sendRedirect(req.getContextPath() + (motorista ? "/frota" : "/"));
+                            boolean gerente = auth.getAuthorities().stream()
+                                    .anyMatch(a -> "ROLE_GERENTE".equals(a.getAuthority()));
+                            res.sendRedirect(req.getContextPath() + (motorista ? "/frota" : gerente ? "/frota/gestao" : "/"));
                         })
                         .failureUrl("/login?erro")
                         .permitAll()

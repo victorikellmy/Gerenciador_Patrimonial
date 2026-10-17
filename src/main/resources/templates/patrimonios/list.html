@@ -21,7 +21,7 @@
             <a class="btn btn-secondary" th:href="@{/relatorios}">
                 <i class="bi bi-file-earmark-bar-graph"></i> Relatórios
             </a>
-            <a class="btn btn-primary" th:href="@{/patrimonios/novo}">
+            <a class="btn btn-primary" th:href="@{/patrimonios/novo}" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
                 <i class="bi bi-plus-lg"></i> Novo patrimônio
             </a>
         </div>

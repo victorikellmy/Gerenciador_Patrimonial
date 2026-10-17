@@ -19,7 +19,7 @@
                 <a class="btn btn-secondary" th:href="@{/frota/abastecimentos/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},formato='xlsx')}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
                 <a class="btn btn-secondary" th:href="@{/frota/abastecimentos/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},formato='pdf')}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
             </div>
-            <a class="btn btn-primary" th:href="@{/frota/abastecimentos/novo}"><i class="bi bi-plus-lg"></i> Novo abastecimento</a>
+            <a class="btn btn-primary" th:href="@{/frota/abastecimentos/novo}" sec:authorize="!hasRole('GERENTE')"><i class="bi bi-plus-lg"></i> Novo abastecimento</a>
         </div>
     </div>
 
@@ -43,7 +43,12 @@
                         <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(a.valor, 1, 'POINT', 2, 'COMMA')}"></td>
                         <td class="text-end text-muted" th:text="${a.precoLitro != null} ? ${#numbers.formatDecimal(a.precoLitro, 1, 'POINT', 3, 'COMMA')} : '—'"></td>
                         <td th:text="${a.postoCidade} ?: '—'"></td>
-                        <td th:text="${a.motorista}"></td>
+                        <td>
+                            <span th:text="${a.motorista}"></span>
+                            <a class="ms-1" th:if="${a.possuiNotaFiscal}" target="_blank" title="Abrir nota fiscal"
+                               th:href="@{'/frota/abastecimentos/' + ${a.id} + '/nota-fiscal'}"><i class="bi bi-receipt"></i></a>
+                            <span class="badge badge-plain text-bg-light text-muted ms-1" th:unless="${a.possuiNotaFiscal}">sem NF</span>
+                        </td>
                         <td class="text-end">
                             <div class="d-inline-flex gap-1" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
                                 <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/abastecimentos/' + ${a.id} + '/editar'}" title="Editar"><i class="bi bi-pencil"></i></a>

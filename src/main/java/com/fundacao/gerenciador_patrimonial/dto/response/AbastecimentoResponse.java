@@ -20,12 +20,14 @@ public record AbastecimentoResponse(
         String postoCidade,
         String motorista,
         String observacao,
-        String registradoPor
+        String registradoPor,
+        boolean possuiNotaFiscal,
+        String nfNomeOriginal
 ) {
     public static AbastecimentoResponse from(Abastecimento a) {
         return new AbastecimentoResponse(a.getId(), a.getVeiculo().getId(), a.getVeiculo().getPlaca(),
                 a.getVeiculo().getModelo(), a.getData(), a.getKm(), a.getCombustivel(), a.getQuantidadeLitros(),
                 a.getValor(), a.getPrecoLitro(), a.getPostoCidade(), a.getMotorista(), a.getObservacao(),
-                a.getRegistradoPor());
+                a.getRegistradoPor(), a.possuiNotaFiscal(), a.getNfNomeOriginal());
     }
 }

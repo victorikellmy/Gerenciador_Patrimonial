@@ -19,7 +19,7 @@
                 <a class="btn btn-secondary" th:href="@{/frota/deslocamentos/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},somenteAbertos=${filtro.somenteAbertos},formato='xlsx')}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
                 <a class="btn btn-secondary" th:href="@{/frota/deslocamentos/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},somenteAbertos=${filtro.somenteAbertos},formato='pdf')}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
             </div>
-            <a class="btn btn-primary" th:href="@{/frota/deslocamentos/novo}"><i class="bi bi-plus-lg"></i> Registrar saída</a>
+            <a class="btn btn-primary" th:href="@{/frota/deslocamentos/novo}" sec:authorize="!hasRole('GERENTE')"><i class="bi bi-plus-lg"></i> Registrar saída</a>
         </div>
     </div>
 
@@ -54,7 +54,7 @@
                         <td th:text="${d.motorista}"></td>
                         <td class="small" th:text="${d.lotacao} ?: '—'"></td>
                         <td class="text-end">
-                            <form th:if="${d.emAndamento}" th:action="@{'/frota/deslocamentos/' + ${d.id} + '/finalizar'}" method="post"
+                            <form th:if="${d.emAndamento}" sec:authorize="!hasRole('GERENTE')" th:action="@{'/frota/deslocamentos/' + ${d.id} + '/finalizar'}" method="post"
                                   class="d-inline-flex gap-1 align-items-center">
                                 <input type="hidden" name="voltar" value="lista"/>
                                 <input type="time" name="horaChegada" class="form-control form-control-sm" style="width:105px;" title="Hora de chegada"/>

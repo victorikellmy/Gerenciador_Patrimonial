@@ -145,6 +145,20 @@ public class Patrimonio {
     }
 
     /**
+     * Troca a situação operacional (ex.: ATIVO ↔ MANUTENCAO, usado pela frota).
+     * Baixa continua sendo só por {@link #darBaixa}; bem baixado não muda mais.
+     */
+    public void alterarSituacao(SituacaoPatrimonio nova) {
+        if (situacao == SituacaoPatrimonio.BAIXADO) {
+            throw new RegraDeNegocioException("Patrimônio baixado não pode mudar de situação.");
+        }
+        if (nova == null || nova == SituacaoPatrimonio.BAIXADO) {
+            throw new RegraDeNegocioException("Use a baixa para encerrar o patrimônio.");
+        }
+        this.situacao = nova;
+    }
+
+    /**
      * Move o patrimônio para outra lotação e/ou responsável.
      * Argumentos {@code null} mantêm o valor atual — útil quando só
      * um dos dois muda. Invariante: bens baixados não podem ser movidos.

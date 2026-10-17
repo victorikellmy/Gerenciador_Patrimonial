@@ -30,6 +30,10 @@ app:
       login: ${INTEGRACAO_ALMOXARIFADO_LOGIN:integracao.almoxarifado}
       senha: ${INTEGRACAO_ALMOXARIFADO_SENHA:}
   frota:
+    # Dados de demonstração da frota (6 veículos com histórico, usuário motorista.demo).
+    # Só para homologação: ligado no perfil dev; em produção use FROTA_SEED=true conscientemente.
+    seed: ${FROTA_SEED:false}
+    seed-senha-motorista: ${FROTA_SEED_SENHA_MOTORISTA:trocar123}
     # Importação do sistema Transportes FPTO (banco PostgreSQL "transportes").
     # Sem a URL a importação fica desligada. Idempotente (pode rodar a cada boot).
     transportes:

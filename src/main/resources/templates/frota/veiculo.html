@@ -18,6 +18,7 @@
                     <span class="chip-tombo me-2" th:text="${veiculo.placa}"></span>
                     <span th:text="${veiculo.modelo}"></span>
                     <span class="badge badge-plain text-bg-warning ms-2 align-middle" th:if="${veiculo.naRua}"><i class="bi bi-geo-alt"></i> Na rua</span>
+                    <span class="badge badge-plain text-bg-danger ms-2 align-middle" th:if="${veiculo.situacao.name() == 'MANUTENCAO'}"><i class="bi bi-wrench"></i> Em manutenção</span>
                     <span class="badge badge-plain text-bg-secondary ms-2 align-middle" th:if="${!veiculo.ativo}">Desativado</span>
                     <span class="badge badge-plain text-bg-dark ms-2 align-middle" th:if="${veiculo.baixado()}">Baixado</span>
                 </h1>
@@ -30,7 +31,7 @@
                 </div>
             </div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-wrap" sec:authorize="!hasRole('GERENTE')">
             <a class="btn btn-warning" th:if="${veiculo.ativo and !veiculo.naRua}" th:href="@{'/frota/' + ${veiculo.id} + '/deslocamentos/novo'}">
                 <i class="bi bi-signpost-2"></i> Registrar saída
             </a>
@@ -60,7 +61,7 @@
                 · km inicial <span th:text="${resumo.deslocamentoAberto.kmInicial} ?: '—'"></span>
             </div>
             <form th:action="@{'/frota/deslocamentos/' + ${resumo.deslocamentoAberto.id} + '/finalizar'}"
-                  th:object="${finalizarForm}" method="post" class="d-flex gap-2 align-items-end flex-wrap">
+                  th:object="${finalizarForm}" method="post" class="d-flex gap-2 align-items-end flex-wrap" sec:authorize="!hasRole('GERENTE')">
                 <div>
                     <label class="form-label mb-0 small" for="horaChegada">Hora de chegada</label>
                     <input type="time" class="form-control form-control-sm" id="horaChegada" th:field="*{horaChegada}"/>
@@ -170,6 +171,11 @@
                                             <i class="bi" th:classappend="${h.tipo.name() == 'ABASTECIMENTO'} ? 'bi-fuel-pump text-info' : (${h.tipo.name() == 'MANUTENCAO'} ? 'bi-wrench-adjustable text-danger' : 'bi-signpost-2 text-warning')"></i>
                                             <span th:text="${h.titulo}"></span>
                                             <span class="badge badge-plain text-bg-warning ms-1" th:if="${h.emAndamento}">em andamento</span>
+                                            <a class="ms-1" th:if="${h.possuiNotaFiscal}" target="_blank" title="Abrir nota fiscal"
+                                               th:href="@{(${h.tipo.name() == 'ABASTECIMENTO'} ? '/frota/abastecimentos/' : '/frota/manutencoes/') + ${h.id} + '/nota-fiscal'}">
+                                                <i class="bi bi-receipt"></i> NF
+                                            </a>
+                                            <span class="badge badge-plain text-bg-light text-muted ms-1" th:if="${!h.possuiNotaFiscal and h.tipo.name() != 'DESLOCAMENTO'}" title="Sem nota fiscal anexada">sem NF</span>
                                         </span>
                                         <span class="cell-secondary" th:text="${h.detalhe}"></span>
                                     </div>
@@ -232,6 +238,17 @@
                         <dt class="col-5">Conservação</dt><dd class="col-7" th:text="${veiculo.conservacao} ?: '—'"></dd>
                         <dt class="col-5" th:if="${veiculo.observacao}">Observação</dt><dd class="col-7" th:if="${veiculo.observacao}" th:text="${veiculo.observacao}"></dd>
                     </dl>
+                </div>
+                <div class="form-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                    <form th:action="@{'/frota/' + ${veiculo.id} + '/manutencao-status'}" method="post" class="d-grid gap-2">
+                        <input type="hidden" name="emManutencao" th:value="${veiculo.situacao.name() != 'MANUTENCAO'}"/>
+                        <input type="text" class="form-control form-control-sm" name="motivo" maxlength="200"
+                               th:placeholder="${veiculo.situacao.name() == 'MANUTENCAO'} ? 'Observação do retorno (opcional)' : 'Motivo / oficina (opcional)'"/>
+                        <button class="btn btn-sm w-100" th:classappend="${veiculo.situacao.name() == 'MANUTENCAO'} ? 'btn-success' : 'btn-outline-warning'" type="submit">
+                            <i class="bi" th:classappend="${veiculo.situacao.name() == 'MANUTENCAO'} ? 'bi-check2-circle' : 'bi-wrench-adjustable'"></i>
+                            <span th:text="${veiculo.situacao.name() == 'MANUTENCAO'} ? 'Retornou da manutenção' : 'Enviar para manutenção'"></span>
+                        </button>
+                    </form>
                 </div>
                 <div class="form-section" sec:authorize="hasRole('ADMINISTRADOR')">
                     <form th:action="@{'/frota/' + ${veiculo.id} + '/ativo'}" method="post">

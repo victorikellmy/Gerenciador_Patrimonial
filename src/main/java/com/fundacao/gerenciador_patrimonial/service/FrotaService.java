@@ -17,6 +17,8 @@ import com.fundacao.gerenciador_patrimonial.dto.request.VeiculoRequest;
 import com.fundacao.gerenciador_patrimonial.dto.response.AbastecimentoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.DeslocamentoResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.FrotaResumo;
+import com.fundacao.gerenciador_patrimonial.dto.response.GestaoFrotaResponse;
+import com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoPatrimonio;
 import com.fundacao.gerenciador_patrimonial.dto.response.HistoricoVeiculoItem;
 import com.fundacao.gerenciador_patrimonial.dto.response.HistoricoVeiculoItem.Tipo;
 import com.fundacao.gerenciador_patrimonial.dto.response.ManutencaoVeiculoResponse;
@@ -68,6 +70,7 @@ public class FrotaService {
     private final PatrimonioRepository patrimonioRepo;
     private final PatrimonioService patrimonioService;
     private final AuditoriaService auditoriaService;
+    private final com.fundacao.gerenciador_patrimonial.service.storage.StorageService storageService;
 
     // =========================================================================
     // Veículos
@@ -494,7 +497,7 @@ public class FrotaService {
                     + (a.getPostoCidade() != null ? a.getPostoCidade() : "");
             itens.add(new HistoricoVeiculoItem(Tipo.ABASTECIMENTO, a.getId(), a.getData(), null,
                     "Abastecimento · " + a.getCombustivel().getRotulo(), detalhe.isBlank() ? null : detalhe,
-                    a.getKm(), a.getValor(), a.getMotorista(), false));
+                    a.getKm(), a.getValor(), a.getMotorista(), false, a.possuiNotaFiscal()));
         }
         for (ManutencaoVeiculo m : manutencaoRepo.findByVeiculoIdOrderByDataDescIdDesc(veiculoId)) {
             String detalhe = (m.getDescricao() != null ? m.getDescricao() : "")
@@ -502,7 +505,7 @@ public class FrotaService {
                     + (m.getProximaRevisaoKm() != null ? " · próxima revisão em " + m.getProximaRevisaoKm() + " km" : "");
             itens.add(new HistoricoVeiculoItem(Tipo.MANUTENCAO, m.getId(), m.getData(), null,
                     "Manutenção · " + m.getServico().getRotulo(), detalhe.isBlank() ? null : detalhe.trim(),
-                    m.getKm(), m.getValor(), m.getMotorista(), false));
+                    m.getKm(), m.getValor(), m.getMotorista(), false, m.possuiNotaFiscal()));
         }
         for (Deslocamento d : deslocamentoRepo.findByVeiculoIdOrderByDataViagemDescIdDesc(veiculoId)) {
             String detalhe = d.getMotivo()
@@ -511,7 +514,7 @@ public class FrotaService {
                     + (d.getLotacao() != null ? " · " + d.getLotacao() : "");
             itens.add(new HistoricoVeiculoItem(Tipo.DESLOCAMENTO, d.getId(), d.getDataViagem(), d.getHoraSaida(),
                     "Saída · " + d.getDestino(), detalhe,
-                    d.getKmFinal() != null ? d.getKmFinal() : d.getKmInicial(), null, d.getMotorista(), d.isEmAndamento()));
+                    d.getKmFinal() != null ? d.getKmFinal() : d.getKmInicial(), null, d.getMotorista(), d.isEmAndamento(), false));
         }
         itens.sort(Comparator.comparing(HistoricoVeiculoItem::data).reversed()
                 .thenComparing(i -> i.hora() == null ? java.time.LocalTime.MIN : i.hora(), Comparator.reverseOrder())
@@ -561,6 +564,210 @@ public class FrotaService {
                 nz(manutencaoRepo.totalPeriodo(inicioMes, hoje)),
                 manutencaoRepo.countByDataBetween(inicioMes, hoje),
                 deslocamentoRepo.emAndamento().stream().map(DeslocamentoResponse::from).toList());
+    }
+
+    // =========================================================================
+    // Situação operacional (em manutenção) e painel gerencial
+    // =========================================================================
+
+    /** Marca/desmarca o veículo como "em manutenção" (situação do patrimônio). */
+    public VeiculoResponse marcarManutencao(Long id, boolean emManutencao, String motivo) {
+        Veiculo v = carregarVeiculo(id);
+        if (emManutencao && deslocamentoRepo.findFirstByVeiculoIdAndKmFinalIsNullOrderByDataViagemDescIdDesc(id).isPresent()) {
+            throw new RegraDeNegocioException("Registre a chegada da saída em andamento antes de enviar o veículo para manutenção.");
+        }
+        v.getPatrimonio().alterarSituacao(emManutencao
+                ? SituacaoPatrimonio.MANUTENCAO
+                : SituacaoPatrimonio.ATIVO);
+        auditoriaService.registrar(AcaoAuditoria.FROTA, ENT_VEICULO, id,
+                (emManutencao ? "Veículo enviado para manutenção" : "Veículo retornou da manutenção")
+                        + (motivo != null && !motivo.isBlank() ? ": " + motivo.trim() : ""));
+        return toResponse(v);
+    }
+
+    @Transactional(readOnly = true)
+    public GestaoFrotaResponse gestao() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate inicioMes = hoje.withDayOfMonth(1);
+        LocalDate inicioAno = hoje.withDayOfYear(1);
+        LocalDate inicio12 = inicioMes.minusMonths(11);
+
+        List<Veiculo> veiculos = veiculoRepo.listarComPatrimonio();
+
+        java.util.Map<Long, BigDecimal[]> combAno = new java.util.HashMap<>();
+        for (Object[] r : abastecimentoRepo.totaisPorVeiculo(inicioAno, hoje))
+            combAno.put((Long) r[0], new BigDecimal[]{nz((BigDecimal) r[1]), nz((BigDecimal) r[2])});
+        java.util.Map<Long, Object[]> manAno = new java.util.HashMap<>();
+        for (Object[] r : manutencaoRepo.totaisPorVeiculo(inicioAno, hoje)) manAno.put((Long) r[0], r);
+        java.util.Map<Long, Object[]> kmAno = new java.util.HashMap<>();
+        for (Object[] r : deslocamentoRepo.kmPorVeiculo(inicioAno, hoje)) kmAno.put((Long) r[0], r);
+
+        List<GestaoFrotaResponse.SituacaoVeiculo> situacoes = new ArrayList<>();
+        List<GestaoFrotaResponse.GastoVeiculo> gastos = new ArrayList<>();
+        long naRua = 0, emManut = 0, disponiveis = 0, ativos = 0, vencidas = 0;
+
+        for (Veiculo v : veiculos) {
+            Optional<Deslocamento> aberta = deslocamentoRepo.findFirstByVeiculoIdAndKmFinalIsNullOrderByDataViagemDescIdDesc(v.getId());
+            Optional<Deslocamento> ultima = deslocamentoRepo.findFirstByVeiculoIdOrderByDataViagemDescIdDesc(v.getId());
+            Optional<ManutencaoVeiculo> ultimaMan = manutencaoRepo.findFirstByVeiculoIdOrderByDataDescIdDesc(v.getId());
+            Integer proxKm = manutencaoRepo.findFirstByVeiculoIdAndProximaRevisaoKmNotNullOrderByDataDescIdDesc(v.getId())
+                    .map(ManutencaoVeiculo::getProximaRevisaoKm).orElse(null);
+            LocalDate proxData = manutencaoRepo.findFirstByVeiculoIdAndProximaRevisaoDataNotNullOrderByDataDescIdDesc(v.getId())
+                    .map(ManutencaoVeiculo::getProximaRevisaoData).orElse(null);
+            boolean vencida = (proxKm != null && v.getKmAtual() != null && v.getKmAtual() >= proxKm)
+                    || (proxData != null && !proxData.isAfter(hoje));
+
+            boolean manutencao = v.getPatrimonio().getSituacao() == SituacaoPatrimonio.MANUTENCAO;
+            var estado = !v.isAtivo() ? GestaoFrotaResponse.Estado.INATIVO
+                    : aberta.isPresent() ? GestaoFrotaResponse.Estado.NA_RUA
+                    : manutencao ? GestaoFrotaResponse.Estado.MANUTENCAO
+                    : GestaoFrotaResponse.Estado.DISPONIVEL;
+            if (v.isAtivo()) {
+                ativos++;
+                switch (estado) {
+                    case NA_RUA -> naRua++;
+                    case MANUTENCAO -> emManut++;
+                    case DISPONIVEL -> disponiveis++;
+                    default -> { }
+                }
+                if (vencida) vencidas++;
+            }
+
+            situacoes.add(new GestaoFrotaResponse.SituacaoVeiculo(
+                    v.getId(), v.getPlaca(), v.getModelo(), v.getCidade(), estado,
+                    aberta.map(Deslocamento::getMotorista).orElse(ultima.map(Deslocamento::getMotorista).orElse(null)),
+                    aberta.map(Deslocamento::getDestino).orElse(null),
+                    aberta.map(Deslocamento::getDataViagem).orElse(null),
+                    aberta.map(Deslocamento::getHoraSaida).orElse(null),
+                    v.getKmAtual(),
+                    ultima.map(Deslocamento::getDataViagem).orElse(null),
+                    ultimaMan.map(m -> m.getServico().getRotulo() + (m.getDescricao() != null ? " · " + m.getDescricao() : "")).orElse(null),
+                    ultimaMan.map(ManutencaoVeiculo::getData).orElse(null),
+                    proxKm, proxData, vencida));
+
+            BigDecimal[] c = combAno.getOrDefault(v.getId(), new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            Object[] m = manAno.get(v.getId());
+            Object[] k = kmAno.get(v.getId());
+            BigDecimal manut = m != null ? nz((BigDecimal) m[1]) : BigDecimal.ZERO;
+            long manutQtd = m != null ? ((Number) m[2]).longValue() : 0;
+            long km = k != null ? ((Number) k[1]).longValue() : 0;
+            long saidas = k != null ? ((Number) k[2]).longValue() : 0;
+            BigDecimal total = c[0].add(manut);
+            BigDecimal custoKm = km > 0 ? total.divide(BigDecimal.valueOf(km), 2, RoundingMode.HALF_UP) : null;
+            gastos.add(new GestaoFrotaResponse.GastoVeiculo(
+                    v.getId(), v.getPlaca(), v.getModelo(), c[0], c[1], manut, manutQtd, total, km, saidas, custoKm));
+        }
+        gastos.sort(Comparator.comparing(GestaoFrotaResponse.GastoVeiculo::total).reversed());
+        situacoes.sort(Comparator.comparing((GestaoFrotaResponse.SituacaoVeiculo s) -> s.estado().ordinal())
+                .thenComparing(GestaoFrotaResponse.SituacaoVeiculo::placa));
+
+        // --- gastos por mês (últimos 12 meses, meses sem lançamento = 0) ---
+        java.util.Map<String, BigDecimal[]> porMes = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < 12; i++) {
+            LocalDate m = inicio12.plusMonths(i);
+            porMes.put(m.getYear() + "-" + m.getMonthValue(), new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+        }
+        for (Object[] r : abastecimentoRepo.totaisPorMes(inicio12)) {
+            BigDecimal[] acc = porMes.get(((Number) r[0]).intValue() + "-" + ((Number) r[1]).intValue());
+            if (acc != null) acc[0] = nz((BigDecimal) r[2]);
+        }
+        for (Object[] r : manutencaoRepo.totaisPorMes(inicio12)) {
+            BigDecimal[] acc = porMes.get(((Number) r[0]).intValue() + "-" + ((Number) r[1]).intValue());
+            if (acc != null) acc[1] = nz((BigDecimal) r[2]);
+        }
+        String[] meses = {"jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"};
+        List<GestaoFrotaResponse.GastoMes> gastosMes = new ArrayList<>();
+        porMes.forEach((chave, val) -> {
+            String[] p = chave.split("-");
+            int ano = Integer.parseInt(p[0]);
+            int mes = Integer.parseInt(p[1]);
+            gastosMes.add(new GestaoFrotaResponse.GastoMes(
+                    ano, mes, meses[mes - 1] + "/" + String.valueOf(ano).substring(2), val[0], val[1]));
+        });
+
+        BigDecimal combMes = nz(abastecimentoRepo.totalPeriodo(inicioMes, hoje));
+        BigDecimal manMes = nz(manutencaoRepo.totalPeriodo(inicioMes, hoje));
+        BigDecimal combAnoTotal = nz(abastecimentoRepo.totalPeriodo(inicioAno, hoje));
+        BigDecimal manAnoTotal = nz(manutencaoRepo.totalPeriodo(inicioAno, hoje));
+        Long kmMes = deslocamentoRepo.kmRodadosPeriodo(inicioMes, hoje);
+        Long kmAnoTotal = deslocamentoRepo.kmRodadosPeriodo(inicioAno, hoje);
+        long kmA = kmAnoTotal != null ? kmAnoTotal : 0;
+        BigDecimal custoMedio = kmA > 0 ? combAnoTotal.add(manAnoTotal).divide(BigDecimal.valueOf(kmA), 2, RoundingMode.HALF_UP) : null;
+
+        return new GestaoFrotaResponse(
+                hoje, ativos, naRua, emManut, disponiveis, vencidas,
+                combMes, manMes, combAnoTotal, manAnoTotal,
+                kmMes != null ? kmMes : 0, kmA, custoMedio,
+                situacoes, gastos, gastosMes,
+                situacoes.stream().filter(GestaoFrotaResponse.SituacaoVeiculo::revisaoVencida).toList());
+    }
+
+    // =========================================================================
+    // Nota fiscal de abastecimento / manutenção (PDF ou foto)
+    // =========================================================================
+
+    private static final java.util.Set<String> TIPOS_NF = java.util.Set.of(
+            "application/pdf", "image/jpeg", "image/png", "image/webp");
+
+    public record NotaFiscalArquivo(String nomeOriginal, String contentType, org.springframework.core.io.Resource recurso) {}
+
+    /** Anexa (ou substitui) a NF de um abastecimento ou manutenção. */
+    public void anexarNotaFiscal(Tipo tipo, Long id, org.springframework.web.multipart.MultipartFile arquivo) {
+        if (arquivo == null || arquivo.isEmpty()) {
+            throw new RegraDeNegocioException("Arquivo da nota fiscal vazio.");
+        }
+        if (arquivo.getContentType() == null || !TIPOS_NF.contains(arquivo.getContentType())) {
+            throw new RegraDeNegocioException("Nota fiscal deve ser PDF ou foto (JPEG, PNG, WEBP).");
+        }
+        switch (tipo) {
+            case ABASTECIMENTO -> {
+                Abastecimento a = abastecimentoRepo.findComVeiculo(id)
+                        .orElseThrow(() -> new RecursoNaoEncontradoException("Abastecimento", id));
+                if (a.possuiNotaFiscal()) storageService.deletar(a.getNfCaminho());
+                String caminho = storageService.armazenar(arquivo, "frota/" + a.getVeiculo().getId() + "/abastecimentos");
+                a.setNfCaminho(caminho);
+                a.setNfNomeOriginal(arquivo.getOriginalFilename());
+                a.setNfContentType(arquivo.getContentType());
+                a.setNfTamanhoBytes(arquivo.getSize());
+                auditoriaService.registrar(AcaoAuditoria.FROTA, ENT_VEICULO, a.getVeiculo().getId(),
+                        "NF anexada ao abastecimento #%d (%s)".formatted(id, arquivo.getOriginalFilename()));
+            }
+            case MANUTENCAO -> {
+                ManutencaoVeiculo m = manutencaoRepo.findComVeiculo(id)
+                        .orElseThrow(() -> new RecursoNaoEncontradoException("Manutenção", id));
+                if (m.possuiNotaFiscal()) storageService.deletar(m.getNfCaminho());
+                String caminho = storageService.armazenar(arquivo, "frota/" + m.getVeiculo().getId() + "/manutencoes");
+                m.setNfCaminho(caminho);
+                m.setNfNomeOriginal(arquivo.getOriginalFilename());
+                m.setNfContentType(arquivo.getContentType());
+                m.setNfTamanhoBytes(arquivo.getSize());
+                auditoriaService.registrar(AcaoAuditoria.FROTA, ENT_VEICULO, m.getVeiculo().getId(),
+                        "NF anexada à manutenção #%d (%s)".formatted(id, arquivo.getOriginalFilename()));
+            }
+            default -> throw new RegraDeNegocioException("Deslocamento não tem nota fiscal.");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public NotaFiscalArquivo notaFiscal(Tipo tipo, Long id) {
+        String caminho;
+        String nome;
+        String contentType;
+        if (tipo == Tipo.ABASTECIMENTO) {
+            Abastecimento a = abastecimentoRepo.findById(id)
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Abastecimento", id));
+            caminho = a.getNfCaminho(); nome = a.getNfNomeOriginal(); contentType = a.getNfContentType();
+        } else if (tipo == Tipo.MANUTENCAO) {
+            ManutencaoVeiculo m = manutencaoRepo.findById(id)
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Manutenção", id));
+            caminho = m.getNfCaminho(); nome = m.getNfNomeOriginal(); contentType = m.getNfContentType();
+        } else {
+            throw new RecursoNaoEncontradoException("Nota fiscal", id);
+        }
+        if (caminho == null || caminho.isBlank()) {
+            throw new RecursoNaoEncontradoException("Nota fiscal do lançamento", id);
+        }
+        return new NotaFiscalArquivo(nome, contentType, storageService.carregar(caminho));
     }
 
     /** Nome do usuário logado, para pré-preencher o campo "motorista". */

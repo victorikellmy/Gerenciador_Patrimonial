@@ -21,12 +21,14 @@ public record ManutencaoVeiculoResponse(
         Integer proximaRevisaoKm,
         LocalDate proximaRevisaoData,
         String motorista,
-        String registradoPor
+        String registradoPor,
+        boolean possuiNotaFiscal,
+        String nfNomeOriginal
 ) {
     public static ManutencaoVeiculoResponse from(ManutencaoVeiculo m) {
         return new ManutencaoVeiculoResponse(m.getId(), m.getVeiculo().getId(), m.getVeiculo().getPlaca(),
                 m.getVeiculo().getModelo(), m.getData(), m.getServico(), m.getKm(), m.getDescricao(), m.getValor(),
                 m.getFornecedor(), m.getNotaFiscal(), m.getProximaRevisaoKm(), m.getProximaRevisaoData(),
-                m.getMotorista(), m.getRegistradoPor());
+                m.getMotorista(), m.getRegistradoPor(), m.possuiNotaFiscal(), m.getNfNomeOriginal());
     }
 }
