@@ -18,5 +18,7 @@ public enum AcaoAuditoria {
     /** Bem cadastrado a partir de uma pendência de patrimoniamento. */
     PATRIMONIAR,
     /** Conferência física registrada em um levantamento patrimonial. */
-    LEVANTAMENTO
+    LEVANTAMENTO,
+    /** Lançamento da frota (abastecimento, manutenção, deslocamento) ou cadastro de veículo. */
+    FROTA
 }

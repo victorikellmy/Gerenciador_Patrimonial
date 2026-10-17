@@ -68,6 +68,8 @@ public class SecurityConfig {
                                                           "/api/levantamentos/*/reabrir").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/pendencias/*/descartar").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
+                        // Frota (app Android): motoristas também lançam
+                        .requestMatchers("/api/frota/**", "/api/me/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA")
                         // Restante da API: operadores humanos — o perfil INTEGRACAO fica de fora.
                         .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
                 )
@@ -109,13 +111,29 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/levantamentos/*/concluir",
                                                           "/levantamentos/*/reabrir").hasRole("ADMINISTRADOR")
 
+                        // --- Frota: motoristas lançam; editar/cadastrar veículo é de ADMIN/FISCAL; excluir só ADMIN ---
+                        .requestMatchers(HttpMethod.POST, "/frota/*/*/excluir", "/frota/importar-transportes",
+                                                          "/frota/*/ativo").hasRole("ADMINISTRADOR")
+                        .requestMatchers("/frota/novo", "/frota/*/editar", "/frota/*/*/editar",
+                                         "/frota/*/historico/download", "/frota/*/download").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .requestMatchers(HttpMethod.POST, "/frota", "/frota/{id:\\d+}",
+                                                          "/frota/abastecimentos/{id:\\d+}",
+                                                          "/frota/manutencoes/{id:\\d+}",
+                                                          "/frota/deslocamentos/{id:\\d+}").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .requestMatchers("/frota/**", "/minha-conta/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA")
+
                         // --- demais (inclui /pendencias/**) → operadores humanos ---
                         // O perfil INTEGRACAO é só para a API; não navega na interface web.
                         .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/", true)
+                        // Motorista cai direto na frota (não tem acesso ao dashboard).
+                        .successHandler((req, res, auth) -> {
+                            boolean motorista = auth.getAuthorities().stream()
+                                    .anyMatch(a -> "ROLE_MOTORISTA".equals(a.getAuthority()));
+                            res.sendRedirect(req.getContextPath() + (motorista ? "/frota" : "/"));
+                        })
                         .failureUrl("/login?erro")
                         .permitAll()
                 )

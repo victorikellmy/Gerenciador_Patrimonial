@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head(${veiculo.placa} + ' · ' + ${veiculo.modelo})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============================ PAGE HEADER ============================ -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="@{/frota}" title="Voltar"><i class="bi bi-arrow-left"></i></a>
+            <div>
+                <h1 class="page-title">
+                    <span class="chip-tombo me-2" th:text="${veiculo.placa}"></span>
+                    <span th:text="${veiculo.modelo}"></span>
+                    <span class="badge badge-plain text-bg-warning ms-2 align-middle" th:if="${veiculo.naRua}"><i class="bi bi-geo-alt"></i> Na rua</span>
+                    <span class="badge badge-plain text-bg-secondary ms-2 align-middle" th:if="${!veiculo.ativo}">Desativado</span>
+                    <span class="badge badge-plain text-bg-dark ms-2 align-middle" th:if="${veiculo.baixado()}">Baixado</span>
+                </h1>
+                <div class="page-subtitle">
+                    <span th:text="${veiculo.marca} ?: ''"></span>
+                    <span th:if="${veiculo.ano}" th:text="' · ' + ${veiculo.ano}"></span>
+                    <span th:if="${veiculo.cidade}" th:text="' · ' + ${veiculo.cidade}"></span>
+                    · Patrimônio #<span th:text="${veiculo.patrimonioId}"></span>
+                    <span th:if="${veiculo.numeroTombo}" th:text="' · tombo ' + ${veiculo.numeroTombo}"></span>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-warning" th:if="${veiculo.ativo and !veiculo.naRua}" th:href="@{'/frota/' + ${veiculo.id} + '/deslocamentos/novo'}">
+                <i class="bi bi-signpost-2"></i> Registrar saída
+            </a>
+            <a class="btn btn-secondary" th:href="@{'/frota/' + ${veiculo.id} + '/abastecimentos/novo'}">
+                <i class="bi bi-fuel-pump"></i> Abastecimento
+            </a>
+            <a class="btn btn-secondary" th:href="@{'/frota/' + ${veiculo.id} + '/manutencoes/novo'}">
+                <i class="bi bi-wrench-adjustable"></i> Manutenção / revisão
+            </a>
+            <a class="btn btn-primary" th:href="@{'/frota/' + ${veiculo.id} + '/editar'}" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                <i class="bi bi-pencil"></i> Editar
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================ CHEGADA PENDENTE ============================ -->
+    <div class="alert alert-warning mb-4" th:if="${resumo.deslocamentoAberto != null}">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <i class="bi bi-geo-alt-fill"></i>
+                <strong>Veículo na rua</strong> desde
+                <span th:text="${#temporals.format(resumo.deslocamentoAberto.dataViagem, 'dd/MM/yyyy')}"></span>
+                <span th:if="${resumo.deslocamentoAberto.horaSaida != null}" th:text="${#temporals.format(resumo.deslocamentoAberto.horaSaida, 'HH:mm')}"></span>
+                · <span th:text="${resumo.deslocamentoAberto.destino}"></span>
+                (<span th:text="${resumo.deslocamentoAberto.motivo}"></span>)
+                · motorista <span th:text="${resumo.deslocamentoAberto.motorista}"></span>
+                · km inicial <span th:text="${resumo.deslocamentoAberto.kmInicial} ?: '—'"></span>
+            </div>
+            <form th:action="@{'/frota/deslocamentos/' + ${resumo.deslocamentoAberto.id} + '/finalizar'}"
+                  th:object="${finalizarForm}" method="post" class="d-flex gap-2 align-items-end flex-wrap">
+                <div>
+                    <label class="form-label mb-0 small" for="horaChegada">Hora de chegada</label>
+                    <input type="time" class="form-control form-control-sm" id="horaChegada" th:field="*{horaChegada}"/>
+                </div>
+                <div>
+                    <label class="form-label mb-0 small" for="kmFinal">Km final *</label>
+                    <input type="number" class="form-control form-control-sm" id="kmFinal" th:field="*{kmFinal}"
+                           th:min="${resumo.deslocamentoAberto.kmInicial} ?: 0" required style="width:130px;"/>
+                </div>
+                <button class="btn btn-sm btn-warning" type="submit"><i class="bi bi-box-arrow-in-left"></i> Registrar chegada</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="alert alert-danger mb-4" th:if="${resumo.revisaoVencida}">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <strong>Revisão vencida.</strong>
+        <span th:if="${resumo.proximaRevisaoKm != null}" th:text="'Prevista para ' + ${#numbers.formatInteger(resumo.proximaRevisaoKm, 1, 'POINT')} + ' km'"></span>
+        <span th:if="${resumo.proximaRevisaoData != null}" th:text="(${resumo.proximaRevisaoKm != null} ? ' / ' : 'Prevista para ') + ${#temporals.format(resumo.proximaRevisaoData, 'dd/MM/yyyy')}"></span>.
+    </div>
+
+    <!-- ============================ KPIs ============================ -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="kpi-label">Km atual</div>
+                <div class="fs-4 fw-semibold" th:text="${resumo.kmAtual != null} ? ${#numbers.formatInteger(resumo.kmAtual, 1, 'POINT')} : '—'">—</div>
+            </div></div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="kpi-label">Km rodados no ano</div>
+                <div class="fs-4 fw-semibold" th:text="${#numbers.formatInteger(resumo.kmRodadosAno, 1, 'POINT')}">0</div>
+                <div class="small text-muted" th:text="${resumo.qtdDeslocamentos} + ' saída(s) no total'"></div>
+            </div></div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="kpi-label">Combustível no ano</div>
+                <div class="fs-4 fw-semibold" th:text="'R$ ' + ${#numbers.formatDecimal(resumo.combustivelAno, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
+                <div class="small text-muted" th:text="${#numbers.formatDecimal(resumo.litrosAno, 1, 'POINT', 1, 'COMMA')} + ' L · ' + ${resumo.qtdAbastecimentos} + ' abastecimento(s)'"></div>
+            </div></div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="kpi-label">Consumo médio</div>
+                <div class="fs-4 fw-semibold" th:text="${resumo.consumoMedioKmPorLitro != null} ? ${#numbers.formatDecimal(resumo.consumoMedioKmPorLitro, 1, 'POINT', 1, 'COMMA')} + ' km/L' : '—'">—</div>
+                <div class="small text-muted">km rodados ÷ litros (ano)</div>
+            </div></div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="kpi-label">Manutenção no ano</div>
+                <div class="fs-4 fw-semibold" th:text="'R$ ' + ${#numbers.formatDecimal(resumo.manutencaoAno, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
+                <div class="small text-muted" th:text="${resumo.qtdManutencoes} + ' serviço(s) no total'"></div>
+            </div></div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="card card-panel h-100"><div class="card-body">
+                <div class="kpi-label">Próxima revisão</div>
+                <div class="fs-5 fw-semibold">
+                    <span th:if="${resumo.proximaRevisaoKm != null}" th:text="${#numbers.formatInteger(resumo.proximaRevisaoKm, 1, 'POINT')} + ' km'"></span>
+                    <span th:if="${resumo.proximaRevisaoKm == null and resumo.proximaRevisaoData == null}">—</span>
+                </div>
+                <div class="small text-muted" th:if="${resumo.proximaRevisaoData != null}" th:text="${#temporals.format(resumo.proximaRevisaoData, 'dd/MM/yyyy')}"></div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ============================ HISTÓRICO ============================ -->
+        <div class="col-lg-8">
+            <div class="card card-panel" style="overflow:hidden;">
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom flex-wrap gap-2">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a th:href="@{'/frota/' + ${veiculo.id}}" class="btn" th:classappend="${tipo == 'TODOS'} ? 'btn-primary' : 'btn-secondary'">Tudo</a>
+                        <a th:href="@{'/frota/' + ${veiculo.id}(tipo='DESLOCAMENTO')}" class="btn" th:classappend="${tipo == 'DESLOCAMENTO'} ? 'btn-primary' : 'btn-secondary'">Saídas</a>
+                        <a th:href="@{'/frota/' + ${veiculo.id}(tipo='ABASTECIMENTO')}" class="btn" th:classappend="${tipo == 'ABASTECIMENTO'} ? 'btn-primary' : 'btn-secondary'">Abastecimentos</a>
+                        <a th:href="@{'/frota/' + ${veiculo.id}(tipo='MANUTENCAO')}" class="btn" th:classappend="${tipo == 'MANUTENCAO'} ? 'btn-primary' : 'btn-secondary'">Manutenções</a>
+                    </div>
+                    <div class="d-flex gap-1" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                        <a class="btn btn-sm btn-secondary" th:href="@{'/frota/' + ${veiculo.id} + '/historico/download'(formato='xlsx')}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                        <a class="btn btn-sm btn-secondary" th:href="@{'/frota/' + ${veiculo.id} + '/historico/download'(formato='pdf')}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                    </div>
+                </div>
+                <div class="table-responsive" th:if="${!historico.isEmpty()}">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width:110px;">Data</th>
+                                <th>Lançamento</th>
+                                <th class="text-end">Km</th>
+                                <th class="text-end">Valor (R$)</th>
+                                <th>Motorista</th>
+                                <th class="text-end" style="width:90px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="h : ${historico}" th:classappend="${h.emAndamento} ? 'table-warning'">
+                                <td class="text-nowrap">
+                                    <span th:text="${#temporals.format(h.data, 'dd/MM/yyyy')}"></span>
+                                    <span class="text-muted small" th:if="${h.hora != null}" th:text="${#temporals.format(h.hora, 'HH:mm')}"></span>
+                                </td>
+                                <td>
+                                    <div class="cell-stack">
+                                        <span class="cell-primary">
+                                            <i class="bi" th:classappend="${h.tipo.name() == 'ABASTECIMENTO'} ? 'bi-fuel-pump text-info' : (${h.tipo.name() == 'MANUTENCAO'} ? 'bi-wrench-adjustable text-danger' : 'bi-signpost-2 text-warning')"></i>
+                                            <span th:text="${h.titulo}"></span>
+                                            <span class="badge badge-plain text-bg-warning ms-1" th:if="${h.emAndamento}">em andamento</span>
+                                        </span>
+                                        <span class="cell-secondary" th:text="${h.detalhe}"></span>
+                                    </div>
+                                </td>
+                                <td class="text-end" th:text="${h.km != null} ? ${#numbers.formatInteger(h.km, 1, 'POINT')} : '—'"></td>
+                                <td class="text-end" th:text="${h.valor != null} ? ${#numbers.formatDecimal(h.valor, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                                <td th:text="${h.motorista}"></td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')"
+                                         th:with="base=${h.tipo.name() == 'ABASTECIMENTO'} ? '/frota/abastecimentos/' : (${h.tipo.name() == 'MANUTENCAO'} ? '/frota/manutencoes/' : '/frota/deslocamentos/')">
+                                        <a class="btn btn-sm btn-secondary btn-icon" th:href="@{${base} + ${h.id} + '/editar'}" title="Editar"><i class="bi bi-pencil"></i></a>
+                                        <form th:action="@{${base} + ${h.id} + '/excluir'}" method="post" class="d-inline"
+                                              sec:authorize="hasRole('ADMINISTRADOR')"
+                                              onsubmit="return confirm('Excluir este lançamento do histórico?');">
+                                            <button class="btn btn-sm btn-danger btn-icon" type="submit" title="Excluir"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div th:if="${historico.isEmpty()}"
+                     th:replace="~{fragments/ui-kit :: empty-state('bi-clock-history', 'Sem lançamentos',
+                        'Registre a primeira saída, abastecimento ou manutenção deste veículo.', null, null)}"></div>
+            </div>
+        </div>
+
+        <!-- ============================ DADOS ============================ -->
+        <div class="col-lg-4">
+            <div class="card card-panel mb-4" style="overflow:hidden;">
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header('bi-truck-front', 'Dados do veículo', null)}"></div>
+                    <dl class="row mb-0 small">
+                        <dt class="col-5">Placa</dt><dd class="col-7" th:text="${veiculo.placa}"></dd>
+                        <dt class="col-5">Modelo</dt><dd class="col-7" th:text="${veiculo.modelo}"></dd>
+                        <dt class="col-5">Marca</dt><dd class="col-7" th:text="${veiculo.marca} ?: '—'"></dd>
+                        <dt class="col-5">Ano</dt><dd class="col-7" th:text="${veiculo.ano} ?: '—'"></dd>
+                        <dt class="col-5">Chassi</dt><dd class="col-7" th:text="${veiculo.chassi} ?: '—'"></dd>
+                        <dt class="col-5">Renavam</dt><dd class="col-7" th:text="${veiculo.renavam} ?: '—'"></dd>
+                        <dt class="col-5">Cidade</dt><dd class="col-7" th:text="${veiculo.cidade} ?: '—'"></dd>
+                        <dt class="col-5">Combustível</dt><dd class="col-7" th:text="${veiculo.combustivelPadrao != null} ? ${veiculo.combustivelPadrao.rotulo} : '—'"></dd>
+                    </dl>
+                </div>
+                <div class="form-section">
+                    <div th:replace="~{fragments/ui-kit :: section-header('bi-box-seam', 'Patrimônio', null)}"></div>
+                    <dl class="row mb-0 small">
+                        <dt class="col-5">Nº / tombo</dt>
+                        <dd class="col-7">
+                            <a th:href="@{'/patrimonios/' + ${veiculo.patrimonioId} + '/editar'}" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                                #<span th:text="${veiculo.patrimonioId}"></span><span th:if="${veiculo.numeroTombo}" th:text="' · ' + ${veiculo.numeroTombo}"></span>
+                            </a>
+                            <span sec:authorize="hasRole('MOTORISTA')">#<span th:text="${veiculo.patrimonioId}"></span></span>
+                        </dd>
+                        <dt class="col-5">Situação</dt><dd class="col-7" th:text="${veiculo.situacao}"></dd>
+                        <dt class="col-5">Lotação</dt><dd class="col-7" th:text="(${veiculo.lotacaoUpm} ?: '') + ' / ' + (${veiculo.lotacaoNome} ?: '')"></dd>
+                        <dt class="col-5">Responsável</dt><dd class="col-7" th:text="${veiculo.responsavelNome} ?: '—'"></dd>
+                        <dt class="col-5">Aquisição</dt><dd class="col-7" th:text="${veiculo.dataCompra != null} ? ${#temporals.format(veiculo.dataCompra, 'dd/MM/yyyy')} : '—'"></dd>
+                        <dt class="col-5">Valor</dt><dd class="col-7" th:text="${veiculo.valorCompra != null} ? 'R$ ' + ${#numbers.formatDecimal(veiculo.valorCompra, 1, 'POINT', 2, 'COMMA')} : '—'"></dd>
+                        <dt class="col-5">Conservação</dt><dd class="col-7" th:text="${veiculo.conservacao} ?: '—'"></dd>
+                        <dt class="col-5" th:if="${veiculo.observacao}">Observação</dt><dd class="col-7" th:if="${veiculo.observacao}" th:text="${veiculo.observacao}"></dd>
+                    </dl>
+                </div>
+                <div class="form-section" sec:authorize="hasRole('ADMINISTRADOR')">
+                    <form th:action="@{'/frota/' + ${veiculo.id} + '/ativo'}" method="post">
+                        <input type="hidden" name="ativo" th:value="${!veiculo.ativo}"/>
+                        <button class="btn btn-sm w-100" th:classappend="${veiculo.ativo} ? 'btn-outline-danger' : 'btn-outline-success'" type="submit">
+                            <i class="bi" th:classappend="${veiculo.ativo} ? 'bi-x-circle' : 'bi-check-circle'"></i>
+                            <span th:text="${veiculo.ativo} ? 'Desativar veículo' : 'Reativar veículo'"></span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

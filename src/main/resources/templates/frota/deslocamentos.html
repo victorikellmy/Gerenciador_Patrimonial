@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Deslocamentos')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Deslocamentos</h1>
+            <div class="page-subtitle"><span th:text="${pagina.totalElements}">0</span> registro(s) · linhas em amarelo estão na rua</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <div sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')" class="d-flex gap-1">
+                <a class="btn btn-secondary" th:href="@{/frota/deslocamentos/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},somenteAbertos=${filtro.somenteAbertos},formato='xlsx')}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                <a class="btn btn-secondary" th:href="@{/frota/deslocamentos/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},somenteAbertos=${filtro.somenteAbertos},formato='pdf')}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+            </div>
+            <a class="btn btn-primary" th:href="@{/frota/deslocamentos/novo}"><i class="bi bi-plus-lg"></i> Registrar saída</a>
+        </div>
+    </div>
+
+    <div th:replace="~{frota/filtro :: filtro(@{/frota/deslocamentos}, true)}"></div>
+
+    <div class="card card-panel" style="overflow:hidden;">
+        <div class="table-responsive" th:if="${!pagina.empty}">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th>Data</th><th>Veículo</th><th>Destino / motivo</th><th>Titular</th>
+                    <th>Saída</th><th>Chegada</th><th class="text-end">Km rodados</th><th>Motorista</th><th>Lotação</th>
+                    <th class="text-end" style="width:200px;"></th>
+                </tr></thead>
+                <tbody>
+                    <tr th:each="d : ${pagina.content}" th:classappend="${d.emAndamento} ? 'table-warning'">
+                        <td class="text-nowrap" th:text="${#temporals.format(d.dataViagem, 'dd/MM/yyyy')}"></td>
+                        <td><a th:href="@{'/frota/' + ${d.veiculoId}}" class="fw-semibold" th:text="${d.placa} + ' · ' + ${d.modelo}"></a></td>
+                        <td><div class="cell-stack"><span class="cell-primary" th:text="${d.destino}"></span><span class="cell-secondary" th:text="${d.motivo}"></span></div></td>
+                        <td th:text="${d.titular} ?: '—'"></td>
+                        <td class="text-nowrap small">
+                            <span th:text="${d.horaSaida != null} ? ${#temporals.format(d.horaSaida, 'HH:mm')} : '—'"></span>
+                            <span class="text-muted" th:if="${d.kmInicial != null}" th:text="'· km ' + ${#numbers.formatInteger(d.kmInicial, 1, 'POINT')}"></span>
+                        </td>
+                        <td class="text-nowrap small">
+                            <span th:if="${d.emAndamento}" class="badge badge-plain text-bg-warning">na rua</span>
+                            <span th:unless="${d.emAndamento}">
+                                <span th:text="${d.horaChegada != null} ? ${#temporals.format(d.horaChegada, 'HH:mm')} : '—'"></span>
+                                <span class="text-muted" th:if="${d.kmFinal != null}" th:text="'· km ' + ${#numbers.formatInteger(d.kmFinal, 1, 'POINT')}"></span>
+                            </span>
+                        </td>
+                        <td class="text-end" th:text="${d.kmRodados != null} ? ${#numbers.formatInteger(d.kmRodados, 1, 'POINT')} : '—'"></td>
+                        <td th:text="${d.motorista}"></td>
+                        <td class="small" th:text="${d.lotacao} ?: '—'"></td>
+                        <td class="text-end">
+                            <form th:if="${d.emAndamento}" th:action="@{'/frota/deslocamentos/' + ${d.id} + '/finalizar'}" method="post"
+                                  class="d-inline-flex gap-1 align-items-center">
+                                <input type="hidden" name="voltar" value="lista"/>
+                                <input type="time" name="horaChegada" class="form-control form-control-sm" style="width:105px;" title="Hora de chegada"/>
+                                <input type="number" name="kmFinal" class="form-control form-control-sm" style="width:110px;" placeholder="km final" required th:min="${d.kmInicial} ?: 0"/>
+                                <button class="btn btn-sm btn-warning btn-icon" type="submit" title="Registrar chegada"><i class="bi bi-box-arrow-in-left"></i></button>
+                            </form>
+                            <div class="d-inline-flex gap-1" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/deslocamentos/' + ${d.id} + '/editar'}" title="Editar"><i class="bi bi-pencil"></i></a>
+                                <form th:action="@{'/frota/deslocamentos/' + ${d.id} + '/excluir'}" method="post" class="d-inline" sec:authorize="hasRole('ADMINISTRADOR')"
+                                      onsubmit="return confirm('Excluir este deslocamento?');">
+                                    <button class="btn btn-sm btn-danger btn-icon" type="submit" title="Excluir"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div th:if="${pagina.empty}" th:replace="~{fragments/ui-kit :: empty-state('bi-signpost-2', 'Nenhum deslocamento', 'Nenhum registro para o filtro informado.', null, null)}"></div>
+    </div>
+
+    <div th:replace="~{frota/filtro :: paginacao(@{/frota/deslocamentos})}"></div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

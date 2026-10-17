@@ -29,6 +29,14 @@ app:
     almoxarifado:
       login: ${INTEGRACAO_ALMOXARIFADO_LOGIN:integracao.almoxarifado}
       senha: ${INTEGRACAO_ALMOXARIFADO_SENHA:}
+  frota:
+    # Importação do sistema Transportes FPTO (banco PostgreSQL "transportes").
+    # Sem a URL a importação fica desligada. Idempotente (pode rodar a cada boot).
+    transportes:
+      url: ${TRANSPORTES_DB_URL:}
+      usuario: ${TRANSPORTES_DB_USER:transportes}
+      senha: ${TRANSPORTES_DB_SENHA:}
+      importar-no-boot: ${TRANSPORTES_IMPORTAR_NO_BOOT:true}
   importacao:
     # Seed automático da planilha base no primeiro start.
     # Idempotente: só roda se o banco estiver sem patrimônios.

@@ -222,7 +222,8 @@ public class PatrimonioService {
         return t.isEmpty() ? null : t;
     }
 
-    private PatrimonioResponse toResponse(Patrimonio p) {
+    /** Projeção completa (com depreciação) — reutilizada pelo módulo Frota. */
+    public PatrimonioResponse toResponse(Patrimonio p) {
         return PatrimonioResponse.from(p, depreciacaoService.calcular(p));
     }
 }

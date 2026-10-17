@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head(${editando} ? 'Editar veículo' : 'Novo veículo')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="${editando} ? @{'/frota/' + ${veiculo.id}} : @{/frota}" title="Voltar">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="page-title" th:text="${editando} ? 'Editar veículo' : 'Novo veículo'">Veículo</h1>
+                <div class="page-subtitle" th:if="${editando}" th:text="${veiculo.placa} + ' · ' + ${veiculo.modelo} + ' · patrimônio #' + ${veiculo.patrimonioId}"></div>
+                <div class="page-subtitle" th:unless="${editando}">Todo veículo vira um patrimônio na categoria VEICULO.</div>
+            </div>
+        </div>
+    </div>
+
+    <form th:action="${editando} ? @{'/frota/' + ${veiculo.id}} : @{/frota}" th:object="${veiculoForm}" method="post"
+          class="card card-panel" style="overflow:hidden;">
+
+        <!-- =============== VEÍCULO =============== -->
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header('bi-truck-front', 'Dados do veículo', 'Placa e modelo são obrigatórios.')}"></div>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label required">Placa</label>
+                    <input type="text" class="form-control text-uppercase" th:field="*{placa}" maxlength="20" placeholder="QKJ-7909"
+                           th:classappend="${#fields.hasErrors('placa')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('placa')}" th:errors="*{placa}"></div>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label required">Modelo</label>
+                    <input type="text" class="form-control text-uppercase" th:field="*{modelo}" maxlength="60" placeholder="GOL 1.6"
+                           th:classappend="${#fields.hasErrors('modelo')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('modelo')}" th:errors="*{modelo}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Marca</label>
+                    <input type="text" class="form-control text-uppercase" th:field="*{marca}" maxlength="60" placeholder="VOLKSWAGEN"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Ano</label>
+                    <input type="text" class="form-control" th:field="*{ano}" maxlength="10" placeholder="2018"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Chassi</label>
+                    <input type="text" class="form-control text-uppercase" th:field="*{chassi}" maxlength="50"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Renavam</label>
+                    <input type="text" class="form-control" th:field="*{renavam}" maxlength="20"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" class="form-control text-uppercase" th:field="*{cidade}" maxlength="60" placeholder="PALMAS"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Combustível padrão</label>
+                    <select class="form-select" th:field="*{combustivelPadrao}">
+                        <option value="">— selecione —</option>
+                        <option th:each="c : ${combustiveis}" th:value="${c}" th:text="${c.rotulo}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Km atual</label>
+                    <input type="number" class="form-control" th:field="*{kmAtual}" min="0"
+                           th:classappend="${#fields.hasErrors('kmAtual')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('kmAtual')}" th:errors="*{kmAtual}"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =============== PATRIMÔNIO =============== -->
+        <div class="form-section">
+            <div th:replace="~{fragments/ui-kit :: section-header('bi-box-seam', 'Patrimônio',
+                ${editando} ? 'Dados do bem vinculado a este veículo.' : 'Vincule um patrimônio já cadastrado como VEICULO ou informe os dados para criar um novo.')}"></div>
+
+            <div class="row g-3 mb-3" th:unless="${editando}">
+                <div class="col-12">
+                    <label class="form-label">Patrimônio existente (opcional)</label>
+                    <select class="form-select" th:field="*{patrimonioId}" id="patrimonioId">
+                        <option value="">— criar um novo patrimônio com os dados abaixo —</option>
+                        <option th:each="p : ${patrimoniosDisponiveis}" th:value="${p.id}"
+                                th:text="'#' + ${p.id} + (${p.numeroTombo} != null ? ' · tombo ' + ${p.numeroTombo} : '') + ' · ' + ${p.descricao} + ' · ' + ${p.lotacaoUpm} + '/' + ${p.lotacaoNome}"></option>
+                    </select>
+                    <div class="form-text">Só aparecem patrimônios da categoria VEICULO que ainda não têm ficha de veículo.</div>
+                </div>
+            </div>
+            <input type="hidden" th:field="*{patrimonioId}" th:if="${editando}"/>
+
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Tombo</label>
+                    <input type="text" class="form-control" th:field="*{numeroTombo}" maxlength="30"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Data de aquisição</label>
+                    <input type="date" class="form-control" th:field="*{dataCompra}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Valor de aquisição (R$)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" th:field="*{valorCompra}"
+                           th:classappend="${#fields.hasErrors('valorCompra')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('valorCompra')}" th:errors="*{valorCompra}"></div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Conservação</label>
+                    <select class="form-select" th:field="*{conservacao}">
+                        <option value="">— selecione —</option>
+                        <option th:each="c : ${conservacoes}" th:value="${c}" th:text="${c}"></option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" th:classappend="${!editando} ? 'required'">Lotação</label>
+                    <select class="form-select" th:field="*{lotacaoId}">
+                        <option value="">— selecione —</option>
+                        <option th:each="l : ${lotacoes}" th:value="${l.id}" th:text="${l.upm} + ' / ' + ${l.nome}"></option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" th:classappend="${!editando} ? 'required'">Responsável</label>
+                    <select class="form-select" th:field="*{responsavelId}">
+                        <option value="">— selecione —</option>
+                        <option th:each="r : ${responsaveis}" th:value="${r.id}" th:text="${r.nomeCompleto}"></option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nota fiscal</label>
+                    <input type="text" class="form-control" th:field="*{notaFiscal}" maxlength="60"/>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Observação</label>
+                    <input type="text" class="form-control" th:field="*{observacao}" maxlength="1000"/>
+                </div>
+            </div>
+        </div>
+
+        <div class="sticky-actions">
+            <span class="actions-hint"><i class="bi bi-info-circle"></i> Campos com * são obrigatórios. Lotação e responsável são obrigatórios ao criar um patrimônio novo.</span>
+            <a class="btn btn-secondary" th:href="${editando} ? @{'/frota/' + ${veiculo.id}} : @{/frota}">Cancelar</a>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check-lg"></i> <span th:text="${editando} ? 'Salvar alterações' : 'Cadastrar veículo'"></span>
+            </button>
+        </div>
+    </form>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

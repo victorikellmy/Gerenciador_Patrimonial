@@ -56,7 +56,7 @@
     <!-- Sidebar institucional -->
     <aside class="app-sidebar" id="appSidebar" aria-label="Navegação principal">
         <div class="sidebar-brand">
-            <a class="sidebar-brand-link" th:href="@{/}">
+            <a class="sidebar-brand-link" th:href="${#authorization.expression('hasRole(''MOTORISTA'')')} ? @{/frota} : @{/}">
                 <img th:src="@{/images/logo-color.png}" alt="Fundação Pró-Tocantins"
                      class="sidebar-brand-logo sidebar-brand-logo-light"/>
                 <img th:src="@{/images/logo-white.png}" alt="Fundação Pró-Tocantins"
@@ -76,7 +76,7 @@
         </div>
 
         <nav class="sidebar-nav" data-nav-auto-active>
-            <div class="sidebar-section">
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
                 <div class="sidebar-section-title">Visão geral</div>
                 <a class="sidebar-link" th:href="@{/}" data-nav-match="/" data-nav-exact>
                     <i class="bi bi-speedometer2"></i>
@@ -85,6 +85,26 @@
             </div>
 
             <div class="sidebar-section">
+                <div class="sidebar-section-title">Frota</div>
+                <a class="sidebar-link" th:href="@{/frota}" data-nav-match="/frota" data-nav-exact>
+                    <i class="bi bi-truck-front"></i>
+                    <span class="sidebar-link-label">Veículos</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/frota/deslocamentos}" data-nav-match="/frota/deslocamentos">
+                    <i class="bi bi-signpost-2"></i>
+                    <span class="sidebar-link-label">Deslocamentos</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/frota/abastecimentos}" data-nav-match="/frota/abastecimentos">
+                    <i class="bi bi-fuel-pump"></i>
+                    <span class="sidebar-link-label">Abastecimentos</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/frota/manutencoes}" data-nav-match="/frota/manutencoes">
+                    <i class="bi bi-wrench-adjustable"></i>
+                    <span class="sidebar-link-label">Manutenções</span>
+                </a>
+            </div>
+
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
                 <div class="sidebar-section-title">Operacional</div>
                 <a class="sidebar-link" th:href="@{/pendencias}" data-nav-match="/pendencias">
                     <i class="bi bi-inbox"></i>
@@ -118,7 +138,7 @@
                 </a>
             </div>
 
-            <div class="sidebar-section">
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
                 <div class="sidebar-section-title">Análises</div>
                 <a class="sidebar-link" th:href="@{/relatorios}" data-nav-match="/relatorios">
                     <i class="bi bi-file-earmark-bar-graph"></i>
@@ -173,7 +193,7 @@
 
         <!-- Sino: bens recebidos do Almoxarifado aguardando patrimoniamento -->
         <a class="topbar-icon-btn position-relative text-decoration-none" th:href="@{/pendencias}"
-           sec:authorize="isAuthenticated()"
+           sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')"
            th:title="${pendenciasPendentes != null and pendenciasPendentes > 0}
                      ? ${pendenciasPendentes} + ' bem(ns) a patrimoniar'
                      : 'Nenhuma pendência de patrimoniamento'"

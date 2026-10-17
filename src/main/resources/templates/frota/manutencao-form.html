@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head th:replace="~{fragments/layout :: head(${editando} ? 'Editar manutenção' : 'Manutenção / revisão')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-secondary btn-icon" th:href="${veiculo != null} ? @{'/frota/' + ${veiculo.id}} : @{/frota}" title="Voltar"><i class="bi bi-arrow-left"></i></a>
+            <div>
+                <h1 class="page-title" th:text="${editando} ? 'Editar manutenção' : 'Registrar manutenção / revisão'">Manutenção</h1>
+                <div class="page-subtitle" th:if="${veiculo != null}" th:text="${veiculo.placa} + ' · ' + ${veiculo.modelo} + (${veiculo.kmAtual != null} ? ' · km atual ' + ${#numbers.formatInteger(veiculo.kmAtual, 1, 'POINT')} : '')"></div>
+            </div>
+        </div>
+    </div>
+
+    <form th:action="${editando} ? @{'/frota/manutencoes/' + ${regId}} : @{/frota/manutencoes}"
+          th:object="${manutencaoForm}" method="post" class="card card-panel" style="overflow:hidden; max-width: 900px;">
+        <div class="form-section">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label required">Veículo</label>
+                    <select class="form-select" th:field="*{veiculoId}" th:classappend="${#fields.hasErrors('veiculoId')} ? 'is-invalid'" required>
+                        <option value="">— selecione —</option>
+                        <option th:each="v : ${veiculos}" th:value="${v.id}" th:text="${v.rotulo}"></option>
+                    </select>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('veiculoId')}" th:errors="*{veiculoId}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">Data</label>
+                    <input type="date" class="form-control" th:field="*{data}" required th:classappend="${#fields.hasErrors('data')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('data')}" th:errors="*{data}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">Serviço</label>
+                    <select class="form-select" th:field="*{servico}" required th:classappend="${#fields.hasErrors('servico')} ? 'is-invalid'">
+                        <option value="">— selecione —</option>
+                        <option th:each="s : ${servicos}" th:value="${s}" th:text="${s.rotulo}"></option>
+                    </select>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('servico')}" th:errors="*{servico}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Km (odômetro)</label>
+                    <input type="number" class="form-control" th:field="*{km}" min="0" th:classappend="${#fields.hasErrors('km')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('km')}" th:errors="*{km}"></div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Valor (R$)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" th:field="*{valor}" th:classappend="${#fields.hasErrors('valor')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('valor')}" th:errors="*{valor}"></div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Descrição do serviço</label>
+                    <textarea class="form-control" th:field="*{descricao}" rows="3" maxlength="1000" placeholder="Peças trocadas, defeito apresentado, oficina..."></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Fornecedor / oficina</label>
+                    <input type="text" class="form-control" th:field="*{fornecedor}" maxlength="160"/>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Nota fiscal</label>
+                    <input type="text" class="form-control" th:field="*{notaFiscal}" maxlength="60"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Próxima revisão (km)</label>
+                    <input type="number" class="form-control" th:field="*{proximaRevisaoKm}" min="0"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Próxima revisão (data)</label>
+                    <input type="date" class="form-control" th:field="*{proximaRevisaoData}"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required">Responsável pelo registro</label>
+                    <input type="text" class="form-control" th:field="*{motorista}" maxlength="160" required th:classappend="${#fields.hasErrors('motorista')} ? 'is-invalid'"/>
+                    <div class="invalid-feedback" th:if="${#fields.hasErrors('motorista')}" th:errors="*{motorista}"></div>
+                </div>
+            </div>
+        </div>
+        <div class="sticky-actions">
+            <span class="actions-hint"><i class="bi bi-info-circle"></i> Informe a próxima revisão para o sistema avisar quando vencer.</span>
+            <a class="btn btn-secondary" th:href="${veiculo != null} ? @{'/frota/' + ${veiculo.id}} : @{/frota}">Cancelar</a>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> <span th:text="${editando} ? 'Salvar alterações' : 'Registrar'"></span></button>
+        </div>
+    </form>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

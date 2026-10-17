@@ -49,7 +49,15 @@ services:
       # senha vier definida no .env (mesmos valores de PATRIMONIO_USUARIO/SENHA lá).
       INTEGRACAO_ALMOXARIFADO_LOGIN: ${INTEGRACAO_ALMOXARIFADO_LOGIN:-integracao.almoxarifado}
       INTEGRACAO_ALMOXARIFADO_SENHA: ${INTEGRACAO_ALMOXARIFADO_SENHA:-}
+      # Frota: importação do sistema Transportes FPTO (banco "transportes" no mesmo servidor).
+      # O PostgreSQL do Transportes publica 5433 só no loopback do host → host.docker.internal.
+      TRANSPORTES_DB_URL:   ${TRANSPORTES_DB_URL:-}
+      TRANSPORTES_DB_USER:  ${TRANSPORTES_DB_USER:-transportes}
+      TRANSPORTES_DB_SENHA: ${TRANSPORTES_DB_SENHA:-}
+      TRANSPORTES_IMPORTAR_NO_BOOT: ${TRANSPORTES_IMPORTAR_NO_BOOT:-true}
       JAVA_OPTS: "-Xms512m -Xmx1g"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # Anexos vão para o servidor de armazenamento via NFS.
       - uploads_nfs:/uploads

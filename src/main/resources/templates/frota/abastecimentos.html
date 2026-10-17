@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Abastecimentos')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Abastecimentos</h1>
+            <div class="page-subtitle"><span th:text="${pagina.totalElements}">0</span> registro(s)</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <div sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')" class="d-flex gap-1">
+                <a class="btn btn-secondary" th:href="@{/frota/abastecimentos/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},formato='xlsx')}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                <a class="btn btn-secondary" th:href="@{/frota/abastecimentos/download(veiculoId=${filtro.veiculoId},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},formato='pdf')}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+            </div>
+            <a class="btn btn-primary" th:href="@{/frota/abastecimentos/novo}"><i class="bi bi-plus-lg"></i> Novo abastecimento</a>
+        </div>
+    </div>
+
+    <div th:replace="~{frota/filtro :: filtro(@{/frota/abastecimentos}, false)}"></div>
+
+    <div class="card card-panel" style="overflow:hidden;">
+        <div class="table-responsive" th:if="${!pagina.empty}">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th>Data</th><th>Veículo</th><th class="text-end">Km</th><th>Combustível</th>
+                    <th class="text-end">Litros</th><th class="text-end">Valor (R$)</th><th class="text-end">R$/litro</th>
+                    <th>Posto / cidade</th><th>Motorista</th><th class="text-end" style="width:90px;"></th>
+                </tr></thead>
+                <tbody>
+                    <tr th:each="a : ${pagina.content}">
+                        <td class="text-nowrap" th:text="${#temporals.format(a.data, 'dd/MM/yyyy')}"></td>
+                        <td><a th:href="@{'/frota/' + ${a.veiculoId}}" class="fw-semibold" th:text="${a.placa} + ' · ' + ${a.modelo}"></a></td>
+                        <td class="text-end" th:text="${a.km != null} ? ${#numbers.formatInteger(a.km, 1, 'POINT')} : '—'"></td>
+                        <td th:text="${a.combustivel.rotulo}"></td>
+                        <td class="text-end" th:text="${a.quantidadeLitros != null} ? ${#numbers.formatDecimal(a.quantidadeLitros, 1, 'POINT', 2, 'COMMA')} : '—'"></td>
+                        <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(a.valor, 1, 'POINT', 2, 'COMMA')}"></td>
+                        <td class="text-end text-muted" th:text="${a.precoLitro != null} ? ${#numbers.formatDecimal(a.precoLitro, 1, 'POINT', 3, 'COMMA')} : '—'"></td>
+                        <td th:text="${a.postoCidade} ?: '—'"></td>
+                        <td th:text="${a.motorista}"></td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                                <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/frota/abastecimentos/' + ${a.id} + '/editar'}" title="Editar"><i class="bi bi-pencil"></i></a>
+                                <form th:action="@{'/frota/abastecimentos/' + ${a.id} + '/excluir'}" method="post" class="d-inline" sec:authorize="hasRole('ADMINISTRADOR')"
+                                      onsubmit="return confirm('Excluir este abastecimento?');">
+                                    <button class="btn btn-sm btn-danger btn-icon" type="submit" title="Excluir"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div th:if="${pagina.empty}" th:replace="~{fragments/ui-kit :: empty-state('bi-fuel-pump', 'Nenhum abastecimento', 'Nenhum registro para o filtro informado.', null, null)}"></div>
+    </div>
+
+    <div th:replace="~{frota/filtro :: paginacao(@{/frota/abastecimentos})}"></div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
