@@ -1644,3 +1644,8 @@ body:has(.app-sidebar) .navbar { margin-bottom: 0 !important; }
 .table > tbody > tr.row-na-rua .cell-secondary,
 .table > tbody > tr.row-manutencao .cell-secondary { color: var(--text-secondary) !important; }
 .alert .alert-link { color: inherit; text-decoration: underline; font-weight: 600; }
+/* Bootstrap aplica --bs-body-color (tema claro) dentro de .card; nos cards do tema escuro
+   o texto comum (dl, p) ficava quase invisível. Força os tokens do app. */
+.card, .card-body { color: var(--text-primary); }
+.card dl dt { color: var(--text-secondary); font-weight: 500; }
+.card dl dd { color: var(--text-primary); }
