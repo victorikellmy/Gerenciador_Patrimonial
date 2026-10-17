@@ -57,10 +57,10 @@ function Perfis({ perfis }: { perfis: Perfil[] }) {
   return <Outlet />
 }
 
+/** Raiz: o dashboard para quem tem leitura; motorista (sem dashboard) vai para a frota. */
 function Inicio() {
   const { usuario } = useAuth()
-  const destino = destinoInicial(usuario?.perfil)
-  return destino === '/' ? <Dashboard /> : <Navigate to={destino} replace />
+  return usuario?.perfil === 'MOTORISTA' ? <Navigate to="/frota" replace /> : <Dashboard />
 }
 
 export default function App() {

@@ -29,6 +29,21 @@
    da tabela (aparece um bloco solto). Em célula, mantém table-cell e só corta o texto. */
 td.texto-limitado { display: table-cell; vertical-align: inherit; }
 
+/* Gráfico de rosca com legenda em tabela (components/Rosca.tsx) */
+.rosca { display: flex; flex-direction: column; gap: var(--space-4); }
+.rosca-grafico { position: relative; height: 220px; }
+.rosca-centro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.rosca-total { font-size: 1.6rem; font-weight: 700; line-height: 1; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.rosca-unidade { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-top: 4px; }
+.rosca-legenda { width: 100%; font-size: 0.8rem; color: var(--text-primary); border-collapse: collapse; }
+.rosca-legenda td { padding: 5px 4px; border-top: 1px solid var(--border); white-space: nowrap; }
+.rosca-legenda td:first-child { white-space: normal; }
+.rosca-legenda tr:first-child td { border-top: none; }
+.rosca-cor { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
+.rosca-qtd { font-weight: 600; font-variant-numeric: tabular-nums; }
+.rosca-pct { color: var(--text-muted); font-variant-numeric: tabular-nums; width: 56px; }
+.grafico-barras { height: 260px; }
+
 /* Botões de ação com texto escondido em telas pequenas */
 .btn-check-item { min-width: 42px; }
 .lista-ocorrencias .foto-mini { width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-sm); }

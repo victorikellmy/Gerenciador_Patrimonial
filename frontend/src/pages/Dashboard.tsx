@@ -1,14 +1,31 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Doughnut, Bar } from 'react-chartjs-2'
-import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
+import { Bar } from 'react-chartjs-2'
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip } from 'chart.js'
 import { api } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import { Card, Carregando, Erro, Kpi, PageHeader } from '../components/ui'
-import { data, moeda, numero, rotulo } from '../utils/format'
+import Rosca, { type FatiaRosca } from '../components/Rosca'
+import { data, moeda, numero, rotulo, CONSERVACOES, SITUACOES } from '../utils/format'
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
-const CORES = ['#1f6f5f', '#2e8b74', '#4ea58b', '#7cc1a8', '#f4b740', '#e07a3f', '#c94c4c', '#6c757d', '#3b82f6', '#8b5cf6']
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip)
+
+// Cores com significado: verde = em uso/bom, âmbar = atenção, vermelho = problema, cinza = fora de uso / sem dado.
+const COR_SITUACAO: Record<string, string> = { ATIVO: '#2e8b74', MANUTENCAO: '#f4b740', CAUTELADO: '#3b82f6', EM_APURACAO: '#c94c4c', BAIXADO: '#6c757d' }
+const COR_CONSERVACAO: Record<string, string> = { NOVO: '#1f6f5f', OTIMO: '#2e8b74', BOM: '#4ea58b', BOM_REGULAR: '#8fcf4a', REGULAR: '#f4b740', REGULAR_RUIM: '#f08c2e', RUIM: '#e0533f', INSERVIVEL: '#a12c2c' }
+const COR_SEM_INFO = '#8a94a6'
+const corTexto = (token: string) => getComputedStyle(document.documentElement).getPropertyValue(token).trim() || '#888'
+
+function fatiasSituacao(cont: Record<string, number>): FatiaRosca[] {
+  const ordem = [...SITUACOES, ...Object.keys(cont).filter(k => !(SITUACOES as readonly string[]).includes(k))]
+  return ordem.map(k => ({ chave: k, rotulo: rotulo(k), quantidade: cont[k] ?? 0, cor: COR_SITUACAO[k] ?? COR_SEM_INFO }))
+}
+function fatiasConservacao(lista: { chave: string; quantidade: number }[]): FatiaRosca[] {
+  const porChave = Object.fromEntries(lista.map(a => [a.chave, a.quantidade]))
+  const conhecidas = CONSERVACOES.map(k => ({ chave: k, rotulo: rotulo(k), quantidade: porChave[k] ?? 0, cor: COR_CONSERVACAO[k] }))
+  const outras = lista.filter(a => !(CONSERVACOES as readonly string[]).includes(a.chave)).map(a => ({ chave: a.chave || 'SEM', rotulo: a.chave && a.chave !== '(não informado)' ? rotulo(a.chave) : 'Não informado', quantidade: a.quantidade, cor: COR_SEM_INFO }))
+  return [...conhecidas, ...outras]
+}
 
 export default function Dashboard() {
   const { temPerfil } = useAuth()
@@ -35,18 +52,23 @@ export default function Dashboard() {
       </div>
       <div className="row g-3 mb-4">
         <div className="col-lg-4">
-          <Card className="h-100"><div className="card-body"><h6 className="section-title mb-3">Por situação</h6>
-            <Doughnut data={{ labels: Object.keys(d.contagemPorSituacao).map(rotulo), datasets: [{ data: Object.values(d.contagemPorSituacao), backgroundColor: CORES }] }} options={{ plugins: { legend: { position: 'bottom' } } }} />
+          <Card className="h-100"><div className="card-body"><h6 className="section-title mb-1">Por situação</h6><div className="small text-muted mb-3">Em que estado operacional os bens estão.</div>
+            <Rosca fatias={fatiasSituacao(d.contagemPorSituacao)} />
           </div></Card>
         </div>
         <div className="col-lg-4">
-          <Card className="h-100"><div className="card-body"><h6 className="section-title mb-3">Por estado de conservação</h6>
-            <Doughnut data={{ labels: d.porConservacao.map(a => rotulo(a.chave)), datasets: [{ data: d.porConservacao.map(a => a.quantidade), backgroundColor: CORES }] }} options={{ plugins: { legend: { position: 'bottom' } } }} />
+          <Card className="h-100"><div className="card-body"><h6 className="section-title mb-1">Por estado de conservação</h6><div className="small text-muted mb-3">Do melhor (verde) ao pior (vermelho).</div>
+            <Rosca fatias={fatiasConservacao(d.porConservacao)} />
           </div></Card>
         </div>
         <div className="col-lg-4">
-          <Card className="h-100"><div className="card-body"><h6 className="section-title mb-3">Top UPMs</h6>
-            <Bar data={{ labels: d.topUpms.map(a => a.chave), datasets: [{ label: 'Bens', data: d.topUpms.map(a => a.quantidade), backgroundColor: '#1f6f5f' }] }} options={{ indexAxis: 'y', plugins: { legend: { display: false } } }} />
+          <Card className="h-100"><div className="card-body"><h6 className="section-title mb-1">Unidades com mais bens</h6><div className="small text-muted mb-3">Quantidade de bens por UPM.</div>
+            <div className="grafico-barras">
+              <Bar data={{ labels: d.topUpms.map(a => a.chave), datasets: [{ label: 'Bens', data: d.topUpms.map(a => a.quantidade), backgroundColor: '#2e8b74', borderRadius: 4 }] }}
+                   options={{ indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${numero(ctx.parsed.x)} bens` } } },
+                     scales: { x: { ticks: { color: corTexto('--text-muted') }, grid: { color: corTexto('--border') } }, y: { ticks: { color: corTexto('--text-primary'), autoSkip: false, callback: (_v, i) => { const l = d.topUpms[i]?.chave ?? ''; return l.length > 14 ? l.slice(0, 13) + '…' : l } }, grid: { display: false } } } }} />
+            </div>
+            <ul className="list-unstyled small mb-0 mt-3">{d.topUpms.map(a => <li key={a.chave} className="d-flex justify-content-between border-top py-1"><span>{a.chave}</span><strong>{numero(a.quantidade)}</strong></li>)}</ul>
           </div></Card>
         </div>
       </div>
