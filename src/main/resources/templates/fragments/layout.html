@@ -56,7 +56,7 @@
     <!-- Sidebar institucional -->
     <aside class="app-sidebar" id="appSidebar" aria-label="Navegação principal">
         <div class="sidebar-brand">
-            <a class="sidebar-brand-link" th:href="${#authorization.expression('hasRole(''MOTORISTA'')')} ? @{/frota} : @{/}">
+            <a class="sidebar-brand-link" th:href="${#authorization.expression('hasRole(''MOTORISTA'')')} ? @{/frota} : (${#authorization.expression('hasAnyRole(''PRESIDENTE'',''FINANCEIRO'')')} ? @{/diarias} : @{/})">
                 <img th:src="@{/images/logo-color.png}" alt="Fundação Pró-Tocantins"
                      class="sidebar-brand-logo sidebar-brand-logo-light"/>
                 <img th:src="@{/images/logo-white.png}" alt="Fundação Pró-Tocantins"
@@ -76,7 +76,7 @@
         </div>
 
         <nav class="sidebar-nav" data-nav-auto-active>
-            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE')">
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE','PRESIDENTE','FINANCEIRO')">
                 <div class="sidebar-section-title">Visão geral</div>
                 <a class="sidebar-link" th:href="@{/}" data-nav-match="/" data-nav-exact>
                     <i class="bi bi-speedometer2"></i>
@@ -84,7 +84,7 @@
                 </a>
             </div>
 
-            <div class="sidebar-section">
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE','MOTORISTA')">
                 <div class="sidebar-section-title">Frota</div>
                 <a class="sidebar-link" th:href="@{/frota/gestao}" data-nav-match="/frota/gestao"
                    sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE')">
@@ -106,6 +106,35 @@
                 <a class="sidebar-link" th:href="@{/frota/manutencoes}" data-nav-match="/frota/manutencoes">
                     <i class="bi bi-wrench-adjustable"></i>
                     <span class="sidebar-link-label">Manutenções</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/frota/cautelas}" data-nav-match="/frota/cautelas">
+                    <i class="bi bi-key"></i>
+                    <span class="sidebar-link-label">Cautelas</span>
+                </a>
+            </div>
+
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','PRESIDENTE','FINANCEIRO','GERENTE')">
+                <div class="sidebar-section-title">Diárias</div>
+                <a class="sidebar-link" th:href="@{/diarias}" data-nav-match="/diarias" data-nav-exact>
+                    <i class="bi bi-cash-coin"></i>
+                    <span class="sidebar-link-label">Solicitações</span>
+                    <span class="badge rounded-pill text-bg-warning ms-auto badge-plain"
+                          th:if="${diariasPendentes != null and diariasPendentes > 0}"
+                          th:text="${diariasPendentes}" th:title="${diariasPendentes} + ' diária(s) aguardando sua ação'">0</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/diarias/pagas}" data-nav-match="/diarias/pagas">
+                    <i class="bi bi-receipt-cutoff"></i>
+                    <span class="sidebar-link-label">Diárias pagas</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/diarias/profissionais}" data-nav-match="/diarias/profissionais"
+                   sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                    <i class="bi bi-person-vcard"></i>
+                    <span class="sidebar-link-label">Profissionais</span>
+                </a>
+                <a class="sidebar-link" th:href="@{/diarias/niveis}" data-nav-match="/diarias/niveis"
+                   sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                    <i class="bi bi-table"></i>
+                    <span class="sidebar-link-label">Tabela de valores</span>
                 </a>
             </div>
 
@@ -143,7 +172,7 @@
                 </a>
             </div>
 
-            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE')">
+            <div class="sidebar-section" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL','GERENTE','PRESIDENTE','FINANCEIRO')">
                 <div class="sidebar-section-title">Análises</div>
                 <a class="sidebar-link" th:href="@{/patrimonios}" data-nav-match="/patrimonios" sec:authorize="hasRole('GERENTE')">
                     <i class="bi bi-box-seam"></i>

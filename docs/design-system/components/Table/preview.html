@@ -1,0 +1,63 @@
+<!-- @dsCard group="Dados" height=300 subtitle="Listagem padrão dentro de card-panel, com cell-stack, badges e ações" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;padding:var(--space-5) var(--space-6)}</style>
+</head>
+<body>
+<div class="card card-panel" style="overflow:hidden">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th style="width:120px">Tombo</th>
+          <th>Descrição</th>
+          <th>Lotação</th>
+          <th class="text-end">Valor (R$)</th>
+          <th>Situação</th>
+          <th class="text-end" style="width:160px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="chip-tombo">PM-00123</span></td>
+          <td><div class="cell-stack"><span class="cell-primary">Notebook Dell Latitude 5440</span><span class="cell-secondary">COMPUTADOR · Sgt. João Silva</span></div></td>
+          <td><div class="cell-stack"><span class="cell-primary">NÚCLEO DE SAÚDE</span><span class="cell-secondary">5 BPM</span></div></td>
+          <td class="text-end tabular-nums">4.350,00</td>
+          <td><span class="badge badge-sit ATIVO badge-plain">ATIVO</span></td>
+          <td class="text-end"><div class="d-inline-flex gap-1">
+            <a class="btn btn-sm btn-secondary btn-icon" href="#" title="Editar"><i class="bi bi-pencil"></i></a>
+            <a class="btn btn-sm btn-secondary btn-icon" href="#" title="Movimentar"><i class="bi bi-arrow-left-right"></i></a>
+            <a class="btn btn-sm btn-secondary btn-icon" href="#" title="Histórico"><i class="bi bi-clock-history"></i></a>
+          </div></td>
+        </tr>
+        <tr>
+          <td><span class="chip-tombo">PM-00098</span></td>
+          <td><div class="cell-stack"><span class="cell-primary">Ar-condicionado split 18.000 BTU</span><span class="cell-secondary">EQUIPAMENTO · Cap. Maria Souza</span></div></td>
+          <td><div class="cell-stack"><span class="cell-primary">ADMINISTRACAO</span><span class="cell-secondary">1 BPM</span></div></td>
+          <td class="text-end tabular-nums">2.899,90</td>
+          <td><span class="badge badge-sit MANUTENCAO badge-plain">MANUTENCAO</span></td>
+          <td class="text-end"><div class="d-inline-flex gap-1">
+            <a class="btn btn-sm btn-secondary btn-icon" href="#" title="Editar"><i class="bi bi-pencil"></i></a>
+            <a class="btn btn-sm btn-secondary btn-icon" href="#" title="Movimentar"><i class="bi bi-arrow-left-right"></i></a>
+            <a class="btn btn-sm btn-secondary btn-icon" href="#" title="Histórico"><i class="bi bi-clock-history"></i></a>
+          </div></td>
+        </tr>
+        <tr>
+          <td><span class="chip-tombo">—</span></td>
+          <td><div class="cell-stack"><span class="cell-primary">Cadeira giratória</span><span class="cell-secondary">MOVEIS · ID #412</span></div></td>
+          <td><div class="cell-stack"><span class="cell-primary">CONS. ODONTO</span><span class="cell-secondary">2 BPM ARAGUAINA</span></div></td>
+          <td class="text-end tabular-nums">389,00</td>
+          <td><span class="badge badge-sit BAIXADO badge-plain">BAIXADO</span></td>
+          <td class="text-end"><div class="d-inline-flex gap-1">
+            <a class="btn btn-sm btn-secondary btn-icon" href="#" title="Ver"><i class="bi bi-eye"></i></a>
+          </div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

@@ -37,6 +37,7 @@ import java.sql.Statement;
 import java.sql.Time;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -87,9 +88,16 @@ public class ImportadorTransportesService {
     }
 
     public record Resultado(int veiculosNovos, int veiculosExistentes, int abastecimentos, int manutencoes,
-                            int deslocamentos, int ignorados) {
-        public int total() { return abastecimentos + manutencoes + deslocamentos; }
+                            int deslocamentos, int ignorados, int profissionais, int diarias, int cautelas, int titulares) {
+        public int total() { return abastecimentos + manutencoes + deslocamentos + diarias + cautelas; }
     }
+
+    private final com.fundacao.gerenciador_patrimonial.repository.NivelDiariaRepository nivelRepo;
+    private final com.fundacao.gerenciador_patrimonial.repository.ProfissionalRepository profissionalRepo;
+    private final com.fundacao.gerenciador_patrimonial.repository.DiariaRepository diariaRepo;
+    private final com.fundacao.gerenciador_patrimonial.repository.DiariaHistoricoRepository historicoRepo;
+    private final com.fundacao.gerenciador_patrimonial.repository.CautelaRepository cautelaRepo;
+    private final com.fundacao.gerenciador_patrimonial.repository.TitularRepository titularRepo;
 
     /** Conecta no banco do Transportes e importa tudo que ainda não existe aqui. */
     @Transactional
@@ -104,12 +112,20 @@ public class ImportadorTransportesService {
             importarAbastecimentos(con, porIdLegado, contadores);
             importarManutencoes(con, porIdLegado, contadores);
             importarDeslocamentos(con, porIdLegado, contadores);
+            int[] extras = new int[4]; // profissionais, diarias, cautelas, titulares
+            Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.NivelDiaria> niveis = importarNiveis(con);
+            Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.Profissional> profissionais = importarProfissionais(con, niveis, extras);
+            importarDiarias(con, profissionais, extras);
+            importarCautelas(con, porIdLegado, extras);
+            importarTitulares(con, extras);
 
-            Resultado r = new Resultado(veiculos[0], veiculos[1], contadores[0], contadores[1], contadores[2], contadores[3]);
+            Resultado r = new Resultado(veiculos[0], veiculos[1], contadores[0], contadores[1], contadores[2], contadores[3],
+                    extras[0], extras[1], extras[2], extras[3]);
             auditoriaService.registrar(AcaoAuditoria.FROTA, "Veiculo", null,
-                    "Importação do Transportes: %d veículo(s) novo(s), %d já existente(s), %d abastecimento(s), %d manutenção(ões), %d deslocamento(s), %d ignorado(s)"
+                    ("Importação do Transportes: %d veículo(s) novo(s), %d já existente(s), %d abastecimento(s), %d manutenção(ões), " +
+                     "%d deslocamento(s), %d ignorado(s), %d profissional(is), %d diária(s), %d cautela(s), %d titular(es)")
                             .formatted(r.veiculosNovos(), r.veiculosExistentes(), r.abastecimentos(), r.manutencoes(),
-                                       r.deslocamentos(), r.ignorados()));
+                                       r.deslocamentos(), r.ignorados(), r.profissionais(), r.diarias(), r.cautelas(), r.titulares()));
             log.info("Importação do Transportes concluída: {}", r);
             return r;
         } catch (SQLException e) {
@@ -266,6 +282,186 @@ public class ImportadorTransportesService {
                 c[2]++;
             }
         }
+    }
+
+    // ------------------------------------------------------------------ diárias / cautelas / titulares
+
+    private Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.NivelDiaria> importarNiveis(Connection con) throws SQLException {
+        Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.NivelDiaria> mapa = new HashMap<>();
+        try (Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery("select id, descricao, valor_capitais, valor_interior_estado, valor_interior_outro_estado, ativo from nivel_diaria order by id")) {
+            while (rs.next()) {
+                int idLegado = rs.getInt("id");
+                var existente = nivelRepo.findByIdTransportes(idLegado).orElse(null);
+                if (existente == null) {
+                    existente = nivelRepo.save(com.fundacao.gerenciador_patrimonial.domain.entity.NivelDiaria.builder()
+                            .descricao(truncar(limparOu(rs.getString("descricao"), "Nível " + idLegado), 160))
+                            .valorCapitais(nz(rs.getBigDecimal("valor_capitais")))
+                            .valorInteriorEstado(nz(rs.getBigDecimal("valor_interior_estado")))
+                            .valorInteriorOutroEstado(nz(rs.getBigDecimal("valor_interior_outro_estado")))
+                            .ativo(rs.getBoolean("ativo"))
+                            .idTransportes(idLegado)
+                            .build());
+                }
+                mapa.put(idLegado, existente);
+            }
+        }
+        return mapa;
+    }
+
+    private Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.Profissional> importarProfissionais(
+            Connection con, Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.NivelDiaria> niveis, int[] c) throws SQLException {
+        Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.Profissional> mapa = new HashMap<>();
+        String sql = "select id, matricula, nome, lotacao, nivel_diaria_id, cpf, rg, orgao_expedidor, dados_bancarios, ativo, cadastrado_por from profissional order by id";
+        try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                int idLegado = rs.getInt("id");
+                var existente = profissionalRepo.findByIdTransportes(idLegado).orElse(null);
+                if (existente == null) {
+                    var nivel = niveis.get(rs.getInt("nivel_diaria_id"));
+                    if (nivel == null) continue;
+                    String cpf = DiariaService.formatarCpf(rs.getString("cpf"));
+                    existente = profissionalRepo.save(com.fundacao.gerenciador_patrimonial.domain.entity.Profissional.builder()
+                            .matricula(truncar(limpar(rs.getString("matricula")), 30))
+                            .nome(truncar(limparOu(rs.getString("nome"), "SEM NOME").toUpperCase(), 160))
+                            .lotacao(truncar(limpar(rs.getString("lotacao")), 60))
+                            .nivel(nivel)
+                            .cpf(cpf != null ? cpf : truncar(limparOu(rs.getString("cpf"), "000.000.000-00"), 14))
+                            .rg(truncar(limpar(rs.getString("rg")), 30))
+                            .orgaoExpedidor(truncar(limpar(rs.getString("orgao_expedidor")), 30))
+                            .dadosBancarios(truncar(limpar(rs.getString("dados_bancarios")), 160))
+                            .ativo(rs.getBoolean("ativo"))
+                            .cadastradoPor(truncar(limpar(rs.getString("cadastrado_por")), 160))
+                            .idTransportes(idLegado)
+                            .build());
+                    c[0]++;
+                }
+                mapa.put(idLegado, existente);
+            }
+        }
+        return mapa;
+    }
+
+    private void importarDiarias(Connection con, Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.Profissional> profissionais, int[] c) throws SQLException {
+        String sql = "select id, data_solicitacao, profissional_id, itinerario, hora_saida, meio_transporte, partida, retorno, hora_chegada, " +
+                     "recurso, numero_diarias, valor_unitario, valor_total, finalidade, solicitante, status, data_pagamento, motivo_indeferimento, criado_em " +
+                     "from diaria order by id";
+        Map<Integer, com.fundacao.gerenciador_patrimonial.domain.entity.Diaria> novas = new HashMap<>();
+        try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                int idLegado = rs.getInt("id");
+                if (diariaRepo.findByIdTransportes(idLegado).isPresent()) continue;
+                var prof = profissionais.get(rs.getInt("profissional_id"));
+                if (prof == null) continue;
+                Time saida = rs.getTime("hora_saida");
+                Time chegada = rs.getTime("hora_chegada");
+                java.sql.Timestamp criado = rs.getTimestamp("criado_em");
+                BigDecimal nDiarias = nz(rs.getBigDecimal("numero_diarias"));
+                BigDecimal unit = nz(rs.getBigDecimal("valor_unitario"));
+                BigDecimal total = rs.getBigDecimal("valor_total");
+                var d = com.fundacao.gerenciador_patrimonial.domain.entity.Diaria.builder()
+                        .dataSolicitacao(data(rs.getDate("data_solicitacao")))
+                        .profissional(prof)
+                        .itinerario(truncar(limparOu(rs.getString("itinerario"), "—"), 200))
+                        .horaSaida(saida != null ? saida.toLocalTime() : null)
+                        .meioTransporte(com.fundacao.gerenciador_patrimonial.domain.enums.MeioTransporte.de(rs.getString("meio_transporte")))
+                        .partida(data(rs.getDate("partida")))
+                        .retorno(data(rs.getDate("retorno")))
+                        .horaChegada(chegada != null ? chegada.toLocalTime() : null)
+                        .recurso(com.fundacao.gerenciador_patrimonial.domain.enums.RecursoDiaria.de(rs.getString("recurso")))
+                        .numeroDiarias(nDiarias)
+                        .valorUnitario(unit)
+                        .valorTotal(total != null ? total : nDiarias.multiply(unit))
+                        .finalidade(truncar(limpar(rs.getString("finalidade")), 2000))
+                        .solicitante(truncar(limparOu(rs.getString("solicitante"), "Transportes FPTO"), 160))
+                        .status(com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.de(rs.getString("status")))
+                        .dataPagamento(rs.getDate("data_pagamento") != null ? rs.getDate("data_pagamento").toLocalDate() : null)
+                        .motivoIndeferimento(truncar(limpar(rs.getString("motivo_indeferimento")), 500))
+                        .criadoEm(criado != null ? criado.toLocalDateTime() : null)
+                        .idTransportes(idLegado)
+                        .build();
+                novas.put(idLegado, diariaRepo.save(d));
+                c[1]++;
+            }
+        }
+        if (novas.isEmpty()) return;
+        String hist = "select diaria_id, de_status, para_status, usuario, instante, observacao from diaria_historico order by id";
+        try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(hist)) {
+            while (rs.next()) {
+                var d = novas.get(rs.getInt("diaria_id"));
+                if (d == null) continue;
+                java.sql.Timestamp inst = rs.getTimestamp("instante");
+                historicoRepo.save(com.fundacao.gerenciador_patrimonial.domain.entity.DiariaHistorico.builder()
+                        .diaria(d)
+                        .deStatus(rs.getString("de_status") != null ? com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.de(rs.getString("de_status")) : null)
+                        .paraStatus(com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.de(rs.getString("para_status")))
+                        .usuario(truncar(limparOu(rs.getString("usuario"), "Transportes FPTO"), 160))
+                        .instante(inst != null ? inst.toLocalDateTime() : LocalDate.now().atStartOfDay())
+                        .observacao(truncar(limpar(rs.getString("observacao")), 500))
+                        .build());
+            }
+        }
+    }
+
+    private void importarCautelas(Connection con, Map<Integer, Veiculo> veiculos, int[] c) throws SQLException {
+        String sql = "select c.id, c.veiculo_id, c.destino, c.motivo, c.responsavel, c.assistido, c.hora_saida, c.km_inicial, c.hora_chegada, c.km_final, " +
+                     "c.data_viagem, c.motorista_nome, c.rg, c.cpf, c.fone, c.lotacao, u.login from cautela c left join usuario u on u.id = c.usuario_id order by c.id";
+        try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) {
+                int idLegado = rs.getInt("id");
+                if (cautelaRepo.findByIdTransportes(idLegado).isPresent()) continue;
+                Veiculo v = veiculos.get(rs.getInt("veiculo_id"));
+                if (v == null) continue;
+                Time saida = rs.getTime("hora_saida");
+                Time chegada = rs.getTime("hora_chegada");
+                cautelaRepo.save(com.fundacao.gerenciador_patrimonial.domain.entity.Cautela.builder()
+                        .veiculo(v)
+                        .dataViagem(data(rs.getDate("data_viagem")))
+                        .destino(truncar(limparOu(rs.getString("destino"), "—"), 160))
+                        .motivo(truncar(limparOu(rs.getString("motivo"), "Cautela"), 60))
+                        .responsavel(truncar(limpar(rs.getString("responsavel")), 160))
+                        .assistido(truncar(limpar(rs.getString("assistido")), 160))
+                        .horaSaida(saida != null ? saida.toLocalTime() : null)
+                        .kmInicial(inteiro(rs, "km_inicial"))
+                        .horaChegada(chegada != null ? chegada.toLocalTime() : null)
+                        .kmFinal(inteiro(rs, "km_final"))
+                        .motoristaNome(truncar(limparOu(rs.getString("motorista_nome"), "NÃO INFORMADO"), 160))
+                        .rg(truncar(limpar(rs.getString("rg")), 30))
+                        .cpf(truncar(limpar(rs.getString("cpf")), 14))
+                        .fone(truncar(limpar(rs.getString("fone")), 25))
+                        .lotacao(truncar(limpar(rs.getString("lotacao")), 60))
+                        .registradoPor(limpar(rs.getString("login")))
+                        .idTransportes(idLegado)
+                        .build());
+                c[2]++;
+            }
+        }
+    }
+
+    private void importarTitulares(Connection con, int[] c) throws SQLException {
+        java.util.Set<Integer> existentes = new java.util.HashSet<>();
+        for (var t : titularRepo.findAll()) if (t.getIdTransportes() != null) existentes.add(t.getIdTransportes());
+        List<com.fundacao.gerenciador_patrimonial.domain.entity.Titular> lote = new java.util.ArrayList<>();
+        try (Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery("select id, posto_graduacao, tipo_cadastro, matricula, vinculo, nome, cpf from titular order by id")) {
+            while (rs.next()) {
+                int idLegado = rs.getInt("id");
+                if (existentes.contains(idLegado)) continue;
+                String nome = limpar(rs.getString("nome"));
+                if (nome == null) continue;
+                lote.add(com.fundacao.gerenciador_patrimonial.domain.entity.Titular.builder()
+                        .postoGraduacao(inteiro(rs, "posto_graduacao"))
+                        .tipoCadastro(truncar(limpar(rs.getString("tipo_cadastro")), 1))
+                        .matricula(truncar(limpar(rs.getString("matricula")), 20))
+                        .vinculo(truncar(limpar(rs.getString("vinculo")), 2))
+                        .nome(truncar(nome, 120))
+                        .cpf(truncar(limpar(rs.getString("cpf")), 15))
+                        .idTransportes(idLegado)
+                        .build());
+                if (lote.size() >= 500) { titularRepo.saveAll(lote); c[3] += lote.size(); lote.clear(); }
+            }
+        }
+        if (!lote.isEmpty()) { titularRepo.saveAll(lote); c[3] += lote.size(); }
     }
 
     // ------------------------------------------------------------------ apoio

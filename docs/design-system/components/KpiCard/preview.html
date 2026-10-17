@@ -1,0 +1,52 @@
+<!-- @dsCard group="Dados" height=200 subtitle="Cards de indicador do dashboard e do guia de levantamento" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>body{margin:0;padding:var(--space-5) var(--space-6)}</style>
+</head>
+<body>
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card card-panel card-hover h-100"><div class="card-body">
+      <div class="d-flex align-items-start gap-3">
+        <div class="kpi-icon kpi-icon-primary"><i class="bi bi-box-seam"></i></div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="kpi-label">Total de patrimônios</div>
+          <div class="kpi-value tabular-nums">1.312</div>
+          <div class="kpi-delta">
+            <span class="badge badge-sit ATIVO badge-plain">1.284 ativos</span>
+            <span class="badge badge-sit BAIXADO badge-plain">28 baixados</span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-panel h-100"><div class="card-body">
+      <div class="d-flex align-items-start gap-3">
+        <div class="kpi-icon kpi-icon-success"><i class="bi bi-cash-stack"></i></div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="kpi-label">Valor dos ativos</div>
+          <div class="kpi-value tabular-nums"><span class="kpi-currency">R$</span> 2.418.930,55</div>
+          <div class="kpi-delta text-muted small">VCL R$ 1.102.400,10</div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-panel h-100"><div class="card-body">
+      <div class="d-flex align-items-start gap-3">
+        <div class="kpi-icon kpi-icon-warning"><i class="bi bi-exclamation-triangle"></i></div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="kpi-label">Avariados</div>
+          <div class="kpi-value tabular-nums">17</div>
+          <div class="progress mt-2" style="height:6px"><div class="progress-bar" style="width:62%"></div></div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</div>
+</body>
+</html>

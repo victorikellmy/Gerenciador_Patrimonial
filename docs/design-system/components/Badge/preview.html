@@ -1,0 +1,35 @@
+<!-- @dsCard group="Dados" height=210 subtitle="Situação do bem, resultado da conferência, chip de tombo e filtros" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>body{margin:0;padding:var(--space-5) var(--space-6)} .row-demo{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;margin-bottom:var(--space-4)} .lbl{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);width:100%;margin-bottom:var(--space-1)}</style>
+</head>
+<body>
+<div class="row-demo">
+  <div class="lbl">Situação do patrimônio (badge-sit)</div>
+  <span class="badge badge-sit ATIVO badge-plain">ATIVO</span>
+  <span class="badge badge-sit MANUTENCAO badge-plain">MANUTENCAO</span>
+  <span class="badge badge-sit CAUTELADO badge-plain">CAUTELADO</span>
+  <span class="badge badge-sit BAIXADO badge-plain">BAIXADO</span>
+</div>
+<div class="row-demo">
+  <div class="lbl">Resultado da conferência (badge-res)</div>
+  <span class="badge badge-res PENDENTE badge-plain">Pendente</span>
+  <span class="badge badge-res OK badge-plain">OK</span>
+  <span class="badge badge-res AVARIADO badge-plain">Avariado</span>
+  <span class="badge badge-res NAO_LOCALIZADO badge-plain">Não localizado</span>
+  <span class="badge text-bg-info badge-plain">Em andamento</span>
+  <span class="badge text-bg-success badge-plain">Concluído</span>
+</div>
+<div class="row-demo">
+  <div class="lbl">Tombo, contagem e filtro ativo</div>
+  <span class="chip-tombo">PM-00123</span>
+  <span class="chip-tombo">2026</span>
+  <span class="badge rounded-pill text-bg-danger badge-plain">3</span>
+  <span class="filter-chip"><span class="chip-label">UPM:</span> <strong>5 BPM</strong> <a href="#" title="Remover filtro"><i class="bi bi-x-lg"></i></a></span>
+  <span class="filter-chip"><span class="chip-label">Situação:</span> <strong>Ativo</strong> <a href="#" title="Remover filtro"><i class="bi bi-x-lg"></i></a></span>
+</div>
+</body>
+</html>

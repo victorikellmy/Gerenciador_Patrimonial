@@ -18,12 +18,19 @@ host) ou como database dentro do protocantins-db (compose.banco-existente.yaml).
 deploy/README.md, docker-compose.yml, .env.example e docs/PROMPT_SERVIDOR_FROTA.md do Patrimônio.
 
 O QUE MUDA NESTA VERSÃO
-- Migrations Flyway V8 (frota) e V9 (nota fiscal dos lançamentos) rodam sozinhas no boot.
-- Novos perfis de usuário: MOTORISTA (só lança abastecimento/manutenção/saída, com NF
-  obrigatória) e GERENTE (somente leitura: painel /frota/gestao, dashboard, relatórios).
+- Migrations Flyway V8 (frota), V9 (nota fiscal dos lançamentos) e V10 (diárias, cautelas,
+  titulares) rodam sozinhas no boot. O Patrimônio agora tem TUDO que o Transportes tinha:
+  frota (saídas, abastecimentos, manutenções, cautelas com termo PDF), diárias com o fluxo
+  solicitada → confirmada → deferida/indeferida → paga, profissionais, tabela de valores e a
+  base de titulares para autocomplete.
+- Novos perfis de usuário: MOTORISTA (só lança na frota, com NF obrigatória), GERENTE
+  (somente leitura: painel /frota/gestao, dashboard, relatórios), PRESIDENTE (defere/indefere
+  diárias) e FINANCEIRO (registra pagamento de diárias). ADMINISTRADOR confirma diárias;
+  ADMINISTRADOR/FISCAL abrem e editam.
 - Importador do Transportes: com TRANSPORTES_DB_URL/USER/SENHA no .env, o Patrimônio lê o
   banco do Transportes no boot (e pelo botão "Importar do Transportes", como admin) e copia
-  veículos + abastecimentos + manutenções + deslocamentos sem duplicar (idempotente).
+  veículos, abastecimentos, manutenções, deslocamentos, níveis de diária, profissionais,
+  diárias (com histórico), cautelas e os ~4.300 titulares, sem duplicar (idempotente).
 - NÃO ligar FROTA_SEED em produção (é só dado de demonstração).
 
 PASSO A PASSO
@@ -54,19 +61,22 @@ PASSO A PASSO
    "Importação do Transportes concluída: Resultado[veiculosNovos=..., abastecimentos=..., ...]".
    Se aparecer "Falha ao ler o banco do Transportes", corrija a URL/senha/rede e reinicie só o app.
 5. Confira no banco do Patrimônio: select count(*) from veiculo; from frota_abastecimento;
-   from frota_manutencao; from frota_deslocamento — os números devem bater com as tabelas
-   veiculo/abastecimento/manutencao/deslocamento do Transportes (veículos inativos duplicados
-   do legado são ignorados de propósito). Confira também que cada veículo virou um patrimônio
-   (select count(*) from patrimonio where categoria = 'VEICULO').
-6. Usuários (como admin, em Administração → Usuários do Patrimônio):
-   - crie um usuário por motorista com perfil MOTORISTA (os logins do Transportes NÃO migram:
-     o Patrimônio tem a própria tabela de usuários);
-   - crie o(s) gerente(s) com perfil GERENTE;
-   - ajuste a lotação/responsável dos veículos importados (entram em "FROTA / <cidade>" com
-     responsável "SETOR DE TRANSPORTES - FPTO").
-7. Validação funcional com um motorista: entrar, registrar uma saída, uma chegada, um
-   abastecimento com foto da NF e uma manutenção; com um gerente: abrir /frota/gestao e
-   conferir "na rua", "em manutenção", gastos e revisões.
+   from frota_manutencao; from frota_deslocamento; from frota_cautela; from profissional;
+   from diaria; from diaria_historico; from titular — os números devem bater com as tabelas
+   veiculo/abastecimento/manutencao/deslocamento/cautela/profissional/diaria/diaria_historico/
+   titular do Transportes (veículos inativos duplicados do legado são ignorados de propósito;
+   nivel_diaria já vem na migration e é casada por id). Confira também que cada veículo virou
+   um patrimônio (select count(*) from patrimonio where categoria = 'VEICULO').
+6. Usuários (como admin, em Administração → Usuários do Patrimônio). Os logins do Transportes
+   NÃO migram (o Patrimônio tem a própria tabela de usuários); crie de novo, mapeando o perfil:
+   Transportes "Motorista" → MOTORISTA; "Coordenação" → FISCAL; "Presidente" → PRESIDENTE;
+   "Financeiro" → FINANCEIRO; "Administrador" → ADMINISTRADOR; gerentes → GERENTE.
+   Ajuste a lotação/responsável dos veículos importados (entram em "FROTA / <cidade>" com
+   responsável "SETOR DE TRANSPORTES - FPTO").
+7. Validação funcional: motorista registra saída, chegada, abastecimento com foto da NF,
+   manutenção e uma cautela (imprime o termo); fiscal abre uma diária para um profissional
+   importado; admin confirma; presidente defere; financeiro paga e abre /diarias/pagas;
+   gerente abre /frota/gestao e confere "na rua", "em manutenção", gastos e revisões.
 8. Período de convivência: deixe o Transportes no ar em modo leitura por 1 a 2 semanas
    (avise os motoristas para lançar só no Patrimônio). A importação é idempotente: se alguém
    lançar no Transportes nesse período, basta clicar "Importar do Transportes" no Patrimônio.

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head th:replace="~{fragments/layout :: head('Diárias')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid pb-5">
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Solicitações de diária</h1>
+            <div class="page-subtitle">
+                Fluxo: solicitada → confirmada (administração) → deferida / indeferida (presidente) → paga (financeiro) ·
+                <span th:text="${pagina.totalElements}">0</span> registro(s)
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-secondary" th:href="@{/diarias/pagas}"><i class="bi bi-receipt-cutoff"></i> Diárias pagas</a>
+            <a class="btn btn-primary" th:href="@{/diarias/nova}" sec:authorize="hasAnyRole('ADMINISTRADOR','FISCAL')">
+                <i class="bi bi-plus-lg"></i> Nova solicitação
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================ FILTRO ============================ -->
+    <div class="card card-panel mb-4" style="overflow:hidden;">
+        <form th:action="@{/diarias}" method="get" class="form-section row g-2 align-items-end" style="border-bottom:none;">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Situação</label>
+                <select class="form-select form-select-sm" name="status">
+                    <option value="TODAS" th:selected="${statusSelecionado == 'TODAS'}">Todas</option>
+                    <option th:each="s : ${statusOpcoes}" th:value="${s}" th:selected="${statusSelecionado == s.name()}"
+                            th:text="${s.rotulo} + (${contagens[s.name()]} != null ? ' (' + ${contagens[s.name()]} + ')' : '')"></option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Partida de</label>
+                <input type="date" class="form-control form-control-sm" name="de" th:value="${filtro.de}"/>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">até</label>
+                <input type="date" class="form-control form-control-sm" name="ate" th:value="${filtro.ate}"/>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Busca</label>
+                <input type="text" class="form-control form-control-sm" name="texto" th:value="${filtro.texto}" placeholder="profissional, itinerário, solicitante..."/>
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+                <button class="btn btn-sm btn-primary w-100" type="submit" title="Filtrar"><i class="bi bi-funnel"></i></button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card card-panel" style="overflow:hidden;">
+        <div class="table-responsive" th:if="${!pagina.empty}">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr>
+                    <th style="width:70px;">Nº</th><th>Profissional</th><th>Itinerário</th><th>Partida / retorno</th>
+                    <th class="text-end">Diárias</th><th class="text-end">Valor (R$)</th><th>Recurso</th><th>Solicitante</th><th>Situação</th>
+                    <th class="text-end" style="width:90px;"></th>
+                </tr></thead>
+                <tbody>
+                    <tr th:each="d : ${pagina.content}">
+                        <td><a th:href="@{'/diarias/' + ${d.id}}"><span class="chip-tombo" th:text="${d.id}"></span></a></td>
+                        <td><div class="cell-stack"><span class="cell-primary" th:text="${d.profissionalNome}"></span>
+                            <span class="cell-secondary" th:text="(${d.profissionalLotacao} ?: '') + ' · ' + (${d.profissionalNivel} ?: '')"></span></div></td>
+                        <td th:text="${d.itinerario}"></td>
+                        <td class="text-nowrap small" th:text="${#temporals.format(d.partida, 'dd/MM/yyyy')} + ' → ' + ${#temporals.format(d.retorno, 'dd/MM/yyyy')}"></td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(d.numeroDiarias, 1, 'POINT', 1, 'COMMA')}"></td>
+                        <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(d.valorTotal, 1, 'POINT', 2, 'COMMA')}"></td>
+                        <td th:text="${d.recurso.rotulo}"></td>
+                        <td class="small" th:text="${d.solicitante}"></td>
+                        <td><span class="badge badge-plain" th:classappend="${d.status.classeBadge}" th:text="${d.status.rotulo}"></span></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-primary btn-icon" th:href="@{'/diarias/' + ${d.id}}" title="Detalhes e ações"><i class="bi bi-eye"></i></a>
+                            <a class="btn btn-sm btn-secondary btn-icon" th:href="@{'/diarias/' + ${d.id} + '/pdf'}" target="_blank" title="Formulário PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div th:if="${pagina.empty}" th:replace="~{fragments/ui-kit :: empty-state('bi-cash-coin', 'Nenhuma diária', 'Nenhuma solicitação nesta situação.', null, null)}"></div>
+    </div>
+
+    <nav th:if="${pagina.totalPages > 1}" class="mt-3">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+            <li class="page-item" th:classappend="${pagina.first} ? 'disabled'">
+                <a class="page-link" th:href="@{/diarias(status=${statusSelecionado},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},page=${pagina.number - 1})}">&laquo;</a></li>
+            <li class="page-item disabled"><span class="page-link" th:text="${pagina.number + 1} + ' / ' + ${pagina.totalPages}"></span></li>
+            <li class="page-item" th:classappend="${pagina.last} ? 'disabled'">
+                <a class="page-link" th:href="@{/diarias(status=${statusSelecionado},de=${filtro.de},ate=${filtro.ate},texto=${filtro.texto},page=${pagina.number + 1})}">&raquo;</a></li>
+        </ul>
+    </nav>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
