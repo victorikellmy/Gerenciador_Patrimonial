@@ -34,7 +34,7 @@
                     <th class="text-end" style="width:200px;"></th>
                 </tr></thead>
                 <tbody>
-                    <tr th:each="d : ${pagina.content}" th:classappend="${d.emAndamento} ? 'table-warning'">
+                    <tr th:each="d : ${pagina.content}" th:classappend="${d.emAndamento} ? 'row-na-rua'">
                         <td class="text-nowrap" th:text="${#temporals.format(d.dataViagem, 'dd/MM/yyyy')}"></td>
                         <td><a th:href="@{'/frota/' + ${d.veiculoId}}" class="fw-semibold" th:text="${d.placa} + ' · ' + ${d.modelo}"></a></td>
                         <td><div class="cell-stack"><span class="cell-primary" th:text="${d.destino}"></span><span class="cell-secondary" th:text="${d.motivo}"></span></div></td>

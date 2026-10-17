@@ -88,41 +88,41 @@
         <div class="col-xl-2 col-md-4 col-6">
             <div class="card card-panel h-100"><div class="card-body">
                 <div class="kpi-label">Km atual</div>
-                <div class="fs-4 fw-semibold" th:text="${resumo.kmAtual != null} ? ${#numbers.formatInteger(resumo.kmAtual, 1, 'POINT')} : '—'">—</div>
+                <div class="kpi-value" th:text="${resumo.kmAtual != null} ? ${#numbers.formatInteger(resumo.kmAtual, 1, 'POINT')} : '—'">—</div>
             </div></div>
         </div>
         <div class="col-xl-2 col-md-4 col-6">
             <div class="card card-panel h-100"><div class="card-body">
                 <div class="kpi-label">Km rodados no ano</div>
-                <div class="fs-4 fw-semibold" th:text="${#numbers.formatInteger(resumo.kmRodadosAno, 1, 'POINT')}">0</div>
+                <div class="kpi-value" th:text="${#numbers.formatInteger(resumo.kmRodadosAno, 1, 'POINT')}">0</div>
                 <div class="small text-muted" th:text="${resumo.qtdDeslocamentos} + ' saída(s) no total'"></div>
             </div></div>
         </div>
         <div class="col-xl-2 col-md-4 col-6">
             <div class="card card-panel h-100"><div class="card-body">
                 <div class="kpi-label">Combustível no ano</div>
-                <div class="fs-4 fw-semibold" th:text="'R$ ' + ${#numbers.formatDecimal(resumo.combustivelAno, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
+                <div class="kpi-value" th:text="'R$ ' + ${#numbers.formatDecimal(resumo.combustivelAno, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
                 <div class="small text-muted" th:text="${#numbers.formatDecimal(resumo.litrosAno, 1, 'POINT', 1, 'COMMA')} + ' L · ' + ${resumo.qtdAbastecimentos} + ' abastecimento(s)'"></div>
             </div></div>
         </div>
         <div class="col-xl-2 col-md-4 col-6">
             <div class="card card-panel h-100"><div class="card-body">
                 <div class="kpi-label">Consumo médio</div>
-                <div class="fs-4 fw-semibold" th:text="${resumo.consumoMedioKmPorLitro != null} ? ${#numbers.formatDecimal(resumo.consumoMedioKmPorLitro, 1, 'POINT', 1, 'COMMA')} + ' km/L' : '—'">—</div>
+                <div class="kpi-value" th:text="${resumo.consumoMedioKmPorLitro != null} ? ${#numbers.formatDecimal(resumo.consumoMedioKmPorLitro, 1, 'POINT', 1, 'COMMA')} + ' km/L' : '—'">—</div>
                 <div class="small text-muted">km rodados ÷ litros (ano)</div>
             </div></div>
         </div>
         <div class="col-xl-2 col-md-4 col-6">
             <div class="card card-panel h-100"><div class="card-body">
                 <div class="kpi-label">Manutenção no ano</div>
-                <div class="fs-4 fw-semibold" th:text="'R$ ' + ${#numbers.formatDecimal(resumo.manutencaoAno, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
+                <div class="kpi-value" th:text="'R$ ' + ${#numbers.formatDecimal(resumo.manutencaoAno, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
                 <div class="small text-muted" th:text="${resumo.qtdManutencoes} + ' serviço(s) no total'"></div>
             </div></div>
         </div>
         <div class="col-xl-2 col-md-4 col-6">
             <div class="card card-panel h-100"><div class="card-body">
                 <div class="kpi-label">Próxima revisão</div>
-                <div class="fs-5 fw-semibold">
+                <div class="kpi-value" style="font-size:1.1rem">
                     <span th:if="${resumo.proximaRevisaoKm != null}" th:text="${#numbers.formatInteger(resumo.proximaRevisaoKm, 1, 'POINT')} + ' km'"></span>
                     <span th:if="${resumo.proximaRevisaoKm == null and resumo.proximaRevisaoData == null}">—</span>
                 </div>
@@ -160,7 +160,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="h : ${historico}" th:classappend="${h.emAndamento} ? 'table-warning'">
+                            <tr th:each="h : ${historico}" th:classappend="${h.emAndamento} ? 'row-na-rua'">
                                 <td class="text-nowrap">
                                     <span th:text="${#temporals.format(h.data, 'dd/MM/yyyy')}"></span>
                                     <span class="text-muted small" th:if="${h.hora != null}" th:text="${#temporals.format(h.hora, 'HH:mm')}"></span>
