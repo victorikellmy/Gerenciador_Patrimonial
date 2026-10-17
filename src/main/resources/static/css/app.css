@@ -1663,3 +1663,12 @@ body:has(.app-sidebar) .navbar { margin-bottom: 0 !important; }
     font-size: 0.55rem; line-height: 1; padding: 2px 4px; min-width: 14px;
 }
 :root.sidebar-collapsed .sidebar-nav { padding-left: var(--space-2); padding-right: var(--space-2); }
+
+/* Sidebar recolhida: marca e botão de expandir empilhados (lado a lado não cabem e se sobrepunham). */
+:root.sidebar-collapsed .sidebar-brand {
+    flex-direction: column; justify-content: center; gap: 6px;
+    height: auto; min-height: var(--topbar-h); padding: 8px 0;
+}
+:root.sidebar-collapsed .sidebar-brand-link { flex: 0 0 auto; padding: 0; justify-content: center; width: auto; }
+:root.sidebar-collapsed .sidebar-brand-mark-collapsed { width: 32px; height: 32px; }
+:root.sidebar-collapsed .sidebar-collapse-btn { width: 26px; height: 26px; }
