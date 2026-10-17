@@ -40,7 +40,7 @@ public class UsuarioWebController {
     public String novoForm(Model model) {
         if (!model.containsAttribute("usuarioForm")) {
             model.addAttribute("usuarioForm",
-                    new UsuarioRequest("", "", "", Perfil.FISCAL, true));
+                    new UsuarioRequest("", "", "", Perfil.FISCAL, true, true));
         }
         model.addAttribute("perfis", Perfil.values());
         model.addAttribute("editando", false);
@@ -73,7 +73,7 @@ public class UsuarioWebController {
         model.addAttribute("id", id);
         // Senha vazia = "não altera"
         model.addAttribute("usuarioForm",
-                new UsuarioRequest(u.nomeCompleto(), u.login(), "", u.perfil(), u.ativo()));
+                new UsuarioRequest(u.nomeCompleto(), u.login(), "", u.perfil(), u.ativo(), false));
         model.addAttribute("perfis", Perfil.values());
         model.addAttribute("editando", true);
         return "usuarios/form";

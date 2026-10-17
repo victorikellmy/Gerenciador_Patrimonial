@@ -155,6 +155,11 @@ public class SecurityConfig {
                         .loginPage("/login")
                         // Motorista cai direto na frota (não tem acesso ao dashboard).
                         .successHandler((req, res, auth) -> {
+                            // Senha provisória (primeiro acesso): troca antes de qualquer outra tela.
+                            if (auth.getPrincipal() instanceof UsuarioAutenticado u && u.getUsuario().isSenhaProvisoria()) {
+                                res.sendRedirect(req.getContextPath() + TrocaSenhaObrigatoriaInterceptor.ROTA_TROCA + "?obrigatoria");
+                                return;
+                            }
                             boolean motorista = auth.getAuthorities().stream()
                                     .anyMatch(a -> "ROLE_MOTORISTA".equals(a.getAuthority()));
                             boolean gerente = auth.getAuthorities().stream()

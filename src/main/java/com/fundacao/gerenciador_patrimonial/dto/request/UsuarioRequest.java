@@ -10,6 +10,9 @@ import jakarta.validation.constraints.Size;
  *
  * <p>A senha é opcional na edição (mantém a atual se vier vazia).
  * Em criação, o controller/service valida que foi informada.</p>
+ *
+ * <p>{@code exigirTrocaSenha}: quando verdadeiro (padrão na criação), a senha
+ * informada é provisória e o usuário precisa trocá-la no primeiro acesso.</p>
  */
 public record UsuarioRequest(
         @NotBlank(message = "Nome é obrigatório")
@@ -27,5 +30,7 @@ public record UsuarioRequest(
         @NotNull(message = "Perfil é obrigatório")
         Perfil perfil,
 
-        Boolean ativo
+        Boolean ativo,
+
+        Boolean exigirTrocaSenha
 ) {}

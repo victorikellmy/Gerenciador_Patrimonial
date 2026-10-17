@@ -45,6 +45,14 @@ public class Usuario {
     @Builder.Default
     private boolean ativo = true;
 
+    /**
+     * Senha definida pelo administrador (criação ou redefinição): no próximo
+     * login o usuário é obrigado a trocá-la antes de usar o sistema.
+     */
+    @Column(name = "senha_provisoria", nullable = false)
+    @Builder.Default
+    private boolean senhaProvisoria = false;
+
     @CreatedDate
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm;

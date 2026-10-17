@@ -25,6 +25,12 @@
         </div>
     </div>
 
+    <div th:if="${obrigatoria}" class="alert alert-warning mb-4" style="max-width: 680px;">
+        <i class="bi bi-shield-exclamation"></i>
+        <strong>Primeiro acesso.</strong> A senha que você recebeu é provisória: defina uma senha
+        pessoal para continuar. Informe a senha provisória no campo "Senha atual".
+    </div>
+
     <div th:if="${erro}" class="alert alert-danger mb-4" style="max-width: 680px;">
         <i class="bi bi-exclamation-triangle-fill"></i>
         <span th:text="${erro}"></span>
@@ -84,9 +90,12 @@
             <span class="actions-hint">
                 <i class="bi bi-shield-check"></i> Sua senha é armazenada de forma criptografada.
             </span>
-            <a class="btn btn-secondary" th:href="@{/}">Cancelar</a>
+            <a class="btn btn-secondary" th:href="@{/}" th:unless="${obrigatoria}">Cancelar</a>
+            <form th:action="@{/logout}" method="post" class="d-inline" th:if="${obrigatoria}">
+                <button class="btn btn-secondary" type="submit">Sair</button>
+            </form>
             <button class="btn btn-primary" type="submit">
-                <i class="bi bi-check-lg"></i> Alterar senha
+                <i class="bi bi-check-lg"></i> <span th:text="${obrigatoria} ? 'Definir senha e entrar' : 'Alterar senha'"></span>
             </button>
         </div>
     </form>
