@@ -188,7 +188,19 @@ public class FrotaDemoSeeder implements ApplicationRunner {
             }
             indice++;
         }
-        seedDiariasECautelas(hoje);
+        // Lançamentos de diária/cautela com um usuário "humano" no contexto, para o histórico não ficar como SYSTEM.
+        Usuario coordenacao = usuarioRepo.findByLogin("coordenacao.demo").orElseGet(() -> usuarioRepo.save(Usuario.builder()
+                .nomeCompleto("Coordenação Demonstração").login("coordenacao.demo")
+                .senhaHash(encoder.encode(senhaMotorista)).perfil(Perfil.FISCAL).ativo(true).build()));
+        var anterior = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        try {
+            var principal = new com.fundacao.gerenciador_patrimonial.security.UsuarioAutenticado(coordenacao);
+            org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                    new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+            seedDiariasECautelas(hoje);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(anterior);
+        }
         log.warn("Seed da frota aplicado: {} veículos com histórico de demonstração; usuários motorista.demo, gerente.demo, presidente.demo e financeiro.demo criados.", CARROS.size());
     }
 
