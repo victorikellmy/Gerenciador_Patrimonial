@@ -1649,3 +1649,17 @@ body:has(.app-sidebar) .navbar { margin-bottom: 0 !important; }
 .card, .card-body { color: var(--text-primary); }
 .card dl dt { color: var(--text-secondary); font-weight: 500; }
 .card dl dd { color: var(--text-primary); }
+
+/* Tabelas que devem aparecer inteiras (painel gerencial): sem a altura máxima padrão. */
+.table-responsive.table-livre { max-height: none; overflow: visible; }
+.table-compacta td, .table-compacta th { padding: 8px 10px; font-size: 0.8rem; }
+.table-compacta .cell-primary { font-size: 0.82rem; }
+.texto-limitado { display: inline-block; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+
+/* Sidebar recolhida: badges viram um ponto no canto do ícone, em vez de empurrar o layout. */
+.sidebar-link { position: relative; }
+:root.sidebar-collapsed .sidebar-link .badge {
+    position: absolute; top: 2px; right: 2px; margin: 0 !important;
+    font-size: 0.55rem; line-height: 1; padding: 2px 4px; min-width: 14px;
+}
+:root.sidebar-collapsed .sidebar-nav { padding-left: var(--space-2); padding-right: var(--space-2); }
