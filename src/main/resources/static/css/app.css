@@ -1633,3 +1633,14 @@ body:has(.app-sidebar) .navbar { margin-bottom: 0 !important; }
     .lev-thumb { flex-basis: 56px; width: 56px; height: 56px; }
     .lev-form .btn-check + .btn { font-size: .8rem; padding-left: .4rem; padding-right: .4rem; }
 }
+
+/* ===================== Frota ===================== */
+/* Destaque de linha legível nos dois temas (Bootstrap .table-warning/.table-danger
+   força texto escuro sobre fundo claro e some no tema escuro). */
+.table > tbody > tr.row-na-rua > td      { background-color: var(--warning-bg) !important; color: var(--text-primary); box-shadow: none; }
+.table > tbody > tr.row-manutencao > td  { background-color: var(--danger-bg)  !important; color: var(--text-primary); box-shadow: none; }
+.table > tbody > tr.row-na-rua .text-muted,
+.table > tbody > tr.row-manutencao .text-muted,
+.table > tbody > tr.row-na-rua .cell-secondary,
+.table > tbody > tr.row-manutencao .cell-secondary { color: var(--text-secondary) !important; }
+.alert .alert-link { color: inherit; text-decoration: underline; font-weight: 600; }
