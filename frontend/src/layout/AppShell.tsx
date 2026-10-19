@@ -39,8 +39,8 @@ export default function AppShell() {
   const secoes: Secao[] = [
     { titulo: 'Visão geral', perfis: LEITURA, itens: [{ to: '/', icon: 'bi-speedometer2', label: 'Dashboard', exact: true }] },
     {
-      titulo: 'Frota', perfis: ['ADMINISTRADOR', 'FISCAL', 'GERENTE', 'MOTORISTA'], itens: [
-        { to: '/frota/gestao', icon: 'bi-speedometer2', label: 'Gestão da frota', perfis: ['ADMINISTRADOR', 'FISCAL', 'GERENTE'] },
+      titulo: 'Frota', perfis: ['ADMINISTRADOR', 'FISCAL', 'GERENTE', 'PRESIDENTE', 'MOTORISTA'], itens: [
+        { to: '/frota/gestao', icon: 'bi-speedometer2', label: 'Gestão da frota', perfis: ['ADMINISTRADOR', 'FISCAL', 'GERENTE', 'PRESIDENTE'] },
         { to: '/frota', icon: 'bi-truck-front', label: 'Veículos', exact: true },
         { to: '/frota/deslocamentos', icon: 'bi-signpost-2', label: 'Deslocamentos' },
         { to: '/frota/abastecimentos', icon: 'bi-fuel-pump', label: 'Abastecimentos' },

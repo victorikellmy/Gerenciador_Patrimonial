@@ -40,7 +40,7 @@ import Auditoria from './pages/Auditoria'
 const ADM: Perfil[] = ['ADMINISTRADOR']
 const OPER: Perfil[] = ['ADMINISTRADOR', 'FISCAL']
 const LEITURA: Perfil[] = ['ADMINISTRADOR', 'FISCAL', 'GERENTE', 'PRESIDENTE', 'FINANCEIRO']
-const FROTA: Perfil[] = ['ADMINISTRADOR', 'FISCAL', 'GERENTE', 'MOTORISTA']
+const FROTA: Perfil[] = ['ADMINISTRADOR', 'FISCAL', 'GERENTE', 'PRESIDENTE', 'MOTORISTA']
 
 function Protegida() {
   const { usuario, carregando } = useAuth()
@@ -101,7 +101,7 @@ export default function App() {
 
         <Route element={<Perfis perfis={FROTA} />}>
           <Route path="/frota" element={<FrotaVeiculos />} />
-          <Route path="/frota/gestao" element={<Perfis perfis={['ADMINISTRADOR', 'FISCAL', 'GERENTE']} />}>
+          <Route path="/frota/gestao" element={<Perfis perfis={['ADMINISTRADOR', 'FISCAL', 'GERENTE', 'PRESIDENTE']} />}>
             <Route index element={<FrotaGestao />} />
           </Route>
           <Route path="/frota/veiculos/novo" element={<VeiculoForm />} />

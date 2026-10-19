@@ -39,8 +39,8 @@ public record RecebimentoAlmoxarifadoRequest(
         @Size(max = 120) String registradoPor,
         @Size(max = 1000) String observacao,
 
-        @Valid List<Item> itens,
-        @Valid List<Anexo> anexos
+        @Valid @Size(max = 200, message = "no máximo 200 itens por recebimento") List<Item> itens,
+        @Valid @Size(max = 5, message = "no máximo 5 anexos por recebimento") List<Anexo> anexos
 ) {
     public static final String ORIGEM_PADRAO = "ALMOXARIFADO";
 
@@ -48,8 +48,9 @@ public record RecebimentoAlmoxarifadoRequest(
             @NotBlank(message = "descricao do item é obrigatória")
             @Size(max = 255) String descricao,
             @Size(max = 60) String codigoSku,
-            Integer quantidade,
-            BigDecimal valorUnitario
+            // Cada unidade vira um bem patrimonial (cadastro um a um); limite evita expansão sem fim.
+            @jakarta.validation.constraints.Max(value = 1000, message = "quantidade máxima por item é 1000") Integer quantidade,
+            @jakarta.validation.constraints.PositiveOrZero BigDecimal valorUnitario
     ) {
         public int quantidadeOuUm() {
             return quantidade == null || quantidade < 1 ? 1 : quantidade;
@@ -61,7 +62,8 @@ public record RecebimentoAlmoxarifadoRequest(
             @Size(max = 255) String nomeOriginal,
             @Size(max = 100) String contentType,
             Long tamanhoBytes,
-            String conteudoBase64
+            // 10 MB em base64 ≈ 13,4 milhões de caracteres (com quebras MIME); recusa antes de decodificar.
+            @Size(max = 14_500_000, message = "anexo acima de 10 MB") String conteudoBase64
     ) {}
 
     public String origemOuPadrao() {

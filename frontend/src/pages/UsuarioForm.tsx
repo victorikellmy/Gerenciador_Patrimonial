@@ -7,7 +7,7 @@ import { AcoesForm, Campo, Card, Carregando, Erro, PageHeader, Section, useForm,
 import { rotulo, PERFIS } from '../utils/format'
 
 const vazio: UsuarioRequest = { nomeCompleto: '', login: '', senha: '', perfil: 'FISCAL', ativo: true, exigirTrocaSenha: true }
-const descPerfil: Record<Perfil, string> = { ADMINISTRADOR: 'Acesso total, incluindo usuários, auditoria e importações.', FISCAL: 'Opera patrimônio, levantamentos, frota e diárias.', GERENTE: 'Somente leitura: painel da frota, patrimônios e relatórios.', PRESIDENTE: 'Defere ou indefere diárias; consulta patrimônio.', FINANCEIRO: 'Registra pagamento de diárias; consulta patrimônio.', MOTORISTA: 'Somente frota: saídas, abastecimentos e manutenções com nota fiscal.', INTEGRACAO: 'Conta técnica usada pelo Almoxarifado (API).' }
+const descPerfil: Record<Perfil, string> = { ADMINISTRADOR: 'Acesso total, incluindo usuários, auditoria e importações.', FISCAL: 'Opera patrimônio, levantamentos, frota e diárias.', GERENTE: 'Somente leitura: painel da frota, patrimônios e relatórios.', PRESIDENTE: 'Defere ou indefere diárias; consulta patrimônio e toda a frota (somente leitura).', FINANCEIRO: 'Registra pagamento de diárias; consulta patrimônio.', MOTORISTA: 'Somente frota: saídas, abastecimentos e manutenções com nota fiscal.', INTEGRACAO: 'Conta técnica usada pelo Almoxarifado (API).' }
 
 export default function UsuarioForm() {
   const { id } = useParams()

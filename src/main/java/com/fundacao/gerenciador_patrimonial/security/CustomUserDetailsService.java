@@ -14,19 +14,22 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Usuários inativos ficam logicamente fora do login: o
  * {@link UsuarioAutenticado#isEnabled()} retorna {@code false} e a
- * autenticação é negada automaticamente.</p>
+ * autenticação é negada automaticamente. Logins com tentativas de senha
+ * demais ficam bloqueados por um intervalo ({@link TentativasLoginService}).</p>
  */
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UsuarioRepository usuarioRepo;
+    private final TentativasLoginService tentativas;
 
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
+        boolean bloqueado = tentativas.bloqueado(login);
         return usuarioRepo.findByLogin(login)
-                .map(UsuarioAutenticado::new)
+                .map(u -> new UsuarioAutenticado(u, bloqueado)) // bloqueado → LockedException antes de testar a senha
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + login));
     }
 }

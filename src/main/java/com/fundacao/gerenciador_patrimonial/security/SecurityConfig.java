@@ -35,6 +35,8 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final com.fundacao.gerenciador_patrimonial.repository.UsuarioRepository usuarioRepo;
+
     private static final String[] LEITURA = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO"};
     private static final String[] TODOS_HUMANOS = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO", "MOTORISTA"};
 
@@ -79,7 +81,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/frota/importar-transportes", "/api/frota/veiculos/*/ativo").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/frota/veiculos", "/api/frota/veiculos/*/manutencao-status").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.PUT, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.GET, "/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        // Trocar a NF de um lançamento existente é edição: só ADMIN/FISCAL. O motorista
+                        // anexa a NF junto com o cadastro (multipart em /veiculos/{id}/abastecimentos|manutencoes).
+                        .requestMatchers(HttpMethod.POST, "/api/frota/abastecimentos/*/nota-fiscal",
+                                                          "/api/frota/manutencoes/*/nota-fiscal").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        // Painel gerencial: qualquer método (inclusive HEAD) só para quem vê a gestão.
+                        .requestMatchers("/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE")
+                        // Patrimônios ainda sem ficha de veículo: só para quem cadastra veículos.
+                        .requestMatchers("/api/frota/patrimonios-disponiveis").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         // --- Diárias: abrir/editar ADMIN e FISCAL; confirmar ADMIN; deferir/indeferir PRESIDENTE; pagar FINANCEIRO ---
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/confirmar", "/api/diarias/niveis/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/diarias/**").hasRole("ADMINISTRADOR")
@@ -87,6 +96,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/pagar").hasAnyRole("ADMINISTRADOR", "FINANCEIRO")
                         .requestMatchers(HttpMethod.POST, "/api/diarias", "/api/diarias/profissionais/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.PUT, "/api/diarias/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        // Cadastro de profissionais (CPF, RG, dados bancários) e valores para o formulário:
+                        // só quem cadastra diárias. Os demais perfis veem os dados dentro de cada diária.
+                        .requestMatchers("/api/diarias/profissionais", "/api/diarias/profissionais/**",
+                                         "/api/diarias/valores/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.GET, "/api/diarias/**").hasAnyRole(LEITURA)
                         // --- Escrita/alteração exige ADMINISTRADOR ---
                         .requestMatchers(HttpMethod.POST, "/api/importacao/**").hasRole("ADMINISTRADOR")
@@ -98,7 +111,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/pendencias/*/descartar").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
                         // --- Leitura: GERENTE/PRESIDENTE/FINANCEIRO consultam; MOTORISTA só a frota ---
-                        .requestMatchers(HttpMethod.GET, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA")
+                        .requestMatchers(HttpMethod.GET, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "MOTORISTA")
                         .requestMatchers(HttpMethod.GET, "/api/relatorios/**", "/api/dashboard/**", "/api/patrimonios/**",
                                                          "/api/catalogos/**", "/api/lotacoes/**", "/api/responsaveis/**",
                                                          "/api/anexos/**").hasAnyRole(LEITURA)
@@ -111,7 +124,11 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler((req, res, ex) -> res.sendError(HttpStatus.FORBIDDEN.value())))
-                .httpBasic(basic -> basic.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+                .httpBasic(basic -> basic.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                // Revalida o usuário a cada requisição (sessão revogada ao desativar/mudar perfil/senha)
+                // e barra no servidor quem ainda está com senha provisória.
+                .addFilterAfter(new SessaoUsuarioFilter(usuarioRepo),
+                        org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class);
         return http.build();
     }
 
@@ -134,6 +151,9 @@ public class SecurityConfig {
                                 "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/error",
                                 "/app", "/app/**"
                         ).permitAll()
+                        // Downloads públicos (APK do app Android): só leitura de arquivos.
+                        .requestMatchers(HttpMethod.GET, "/downloads/**").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/downloads/**").permitAll()
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")).permitAll()
                         .anyRequest().denyAll()
                 )

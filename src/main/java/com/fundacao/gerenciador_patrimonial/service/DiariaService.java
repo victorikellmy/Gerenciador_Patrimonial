@@ -217,9 +217,24 @@ public class DiariaService {
         validar(req);
         Diaria d = carregar(id);
         if (!d.isEditavel()) throw new RegraDeNegocioException("Diária já paga não pode ser alterada.");
+        StatusDiaria anterior = d.getStatus();
+        String antes = resumo(d);
         aplicar(d, req, carregarProfissional(req.profissionalId()));
-        registrar(d, d.getStatus(), d.getStatus(), "Dados da solicitação alterados.");
-        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, id, "Diária alterada");
+        String depois = resumo(d);
+        // Separação de funções: o que foi confirmado/deferido vale para os dados daquele momento.
+        // Qualquer alteração depois disso devolve a diária para "Solicitada" (nova confirmação e
+        // novo deferimento), para que o Financeiro nunca pague valor ou beneficiário não aprovado.
+        String obs;
+        if (anterior != StatusDiaria.SOLICITADO) {
+            d.setStatus(StatusDiaria.SOLICITADO);
+            d.setMotivoIndeferimento(null);
+            obs = "Alterada após " + anterior.getRotulo().toLowerCase() + "; volta para nova aprovação. ";
+        } else {
+            obs = "Dados alterados. ";
+        }
+        obs += "Antes: " + antes + " | Depois: " + depois;
+        registrar(d, anterior, d.getStatus(), truncar(obs, 500));
+        auditoriaService.registrar(AcaoAuditoria.UPDATE, ENT, id, "Diária alterada. Antes: " + antes + " | Depois: " + depois);
         return DiariaResponse.from(d);
     }
 
@@ -316,5 +331,16 @@ public class DiariaService {
 
     private static String limpar(String s) {
         return s == null || s.isBlank() ? null : s.trim();
+    }
+
+    private static String truncar(String s, int max) {
+        return s == null || s.length() <= max ? s : s.substring(0, max - 1) + "…";
+    }
+
+    /** Resumo dos campos que o deferimento e o pagamento dependem, para o histórico. */
+    private static String resumo(Diaria d) {
+        String prof = d.getProfissional() != null ? d.getProfissional().getNome() : "?";
+        return "%s; %s x R$ %s = R$ %s; %s a %s; %s".formatted(prof, d.getNumeroDiarias(), d.getValorUnitario(),
+                d.getValorTotal(), d.getPartida(), d.getRetorno(), d.getItinerario());
     }
 }

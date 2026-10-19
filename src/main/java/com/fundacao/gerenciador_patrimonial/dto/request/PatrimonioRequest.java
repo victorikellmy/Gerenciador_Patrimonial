@@ -42,7 +42,9 @@ public record PatrimonioRequest(
 
         @Size(max = 1000) String observacao,
 
-        @Size(max = 2000) String linkReferencia,
+        @Size(max = 2000)
+        @Pattern(regexp = "^(?i)(https?://\\S+)?$", message = "Link de referência deve começar com http:// ou https://")
+        String linkReferencia,
 
         @NotNull(message = "Lotação é obrigatória")
         Long lotacaoId,

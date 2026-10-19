@@ -63,12 +63,9 @@ public class AuditoriaService {
             var attrs = RequestContextHolder.getRequestAttributes();
             if (!(attrs instanceof ServletRequestAttributes sra)) return null;
             HttpServletRequest req = sra.getRequest();
-            // X-Forwarded-For tem prioridade quando há proxy reverso (nginx/traefik).
-            String xff = req.getHeader("X-Forwarded-For");
-            if (xff != null && !xff.isBlank()) {
-                int comma = xff.indexOf(',');
-                return (comma > 0 ? xff.substring(0, comma) : xff).trim();
-            }
+            // Nunca ler X-Forwarded-For aqui: o cliente controla esse cabeçalho. Atrás do proxy,
+            // o Tomcat (server.forward-headers-strategy=native + internal-proxies) já resolve
+            // getRemoteAddr() para o IP real, aceitando o cabeçalho só de proxies confiáveis.
             return req.getRemoteAddr();
         } catch (Exception e) {
             return null;
