@@ -356,6 +356,29 @@ class AuditoriaSegurancaValidacaoTest {
         assertThat(r).contains("lotacaoId").doesNotContain("java.").doesNotContain("Cannot deserialize");
     }
 
+    /** Presidente consulta toda a frota (veículos, lançamentos, cautelas, gestão), mas não altera nada. */
+    @Test
+    void frota_presidenteConsultaTodaAFrotaSemAlterar() throws Exception {
+        UsuarioAutenticado presidente = new UsuarioAutenticado(usuario("val.presidente", Perfil.PRESIDENTE));
+        long veiculoId = criarVeiculo("PRE");
+        mvc.perform(get("/api/frota/veiculos").with(user(presidente))).andExpect(status().isOk());
+        mvc.perform(get("/api/frota/veiculos/" + veiculoId).with(user(presidente))).andExpect(status().isOk());
+        mvc.perform(get("/api/frota/veiculos/" + veiculoId + "/historico").with(user(presidente))).andExpect(status().isOk());
+        mvc.perform(get("/api/frota/abastecimentos").with(user(presidente))).andExpect(status().isOk());
+        mvc.perform(get("/api/frota/cautelas").with(user(presidente))).andExpect(status().isOk());
+        mvc.perform(get("/api/frota/gestao").with(user(presidente))).andExpect(status().isOk());
+
+        String dados = """
+                {"veiculoId":%d,"data":"%s","km":1000,"combustivel":"GASOLINA","quantidadeLitros":30,"valor":150.00,"motorista":"X"}"""
+                .formatted(veiculoId, LocalDate.now());
+        mvc.perform(multipart("/api/frota/veiculos/" + veiculoId + "/abastecimentos")
+                        .file(new MockMultipartFile("dados", "", "application/json", dados.getBytes()))
+                        .with(user(presidente)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/frota/veiculos/" + veiculoId + "/ativo").param("ativo", "false").with(user(presidente)))
+                .andExpect(status().isForbidden());
+    }
+
     // ------------------------------------------------------------------ apoio
 
     /** Cadastra um veículo (ação auditada) enviando X-Forwarded-For forjado e devolve o IP gravado. */

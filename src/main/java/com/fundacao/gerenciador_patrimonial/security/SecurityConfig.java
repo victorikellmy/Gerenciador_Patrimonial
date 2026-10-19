@@ -86,7 +86,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/frota/abastecimentos/*/nota-fiscal",
                                                           "/api/frota/manutencoes/*/nota-fiscal").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         // Painel gerencial: qualquer método (inclusive HEAD) só para quem vê a gestão.
-                        .requestMatchers("/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        .requestMatchers("/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE")
                         // Patrimônios ainda sem ficha de veículo: só para quem cadastra veículos.
                         .requestMatchers("/api/frota/patrimonios-disponiveis").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         // --- Diárias: abrir/editar ADMIN e FISCAL; confirmar ADMIN; deferir/indeferir PRESIDENTE; pagar FINANCEIRO ---
@@ -111,7 +111,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/pendencias/*/descartar").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/patrimonios/*/baixa").hasRole("ADMINISTRADOR")
                         // --- Leitura: GERENTE/PRESIDENTE/FINANCEIRO consultam; MOTORISTA só a frota ---
-                        .requestMatchers(HttpMethod.GET, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "MOTORISTA")
+                        .requestMatchers(HttpMethod.GET, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "MOTORISTA")
                         .requestMatchers(HttpMethod.GET, "/api/relatorios/**", "/api/dashboard/**", "/api/patrimonios/**",
                                                          "/api/catalogos/**", "/api/lotacoes/**", "/api/responsaveis/**",
                                                          "/api/anexos/**").hasAnyRole(LEITURA)
