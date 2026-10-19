@@ -45,6 +45,9 @@ services:
       DB_USER:     ${DB_USER:-patrimonial}
       DB_PASSWORD: ${DB_PASSWORD}
       APP_STORAGE_PASTA_RAIZ: /uploads
+      # Senha do admin inicial (só usada quando o banco não tem nenhum administrador ativo).
+      # Vazia = o boot gera uma senha aleatória e a mostra uma única vez no log.
+      APP_ADMIN_SENHA: ${APP_ADMIN_SENHA:-}
       # Integração com o Almoxarifado: usuário técnico criado no boot quando a
       # senha vier definida no .env (mesmos valores de PATRIMONIO_USUARIO/SENHA lá).
       INTEGRACAO_ALMOXARIFADO_LOGIN: ${INTEGRACAO_ALMOXARIFADO_LOGIN:-integracao.almoxarifado}

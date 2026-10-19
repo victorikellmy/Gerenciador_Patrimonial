@@ -103,7 +103,7 @@ docker compose exec db psql -U patrimonial -d patrimonial -c "select * from flyw
 ## Checklist pós-deploy
 
 - [ ] `curl http://192.168.1.25/login` retorna HTTP 200.
-- [ ] Login funciona com o usuário admin (criado pelo `AdminBootstrapRunner` no primeiro start).
+- [ ] Login funciona com o usuário admin (criado pelo `AdminBootstrapRunner` no primeiro start). A senha é a de `APP_ADMIN_SENHA` ou, se vazia, a senha aleatória mostrada uma vez no log (`docker compose logs app | grep "senha provisória"`). Não existe mais senha padrão no código; troque-a no primeiro acesso (a API bloqueia o resto até a troca).
 - [ ] Teste de upload de anexo: faça upload em um patrimônio → confira no servidor de armazenamento que o arquivo aparece em `/srv/patrimonio/uploads/patrimonio/<id>/<ano-mes>/`.
 - [ ] `GET /api/admin/auditoria` (com login admin) retorna a paginação JSON.
 - [ ] Tabela `auditoria_acao` recebe registros após qualquer CRUD de patrimônio.

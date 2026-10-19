@@ -711,7 +711,11 @@ public class FrotaService {
 
     public record NotaFiscalArquivo(String nomeOriginal, String contentType, org.springframework.core.io.Resource recurso) {}
 
-    /** Anexa (ou substitui) a NF de um abastecimento ou manutenção. */
+    /**
+     * Anexa (ou substitui) a NF de um abastecimento ou manutenção. Ao substituir, o arquivo
+     * anterior NÃO é apagado (fica no armazenamento como evidência) e a auditoria registra os
+     * dois nomes. Quem pode substituir é definido na SecurityConfig (ADMIN/FISCAL).
+     */
     public void anexarNotaFiscal(Tipo tipo, Long id, org.springframework.web.multipart.MultipartFile arquivo) {
         if (arquivo == null || arquivo.isEmpty()) {
             throw new RegraDeNegocioException("Arquivo da nota fiscal vazio.");
@@ -723,26 +727,28 @@ public class FrotaService {
             case ABASTECIMENTO -> {
                 Abastecimento a = abastecimentoRepo.findComVeiculo(id)
                         .orElseThrow(() -> new RecursoNaoEncontradoException("Abastecimento", id));
-                if (a.possuiNotaFiscal()) storageService.deletar(a.getNfCaminho());
+                String anterior = a.possuiNotaFiscal() ? a.getNfNomeOriginal() + " em " + a.getNfCaminho() : null;
                 String caminho = storageService.armazenar(arquivo, "frota/" + a.getVeiculo().getId() + "/abastecimentos");
                 a.setNfCaminho(caminho);
                 a.setNfNomeOriginal(arquivo.getOriginalFilename());
                 a.setNfContentType(arquivo.getContentType());
                 a.setNfTamanhoBytes(arquivo.getSize());
                 auditoriaService.registrar(AcaoAuditoria.FROTA, ENT_VEICULO, a.getVeiculo().getId(),
-                        "NF anexada ao abastecimento #%d (%s)".formatted(id, arquivo.getOriginalFilename()));
+                        (anterior == null ? "NF anexada ao abastecimento #%d (%s)" : "NF substituída no abastecimento #%d (%s; anterior mantida: " + anterior + ")")
+                                .formatted(id, arquivo.getOriginalFilename()));
             }
             case MANUTENCAO -> {
                 ManutencaoVeiculo m = manutencaoRepo.findComVeiculo(id)
                         .orElseThrow(() -> new RecursoNaoEncontradoException("Manutenção", id));
-                if (m.possuiNotaFiscal()) storageService.deletar(m.getNfCaminho());
+                String anterior = m.possuiNotaFiscal() ? m.getNfNomeOriginal() + " em " + m.getNfCaminho() : null;
                 String caminho = storageService.armazenar(arquivo, "frota/" + m.getVeiculo().getId() + "/manutencoes");
                 m.setNfCaminho(caminho);
                 m.setNfNomeOriginal(arquivo.getOriginalFilename());
                 m.setNfContentType(arquivo.getContentType());
                 m.setNfTamanhoBytes(arquivo.getSize());
                 auditoriaService.registrar(AcaoAuditoria.FROTA, ENT_VEICULO, m.getVeiculo().getId(),
-                        "NF anexada à manutenção #%d (%s)".formatted(id, arquivo.getOriginalFilename()));
+                        (anterior == null ? "NF anexada à manutenção #%d (%s)" : "NF substituída na manutenção #%d (%s; anterior mantida: " + anterior + ")")
+                                .formatted(id, arquivo.getOriginalFilename()));
             }
             default -> throw new RegraDeNegocioException("Deslocamento não tem nota fiscal.");
         }

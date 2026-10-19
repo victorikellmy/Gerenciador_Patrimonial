@@ -27,6 +27,9 @@ public class MeController {
     private final PendenciaPatrimoniamentoService pendenciaService;
     private final LevantamentoService levantamentoService;
     private final DiariaService diariaService;
+    private final com.fundacao.gerenciador_patrimonial.repository.UsuarioRepository usuarioRepo;
+    private final org.springframework.security.web.context.SecurityContextRepository contextoSessao =
+            new org.springframework.security.web.context.HttpSessionSecurityContextRepository();
 
     /** Contadores que alimentam os badges do menu, conforme o perfil de quem está logado. */
     public record Resumo(long pendenciasPatrimoniamento, LevantamentoResponse levantamentoAberto, long diariasPendentes) {}
@@ -57,8 +60,21 @@ public class MeController {
     @PostMapping("/senha")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void trocarSenha(@AuthenticationPrincipal UsuarioAutenticado principal,
-                            @Valid @RequestBody TrocarSenhaRequest req) {
+                            @Valid @RequestBody TrocarSenhaRequest req,
+                            jakarta.servlet.http.HttpServletRequest request,
+                            jakarta.servlet.http.HttpServletResponse response) {
         usuarioService.trocarSenha(principal.getUsername(), req);
-        principal.getUsuario().setSenhaProvisoria(false); // libera a sessão atual (SPA) sem novo login
+        // Sessão do SPA: troca o retrato pelo usuário atualizado (novo hash, sem senha provisória)
+        // e rotaciona o id da sessão. As OUTRAS sessões do usuário ficam com o hash antigo e são
+        // encerradas pelo SessaoUsuarioFilter na próxima requisição. Basic (app) não usa sessão.
+        if (request.getSession(false) != null) {
+            var atualizado = new UsuarioAutenticado(usuarioRepo.findById(principal.getId()).orElseThrow());
+            var ctx = org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+            ctx.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+                    .authenticated(atualizado, null, atualizado.getAuthorities()));
+            org.springframework.security.core.context.SecurityContextHolder.setContext(ctx);
+            request.changeSessionId();
+            contextoSessao.saveContext(ctx, request, response);
+        }
     }
 }

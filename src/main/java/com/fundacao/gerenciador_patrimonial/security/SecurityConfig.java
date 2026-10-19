@@ -35,6 +35,8 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final com.fundacao.gerenciador_patrimonial.repository.UsuarioRepository usuarioRepo;
+
     private static final String[] LEITURA = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO"};
     private static final String[] TODOS_HUMANOS = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO", "MOTORISTA"};
 
@@ -79,6 +81,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/frota/importar-transportes", "/api/frota/veiculos/*/ativo").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/frota/veiculos", "/api/frota/veiculos/*/manutencao-status").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.PUT, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        // Trocar a NF de um lançamento existente é edição: só ADMIN/FISCAL. O motorista
+                        // anexa a NF junto com o cadastro (multipart em /veiculos/{id}/abastecimentos|manutencoes).
+                        .requestMatchers(HttpMethod.POST, "/api/frota/abastecimentos/*/nota-fiscal",
+                                                          "/api/frota/manutencoes/*/nota-fiscal").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.GET, "/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
                         // --- Diárias: abrir/editar ADMIN e FISCAL; confirmar ADMIN; deferir/indeferir PRESIDENTE; pagar FINANCEIRO ---
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/confirmar", "/api/diarias/niveis/**").hasRole("ADMINISTRADOR")
@@ -111,7 +117,11 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler((req, res, ex) -> res.sendError(HttpStatus.FORBIDDEN.value())))
-                .httpBasic(basic -> basic.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+                .httpBasic(basic -> basic.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                // Revalida o usuário a cada requisição (sessão revogada ao desativar/mudar perfil/senha)
+                // e barra no servidor quem ainda está com senha provisória.
+                .addFilterAfter(new SessaoUsuarioFilter(usuarioRepo),
+                        org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class);
         return http.build();
     }
 
