@@ -49,3 +49,13 @@ td.texto-limitado { display: table-cell; vertical-align: inherit; }
 .lista-ocorrencias .foto-mini { width: 48px; height: 48px; object-fit: cover; border-radius: var(--radius-sm); }
 .resumo-valor { font-variant-numeric: tabular-nums; }
 .obs-pre { white-space: pre-wrap; }
+
+/* ---- Layout estático: nada rola na horizontal ----
+   O menu tinha conteúdo alguns px mais largo que a área útil quando a barra de rolagem vertical
+   aparecia; o navegador então podia rolá-lo de lado (foco, trackpad) e ele ficava "cortado" à
+   esquerda. `clip` impede qualquer rolagem (inclusive programática) sem quebrar position: sticky. */
+html, body { overflow-x: clip; }
+.app-sidebar, .sidebar-brand { overflow: clip; }
+.sidebar-nav { overflow-x: hidden; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.sidebar-nav, .sidebar-section, .sidebar-link { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.app-main, .app-content { min-width: 0; }

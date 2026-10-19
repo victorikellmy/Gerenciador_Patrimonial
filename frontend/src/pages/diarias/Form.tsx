@@ -48,20 +48,20 @@ export default function DiariaForm() {
         </Section>
         <Section icon="bi-geo-alt" titulo="Viagem">
           <div className="row g-3">
-            <Campo label="Itinerário" obrigatorio col="col-md-8"><input className="form-control" required maxLength={200} placeholder="Ex: Palmas → Araguaína → Palmas" {...bind('itinerario')} /></Campo>
-            <Campo label="Meio de transporte" obrigatorio col="col-md-2"><select className="form-select" {...bind('meioTransporte')}><option value="VEICULO_OFICIAL">Veículo oficial</option><option value="AEREO">Aéreo</option><option value="RODOVIARIO">Rodoviário</option></select></Campo>
-            <Campo label="Recurso" obrigatorio col="col-md-2"><select className="form-select" {...bind('recurso')}><option value="PROPRIO">Próprio</option><option value="CONVENIO">Convênio</option></select></Campo>
-            <Campo label="Partida" obrigatorio col="col-md-3"><input type="date" className="form-control" required {...bind('partida')} /></Campo>
-            <Campo label="Hora de saída" col="col-md-3"><input type="time" className="form-control" {...bind('horaSaida')} /></Campo>
-            <Campo label="Retorno" obrigatorio col="col-md-3"><input type="date" className="form-control" required min={valores.partida || undefined} {...bind('retorno')} /></Campo>
-            <Campo label="Hora de chegada" col="col-md-3"><input type="time" className="form-control" {...bind('horaChegada')} /></Campo>
+            <Campo label="Itinerário" obrigatorio col="col-md-6"><input className="form-control" required maxLength={200} placeholder="Ex: Palmas → Araguaína → Palmas" {...bind('itinerario')} /></Campo>
+            <Campo label="Meio de transporte" obrigatorio col="col-md-6 col-xl-3"><select className="form-select" {...bind('meioTransporte')}><option value="VEICULO_OFICIAL">Veículo oficial</option><option value="AEREO">Aéreo</option><option value="RODOVIARIO">Rodoviário</option></select></Campo>
+            <Campo label="Recurso" obrigatorio col="col-md-6 col-xl-3"><select className="form-select" {...bind('recurso')}><option value="PROPRIO">Próprio</option><option value="CONVENIO">Convênio</option></select></Campo>
+            <Campo label="Partida" obrigatorio col="col-md-6 col-xl-3"><input type="date" className="form-control" required {...bind('partida')} /></Campo>
+            <Campo label="Hora de saída" col="col-md-6 col-xl-3"><input type="time" className="form-control" {...bind('horaSaida')} /></Campo>
+            <Campo label="Retorno" obrigatorio col="col-md-6 col-xl-3"><input type="date" className="form-control" required min={valores.partida || undefined} {...bind('retorno')} /></Campo>
+            <Campo label="Hora de chegada" col="col-md-6 col-xl-3"><input type="time" className="form-control" {...bind('horaChegada')} /></Campo>
           </div>
         </Section>
         <Section icon="bi-cash-coin" titulo="Valores" semBorda>
           <div className="row g-3">
-            <Campo label="Nº de diárias" obrigatorio col="col-md-3"><input type="number" step="0.5" min="0.5" className="form-control" required {...bindNum('numeroDiarias')} /></Campo>
-            <Campo label="Valor unitário (R$)" obrigatorio col="col-md-3"><input type="number" step="0.01" min="0" className="form-control" required {...bindNum('valorUnitario')} /></Campo>
-            <Campo label="Total" col="col-md-3"><input className="form-control" readOnly value={moeda(total)} /></Campo>
+            <Campo label="Nº de diárias" obrigatorio col="col-md-6 col-xl-3"><input type="number" step="0.5" min="0.5" className="form-control" required {...bindNum('numeroDiarias')} /></Campo>
+            <Campo label="Valor unitário (R$)" obrigatorio col="col-md-6 col-xl-3"><input type="number" step="0.01" min="0" className="form-control" required {...bindNum('valorUnitario')} /></Campo>
+            <Campo label="Total" col="col-md-6 col-xl-3"><input className="form-control" readOnly value={moeda(total)} /></Campo>
             <Campo label="Finalidade" col="col-12"><textarea className="form-control" rows={3} maxLength={2000} {...bind('finalidade')} /></Campo>
           </div>
         </Section>

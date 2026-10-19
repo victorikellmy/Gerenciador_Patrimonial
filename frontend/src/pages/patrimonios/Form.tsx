@@ -71,11 +71,11 @@ export default function PatrimonioForm() {
           {erro && <div className="alert alert-danger m-3 mb-0">{erro}</div>}
           <Section icon="bi-box-seam" titulo="Identificação" desc="Dados básicos do bem.">
             <div className="row g-3">
-              <Campo label="Nº do tombo" col="col-md-3"><input className="form-control" {...bind('numeroTombo')} placeholder="Ex: 001234" /></Campo>
-              <Campo label="Descrição" obrigatorio col="col-md-9"><input className="form-control" {...bind('descricao')} required maxLength={255} /></Campo>
-              <Campo label="Categoria" col="col-md-4"><input className="form-control" list="dl-cat" {...bind('categoria')} /><datalist id="dl-cat">{categorias.data?.map(c => <option key={c} value={c} />)}</datalist></Campo>
-              <Campo label="Subcategoria" col="col-md-4"><input className="form-control" list="dl-sub" {...bind('subcategoria')} /><datalist id="dl-sub">{subcategorias.data?.map(c => <option key={c} value={c} />)}</datalist></Campo>
-              <Campo label="Conservação" col="col-md-4"><select className="form-select" {...bind('conservacao')}><option value="">Selecione</option>{CONSERVACOES.map(c => <option key={c} value={c}>{rotulo(c)}</option>)}</select></Campo>
+              <Campo label="Nº do tombo" col="col-md-6 col-xl-3"><input className="form-control" {...bind('numeroTombo')} placeholder="Ex: 001234" /></Campo>
+              <Campo label="Descrição" obrigatorio col="col-md-6 col-xl-9"><input className="form-control" {...bind('descricao')} required maxLength={255} /></Campo>
+              <Campo label="Categoria" col="col-md-6 col-xl-3"><input className="form-control" list="dl-cat" {...bind('categoria')} /><datalist id="dl-cat">{categorias.data?.map(c => <option key={c} value={c} />)}</datalist></Campo>
+              <Campo label="Subcategoria" col="col-md-6 col-xl-3"><input className="form-control" list="dl-sub" {...bind('subcategoria')} /><datalist id="dl-sub">{subcategorias.data?.map(c => <option key={c} value={c} />)}</datalist></Campo>
+              <Campo label="Conservação" col="col-md-6 col-xl-3"><select className="form-select" {...bind('conservacao')}><option value="">Selecione</option>{CONSERVACOES.map(c => <option key={c} value={c}>{rotulo(c)}</option>)}</select></Campo>
             </div>
           </Section>
           <Section icon="bi-geo-alt" titulo="Localização" desc="Onde o bem está e quem responde por ele.">
@@ -86,10 +86,10 @@ export default function PatrimonioForm() {
           </Section>
           <Section icon="bi-cash-coin" titulo="Aquisição e valor" desc="Base para depreciação e valor contábil.">
             <div className="row g-3">
-              <Campo label="Data da compra" col="col-md-3"><input type="date" className="form-control" {...bind('dataCompra')} /></Campo>
-              <Campo label="Valor de compra (R$)" col="col-md-3"><input type="number" step="0.01" min="0" className="form-control" {...bindNum('valorCompra')} /></Campo>
-              <Campo label="Nota fiscal" col="col-md-3"><input className="form-control" {...bind('notaFiscal')} /></Campo>
-              <Campo label="Valor recuperável (R$)" col="col-md-3" hint="Para teste de impairment."><input type="number" step="0.01" min="0" className="form-control" {...bindNum('valorRecuperavel')} /></Campo>
+              <Campo label="Data da compra" col="col-md-6 col-xl-3"><input type="date" className="form-control" {...bind('dataCompra')} /></Campo>
+              <Campo label="Valor de compra (R$)" col="col-md-6 col-xl-3"><input type="number" step="0.01" min="0" className="form-control" {...bindNum('valorCompra')} /></Campo>
+              <Campo label="Nota fiscal" col="col-md-6 col-xl-3"><input className="form-control" {...bind('notaFiscal')} /></Campo>
+              <Campo label="Valor recuperável (R$)" col="col-md-6 col-xl-3" hint="Para teste de impairment."><input type="number" step="0.01" min="0" className="form-control" {...bindNum('valorRecuperavel')} /></Campo>
               <Campo label="Conclusão do impairment" col="col-12"><input className="form-control" {...bind('conclusaoImpairment')} /></Campo>
             </div>
           </Section>

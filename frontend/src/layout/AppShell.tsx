@@ -22,6 +22,15 @@ export default function AppShell() {
 
   useEffect(() => { setMobileAberto(false) }, [location.pathname])
 
+  // O menu nunca rola na horizontal: se o navegador deslocar (foco, trackpad), volta para 0.
+  useEffect(() => {
+    const alvos = [document.getElementById('appSidebar'), document.querySelector<HTMLElement>('#appSidebar .sidebar-nav')]
+      .filter((e): e is HTMLElement => !!e)
+    const travar = (e: Event) => { const el = e.currentTarget as HTMLElement; if (el.scrollLeft !== 0) el.scrollLeft = 0 }
+    alvos.forEach(el => { el.scrollLeft = 0; el.addEventListener('scroll', travar, { passive: true }) })
+    return () => alvos.forEach(el => el.removeEventListener('scroll', travar))
+  }, [])
+
   const alternarTema = () => {
     const next = tema === 'dark' ? 'light' : 'dark'
     document.documentElement.setAttribute('data-theme', next)

@@ -21,7 +21,7 @@ export default function FrotaListas({ tipo }: { tipo: Tipo }) {
   const veiculos = useQuery({ queryKey: ['veiculos', true], queryFn: () => api.frota.veiculos(true) })
   const q = useQuery({ queryKey: ['frota-lista', tipo, aplicado, page], queryFn: (): Promise<Page<Abastecimento | Manutencao | Deslocamento>> => tipo === 'abastecimentos' ? api.frota.abastecimentos(aplicado, page) : tipo === 'manutencoes' ? api.frota.manutencoes(aplicado, page) : api.frota.deslocamentos(aplicado, page) })
   const admin = temPerfil('ADMINISTRADOR')
-  const gestor = temPerfil('ADMINISTRADOR', 'FISCAL')
+  const gestor = temPerfil('ADMINISTRADOR', 'FISCAL', 'PRESIDENTE')
   const excluir = async (id: number) => {
     if (!confirm('Excluir este lançamento?')) return
     try { await (tipo === 'abastecimentos' ? api.frota.excluirAbastecimento(id) : tipo === 'manutencoes' ? api.frota.excluirManutencao(id) : api.frota.excluirDeslocamento(id)); toast.sucesso('Excluído.'); qc.invalidateQueries({ queryKey: ['frota-lista'] }) } catch (ex) { toast.erro(ex instanceof Error ? ex.message : 'Falha.') }

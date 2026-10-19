@@ -45,30 +45,30 @@ export default function VeiculoForm() {
       <form onSubmit={salvar}><Card>
         {erro && <div className="alert alert-danger m-3 mb-0">{erro}</div>}
         {!editando && <Section icon="bi-link-45deg" titulo="Vínculo patrimonial" desc="Vincule a um bem já cadastrado como veículo ou deixe em branco para criar o bem agora.">
-          <div className="row g-3"><Campo label="Bem patrimonial existente" col="col-md-8"><select className="form-select" {...bindNum('patrimonioId')}><option value="">Criar novo bem patrimonial</option>{disponiveis.data?.map(p => <option key={p.id} value={p.id}>{p.numeroTombo ? `${p.numeroTombo} · ` : ''}{p.descricao} ({p.lotacaoUpm} · {p.lotacaoNome})</option>)}</select></Campo></div>
+          <div className="row g-3"><Campo label="Bem patrimonial existente" col="col-12 col-xl-6"><select className="form-select" {...bindNum('patrimonioId')}><option value="">Criar novo bem patrimonial</option>{disponiveis.data?.map(p => <option key={p.id} value={p.id}>{p.numeroTombo ? `${p.numeroTombo} · ` : ''}{p.descricao} ({p.lotacaoUpm} · {p.lotacaoNome})</option>)}</select></Campo></div>
         </Section>}
         <Section icon="bi-truck-front" titulo="Identificação do veículo">
           <div className="row g-3">
-            <Campo label="Placa" obrigatorio col="col-md-2"><input className="form-control text-uppercase" required maxLength={20} {...bind('placa')} /></Campo>
-            <Campo label="Modelo" obrigatorio col="col-md-4"><input className="form-control" required maxLength={60} {...bind('modelo')} /></Campo>
-            <Campo label="Marca" col="col-md-3"><input className="form-control" {...bind('marca')} /></Campo>
-            <Campo label="Ano" col="col-md-3"><input className="form-control" maxLength={9} placeholder="2022/2023" {...bind('ano')} /></Campo>
-            <Campo label="Chassi" col="col-md-4"><input className="form-control" {...bind('chassi')} /></Campo>
-            <Campo label="Renavam" col="col-md-3"><input className="form-control" {...bind('renavam')} /></Campo>
-            <Campo label="Cidade" col="col-md-3"><input className="form-control" {...bind('cidade')} /></Campo>
-            <Campo label="Combustível padrão" col="col-md-2"><select className="form-select" {...bind('combustivelPadrao')}><option value="">—</option>{cat.data?.combustiveis.map(c => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}</select></Campo>
-            <Campo label="Km atual" col="col-md-2"><input type="number" min="0" className="form-control" {...bindNum('kmAtual')} /></Campo>
+            <Campo label="Placa" obrigatorio col="col-md-6 col-xl-3"><input className="form-control text-uppercase" required maxLength={20} {...bind('placa')} /></Campo>
+            <Campo label="Modelo" obrigatorio col="col-md-6 col-xl-3"><input className="form-control" required maxLength={60} {...bind('modelo')} /></Campo>
+            <Campo label="Marca" col="col-md-6 col-xl-3"><input className="form-control" {...bind('marca')} /></Campo>
+            <Campo label="Ano" col="col-md-6 col-xl-3"><input className="form-control" maxLength={9} placeholder="2022/2023" {...bind('ano')} /></Campo>
+            <Campo label="Chassi" col="col-md-6 col-xl-3"><input className="form-control" {...bind('chassi')} /></Campo>
+            <Campo label="Renavam" col="col-md-6 col-xl-3"><input className="form-control" {...bind('renavam')} /></Campo>
+            <Campo label="Cidade" col="col-md-6 col-xl-3"><input className="form-control" {...bind('cidade')} /></Campo>
+            <Campo label="Combustível padrão" col="col-md-6 col-xl-3"><select className="form-select" {...bind('combustivelPadrao')}><option value="">—</option>{cat.data?.combustiveis.map(c => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}</select></Campo>
+            <Campo label="Km atual" col="col-md-6 col-xl-3"><input type="number" min="0" className="form-control" {...bindNum('kmAtual')} /></Campo>
           </div>
         </Section>
         {!vinculando && <Section icon="bi-box-seam" titulo="Dados patrimoniais" desc={editando ? 'Atualiza o bem patrimonial vinculado.' : 'Usados para criar o bem patrimonial do veículo.'}>
           <div className="row g-3">
-            <Campo label="Nº do tombo" col="col-md-2"><input className="form-control" {...bind('numeroTombo')} /></Campo>
-            <Campo label="Lotação" obrigatorio={!editando} col="col-md-4"><select className="form-select" required={!editando} {...bindNum('lotacaoId')}><option value="">Selecione</option>{lotacoes.data?.map(l => <option key={l.id} value={l.id}>{l.upm} · {l.nome}</option>)}</select></Campo>
-            <Campo label="Responsável" obrigatorio={!editando} col="col-md-4"><select className="form-select" required={!editando} {...bindNum('responsavelId')}><option value="">Selecione</option>{responsaveis.data?.map(r => <option key={r.id} value={r.id}>{r.nomeCompleto}</option>)}</select></Campo>
-            <Campo label="Conservação" col="col-md-2"><select className="form-select" {...bind('conservacao')}><option value="">—</option>{CONSERVACOES.map(c => <option key={c} value={c}>{rotulo(c)}</option>)}</select></Campo>
-            <Campo label="Data da compra" col="col-md-3"><input type="date" className="form-control" {...bind('dataCompra')} /></Campo>
-            <Campo label="Valor (R$)" col="col-md-3"><input type="number" step="0.01" min="0" className="form-control" {...bindNum('valorCompra')} /></Campo>
-            <Campo label="Nota fiscal" col="col-md-3"><input className="form-control" {...bind('notaFiscal')} /></Campo>
+            <Campo label="Nº do tombo" col="col-md-6 col-xl-3"><input className="form-control" {...bind('numeroTombo')} /></Campo>
+            <Campo label="Lotação" obrigatorio={!editando} col="col-md-6 col-xl-3"><select className="form-select" required={!editando} {...bindNum('lotacaoId')}><option value="">Selecione</option>{lotacoes.data?.map(l => <option key={l.id} value={l.id}>{l.upm} · {l.nome}</option>)}</select></Campo>
+            <Campo label="Responsável" obrigatorio={!editando} col="col-md-6 col-xl-3"><select className="form-select" required={!editando} {...bindNum('responsavelId')}><option value="">Selecione</option>{responsaveis.data?.map(r => <option key={r.id} value={r.id}>{r.nomeCompleto}</option>)}</select></Campo>
+            <Campo label="Conservação" col="col-md-6 col-xl-3"><select className="form-select" {...bind('conservacao')}><option value="">—</option>{CONSERVACOES.map(c => <option key={c} value={c}>{rotulo(c)}</option>)}</select></Campo>
+            <Campo label="Data da compra" col="col-md-6 col-xl-3"><input type="date" className="form-control" {...bind('dataCompra')} /></Campo>
+            <Campo label="Valor (R$)" col="col-md-6 col-xl-3"><input type="number" step="0.01" min="0" className="form-control" {...bindNum('valorCompra')} /></Campo>
+            <Campo label="Nota fiscal" col="col-md-6 col-xl-3"><input className="form-control" {...bind('notaFiscal')} /></Campo>
           </div>
         </Section>}
         <Section icon="bi-card-text" titulo="Observações" semBorda><textarea className="form-control" rows={3} {...bind('observacao')} /></Section>
