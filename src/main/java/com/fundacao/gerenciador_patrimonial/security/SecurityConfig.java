@@ -79,16 +79,16 @@ public class SecurityConfig {
                         // --- Frota ---
                         .requestMatchers(HttpMethod.DELETE, "/api/frota/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/frota/importar-transportes", "/api/frota/veiculos/*/ativo").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.POST, "/api/frota/veiculos", "/api/frota/veiculos/*/manutencao-status").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.PUT, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        // Trocar a NF de um lançamento existente é edição: só ADMIN/FISCAL. O motorista
+                        .requestMatchers(HttpMethod.POST, "/api/frota/veiculos", "/api/frota/veiculos/*/manutencao-status").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
+                        .requestMatchers(HttpMethod.PUT, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
+                        // Trocar a NF de um lançamento existente é edição: só ADMIN/FISCAL/PRESIDENTE. O motorista
                         // anexa a NF junto com o cadastro (multipart em /veiculos/{id}/abastecimentos|manutencoes).
                         .requestMatchers(HttpMethod.POST, "/api/frota/abastecimentos/*/nota-fiscal",
-                                                          "/api/frota/manutencoes/*/nota-fiscal").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                                                          "/api/frota/manutencoes/*/nota-fiscal").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
                         // Painel gerencial: qualquer método (inclusive HEAD) só para quem vê a gestão.
                         .requestMatchers("/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE")
                         // Patrimônios ainda sem ficha de veículo: só para quem cadastra veículos.
-                        .requestMatchers("/api/frota/patrimonios-disponiveis").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        .requestMatchers("/api/frota/patrimonios-disponiveis").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
                         // --- Diárias: abrir/editar ADMIN e FISCAL; confirmar ADMIN; deferir/indeferir PRESIDENTE; pagar FINANCEIRO ---
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/confirmar", "/api/diarias/niveis/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/diarias/**").hasRole("ADMINISTRADOR")
@@ -116,7 +116,7 @@ public class SecurityConfig {
                                                          "/api/catalogos/**", "/api/lotacoes/**", "/api/responsaveis/**",
                                                          "/api/anexos/**").hasAnyRole(LEITURA)
                         .requestMatchers("/api/me/**", "/api/auth/**").hasAnyRole(TODOS_HUMANOS)
-                        .requestMatchers("/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "MOTORISTA")
+                        .requestMatchers("/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE", "MOTORISTA")
                         // Restante da API: operadores humanos — o perfil INTEGRACAO fica de fora.
                         .anyRequest().hasAnyRole("ADMINISTRADOR", "FISCAL")
                 )

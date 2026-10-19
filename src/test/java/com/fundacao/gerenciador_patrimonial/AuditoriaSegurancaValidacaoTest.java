@@ -356,9 +356,9 @@ class AuditoriaSegurancaValidacaoTest {
         assertThat(r).contains("lotacaoId").doesNotContain("java.").doesNotContain("Cannot deserialize");
     }
 
-    /** Presidente consulta toda a frota (veículos, lançamentos, cautelas, gestão), mas não altera nada. */
+    /** Presidente consulta e edita toda a frota como o fiscal; excluir e desativar seguem só com o ADMIN. */
     @Test
-    void frota_presidenteConsultaTodaAFrotaSemAlterar() throws Exception {
+    void frota_presidenteConsultaEEditaAFrota() throws Exception {
         UsuarioAutenticado presidente = new UsuarioAutenticado(usuario("val.presidente", Perfil.PRESIDENTE));
         long veiculoId = criarVeiculo("PRE");
         mvc.perform(get("/api/frota/veiculos").with(user(presidente))).andExpect(status().isOk());
@@ -374,7 +374,14 @@ class AuditoriaSegurancaValidacaoTest {
         mvc.perform(multipart("/api/frota/veiculos/" + veiculoId + "/abastecimentos")
                         .file(new MockMultipartFile("dados", "", "application/json", dados.getBytes()))
                         .with(user(presidente)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isCreated());
+        mvc.perform(put("/api/frota/veiculos/" + veiculoId).with(user(presidente)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placa\":\"PRE-%s\",\"modelo\":\"GOL EDITADO\"}".formatted(sufixo.substring(0, 4))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.modelo").value("GOL EDITADO"));
+        mvc.perform(post("/api/frota/veiculos/" + veiculoId + "/manutencao-status").param("emManutencao", "true").with(user(presidente)))
+                .andExpect(status().is2xxSuccessful());
+        mvc.perform(delete("/api/frota/veiculos/" + veiculoId).with(user(presidente))).andExpect(status().isForbidden());
         mvc.perform(post("/api/frota/veiculos/" + veiculoId + "/ativo").param("ativo", "false").with(user(presidente)))
                 .andExpect(status().isForbidden());
     }

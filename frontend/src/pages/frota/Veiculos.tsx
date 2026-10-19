@@ -30,7 +30,7 @@ export default function FrotaVeiculos() {
       <PageHeader titulo="Frota" subtitulo="Veículos da Fundação com histórico de deslocamentos, abastecimentos e manutenções." acoes={<>
         <BotaoBaixarApp />
         {temPerfil('ADMINISTRADOR') && importacao.data?.configurada && <button className="btn btn-secondary" disabled={importando} onClick={importar}><i className="bi bi-cloud-download"></i> Importar do Transportes</button>}
-        {temPerfil('ADMINISTRADOR', 'FISCAL') && <Link className="btn btn-primary" to="/frota/veiculos/novo"><i className="bi bi-plus-lg"></i> Novo veículo</Link>}
+        {temPerfil('ADMINISTRADOR', 'FISCAL', 'PRESIDENTE') && <Link className="btn btn-primary" to="/frota/veiculos/novo"><i className="bi bi-plus-lg"></i> Novo veículo</Link>}
       </>} />
       {r && <div className="row g-3 mb-4">
         <div className="col-6 col-xl-2"><Kpi icon="bi-truck-front" label="Veículos ativos" valor={r.veiculosAtivos} /></div>
@@ -49,7 +49,7 @@ export default function FrotaVeiculos() {
           <input className="form-control form-control-sm" style={{ maxWidth: 280 }} placeholder="Buscar por placa, modelo ou cidade" value={busca} onChange={e => setBusca(e.target.value)} />
           <div className="form-check form-switch ms-auto mb-0"><input className="form-check-input" type="checkbox" id="todos" checked={todos} onChange={e => setTodos(e.target.checked)} /><label className="form-check-label small" htmlFor="todos">Incluir inativos</label></div>
         </div>
-        {veiculos.isLoading ? <Carregando /> : veiculos.error ? <Erro erro={veiculos.error} /> : !lista.length ? <EmptyState icon="bi-truck-front" titulo="Nenhum veículo" ctaTo={temPerfil('ADMINISTRADOR', 'FISCAL') ? '/frota/veiculos/novo' : undefined} ctaLabel="Novo veículo" /> : (
+        {veiculos.isLoading ? <Carregando /> : veiculos.error ? <Erro erro={veiculos.error} /> : !lista.length ? <EmptyState icon="bi-truck-front" titulo="Nenhum veículo" ctaTo={temPerfil('ADMINISTRADOR', 'FISCAL', 'PRESIDENTE') ? '/frota/veiculos/novo' : undefined} ctaLabel="Novo veículo" /> : (
           <div className="table-responsive table-livre"><table className="table table-hover table-compacta mb-0">
             <thead><tr><th>Placa</th><th>Modelo</th><th>Cidade</th><th>Tombo</th><th>Situação</th><th className="text-end">Km atual</th><th>Última saída</th><th></th></tr></thead>
             <tbody>{lista.map(v => (

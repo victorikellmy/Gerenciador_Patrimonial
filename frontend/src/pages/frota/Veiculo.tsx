@@ -29,8 +29,8 @@ export default function FrotaVeiculo() {
   if (ficha.isLoading) return <Carregando />
   if (ficha.error || !ficha.data) return <Erro erro={ficha.error ?? 'Veículo não encontrado'} />
   const { veiculo: v, resumo: r } = ficha.data
-  const gestor = temPerfil('ADMINISTRADOR', 'FISCAL')
-  const opera = temPerfil('ADMINISTRADOR', 'FISCAL', 'MOTORISTA')
+  const gestor = temPerfil('ADMINISTRADOR', 'FISCAL', 'PRESIDENTE')
+  const opera = temPerfil('ADMINISTRADOR', 'FISCAL', 'PRESIDENTE', 'MOTORISTA')
   const aberto = r.deslocamentoAberto
   const registrarChegada = (e: FormEvent) => { e.preventDefault(); if (!aberto) return; acao(() => api.frota.finalizarDeslocamento(aberto.id, Number(chegada.kmFinal), chegada.horaChegada), 'Chegada registrada.') }
   const historico = (hist.data ?? []).filter(h => !filtro || h.tipo === filtro)

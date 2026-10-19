@@ -76,39 +76,39 @@ export default function LancamentoForm({ tipo }: { tipo: Tipo }) {
         {erro && <div className="alert alert-danger m-3 mb-0">{erro}</div>}
         <Section icon={icones[tipo]} titulo={titulos[tipo]}>
           <div className="row g-3">
-            {!id && <Campo label="Veículo" obrigatorio col="col-md-4"><select className="form-select" required {...bindNum('veiculoId')}><option value="">Selecione</option>{veiculos.data?.map(v => <option key={v.id} value={v.id}>{v.placa} · {v.modelo}</option>)}</select></Campo>}
-            {tipo !== 'deslocamento' && <Campo label="Data" obrigatorio col="col-md-2"><input type="date" className="form-control" required {...bind('data')} /></Campo>}
+            {!id && <Campo label="Veículo" obrigatorio col="col-md-6 col-xl-3"><select className="form-select" required {...bindNum('veiculoId')}><option value="">Selecione</option>{veiculos.data?.map(v => <option key={v.id} value={v.id}>{v.placa} · {v.modelo}</option>)}</select></Campo>}
+            {tipo !== 'deslocamento' && <Campo label="Data" obrigatorio col="col-md-6 col-xl-3"><input type="date" className="form-control" required {...bind('data')} /></Campo>}
             {tipo === 'abastecimento' && <>
-              <Campo label="Km no painel" col="col-md-2"><input type="number" min="0" className="form-control" {...bindNum('km')} /></Campo>
-              <Campo label="Combustível" obrigatorio col="col-md-2"><select className="form-select" required {...bind('combustivel')}><option value="">Selecione</option>{cat.data?.combustiveis.map(c => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}</select></Campo>
-              <Campo label="Litros" col="col-md-2"><input type="number" step="0.001" min="0" className="form-control" {...bindNum('quantidadeLitros')} /></Campo>
-              <Campo label="Valor (R$)" obrigatorio col="col-md-2" hint={precoLitro ? `≈ R$ ${precoLitro.toFixed(3)}/L` : undefined}><input type="number" step="0.01" min="0" className="form-control" required {...bindNum('valor')} /></Campo>
-              <Campo label="Posto / cidade" col="col-md-4"><input className="form-control" {...bind('postoCidade')} /></Campo>
-              <Campo label="Motorista" obrigatorio col="col-md-4"><input className="form-control" required {...bind('motorista')} readOnly={motorista} /></Campo>
+              <Campo label="Km no painel" col="col-md-6 col-xl-3"><input type="number" min="0" className="form-control" {...bindNum('km')} /></Campo>
+              <Campo label="Combustível" obrigatorio col="col-md-6 col-xl-3"><select className="form-select" required {...bind('combustivel')}><option value="">Selecione</option>{cat.data?.combustiveis.map(c => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}</select></Campo>
+              <Campo label="Litros" col="col-md-6 col-xl-3"><input type="number" step="0.001" min="0" className="form-control" {...bindNum('quantidadeLitros')} /></Campo>
+              <Campo label="Valor (R$)" obrigatorio col="col-md-6 col-xl-3" hint={precoLitro ? `≈ R$ ${precoLitro.toFixed(3)}/L` : undefined}><input type="number" step="0.01" min="0" className="form-control" required {...bindNum('valor')} /></Campo>
+              <Campo label="Posto / cidade" col="col-md-6 col-xl-3"><input className="form-control" {...bind('postoCidade')} /></Campo>
+              <Campo label="Motorista" obrigatorio col="col-md-6 col-xl-3"><input className="form-control" required {...bind('motorista')} readOnly={motorista} /></Campo>
               <Campo label="Observação" col="col-12"><input className="form-control" {...bind('observacao')} /></Campo>
             </>}
             {tipo === 'manutencao' && <>
-              <Campo label="Serviço" obrigatorio col="col-md-3"><select className="form-select" required {...bind('servico')}><option value="">Selecione</option>{cat.data?.servicos.map(c => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}</select></Campo>
-              <Campo label="Km" col="col-md-2"><input type="number" min="0" className="form-control" {...bindNum('km')} /></Campo>
-              <Campo label="Valor (R$)" col="col-md-2"><input type="number" step="0.01" min="0" className="form-control" {...bindNum('valor')} /></Campo>
-              <Campo label="Oficina / fornecedor" col="col-md-3"><input className="form-control" {...bind('fornecedor')} /></Campo>
-              <Campo label="Nº da NF" col="col-md-2"><input className="form-control" {...bind('notaFiscal')} /></Campo>
-              <Campo label="Descrição do serviço" col="col-md-8"><input className="form-control" {...bind('descricao')} /></Campo>
-              <Campo label="Responsável pelo registro" obrigatorio col="col-md-4"><input className="form-control" required {...bind('motorista')} readOnly={motorista} /></Campo>
-              <Campo label="Próxima revisão (km)" col="col-md-3" hint="Gera alerta quando o km atual passar deste valor."><input type="number" min="0" className="form-control" {...bindNum('proximaRevisaoKm')} /></Campo>
-              <Campo label="Próxima revisão (data)" col="col-md-3"><input type="date" className="form-control" {...bind('proximaRevisaoData')} /></Campo>
+              <Campo label="Serviço" obrigatorio col="col-md-6 col-xl-3"><select className="form-select" required {...bind('servico')}><option value="">Selecione</option>{cat.data?.servicos.map(c => <option key={c.valor} value={c.valor}>{c.rotulo}</option>)}</select></Campo>
+              <Campo label="Km" col="col-md-6 col-xl-3"><input type="number" min="0" className="form-control" {...bindNum('km')} /></Campo>
+              <Campo label="Valor (R$)" col="col-md-6 col-xl-3"><input type="number" step="0.01" min="0" className="form-control" {...bindNum('valor')} /></Campo>
+              <Campo label="Oficina / fornecedor" col="col-md-6 col-xl-3"><input className="form-control" {...bind('fornecedor')} /></Campo>
+              <Campo label="Nº da NF" col="col-md-6 col-xl-3"><input className="form-control" {...bind('notaFiscal')} /></Campo>
+              <Campo label="Descrição do serviço" col="col-md-6"><input className="form-control" {...bind('descricao')} /></Campo>
+              <Campo label="Responsável pelo registro" obrigatorio col="col-md-6 col-xl-3"><input className="form-control" required {...bind('motorista')} readOnly={motorista} /></Campo>
+              <Campo label="Próxima revisão (km)" col="col-md-6 col-xl-3" hint="Gera alerta quando o km atual passar deste valor."><input type="number" min="0" className="form-control" {...bindNum('proximaRevisaoKm')} /></Campo>
+              <Campo label="Próxima revisão (data)" col="col-md-6 col-xl-3"><input type="date" className="form-control" {...bind('proximaRevisaoData')} /></Campo>
             </>}
             {tipo === 'deslocamento' && <>
-              <Campo label="Data" obrigatorio col="col-md-2"><input type="date" className="form-control" required {...bind('dataViagem')} /></Campo>
-              <Campo label="Hora de saída" col="col-md-2"><input type="time" className="form-control" {...bind('horaSaida')} /></Campo>
-              <Campo label="Km de saída" col="col-md-2"><input type="number" min="0" className="form-control" {...bindNum('kmInicial')} /></Campo>
-              <Campo label="Motivo" obrigatorio col="col-md-3"><select className="form-select" required {...bind('motivo')}><option value="">Selecione</option>{cat.data?.motivos.map(m => <option key={m}>{m}</option>)}</select></Campo>
-              <Campo label="Lotação" col="col-md-3"><select className="form-select" {...bind('lotacao')}><option value="">—</option>{cat.data?.lotacoes.map(m => <option key={m}>{m}</option>)}</select></Campo>
+              <Campo label="Data" obrigatorio col="col-md-6 col-xl-3"><input type="date" className="form-control" required {...bind('dataViagem')} /></Campo>
+              <Campo label="Hora de saída" col="col-md-6 col-xl-3"><input type="time" className="form-control" {...bind('horaSaida')} /></Campo>
+              <Campo label="Km de saída" col="col-md-6 col-xl-3"><input type="number" min="0" className="form-control" {...bindNum('kmInicial')} /></Campo>
+              <Campo label="Motivo" obrigatorio col="col-md-6 col-xl-3"><select className="form-select" required {...bind('motivo')}><option value="">Selecione</option>{cat.data?.motivos.map(m => <option key={m}>{m}</option>)}</select></Campo>
+              <Campo label="Lotação" col="col-md-6 col-xl-3"><select className="form-select" {...bind('lotacao')}><option value="">—</option>{cat.data?.lotacoes.map(m => <option key={m}>{m}</option>)}</select></Campo>
               <Campo label="Destino" obrigatorio col="col-md-6"><input className="form-control" required {...bind('destino')} /></Campo>
-              <Campo label="Motorista" obrigatorio col="col-md-6"><input className="form-control" required {...bind('motorista')} readOnly={motorista} /></Campo>
+              <Campo label="Motorista" obrigatorio col="col-md-6 col-xl-3"><input className="form-control" required {...bind('motorista')} readOnly={motorista} /></Campo>
               <Campo label="Titular" col="col-md-6"><input className="form-control" list="dl-titulares" {...bind('titular')} onChange={e => set('titular', e.target.value)} /><datalist id="dl-titulares">{sugestoes.map(s => <option key={s} value={s} />)}</datalist></Campo>
               <Campo label="Assistido / passageiro" col="col-md-6"><input className="form-control" {...bind('assistido')} /></Campo>
-              {editando && <><Campo label="Hora de chegada" col="col-md-2"><input type="time" className="form-control" {...bind('horaChegada')} /></Campo><Campo label="Km de chegada" col="col-md-2"><input type="number" min="0" className="form-control" {...bindNum('kmFinal')} /></Campo></>}
+              {editando && <><Campo label="Hora de chegada" col="col-md-6 col-xl-3"><input type="time" className="form-control" {...bind('horaChegada')} /></Campo><Campo label="Km de chegada" col="col-md-6 col-xl-3"><input type="number" min="0" className="form-control" {...bindNum('kmFinal')} /></Campo></>}
               <Campo label="Observação" col="col-12"><input className="form-control" {...bind('observacao')} /></Campo>
             </>}
           </div>

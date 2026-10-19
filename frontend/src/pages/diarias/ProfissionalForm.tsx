@@ -36,11 +36,11 @@ export default function ProfissionalForm() {
         <Section icon="bi-person-vcard" titulo="Identificação">
           <div className="row g-3">
             <Campo label="Nome" obrigatorio col="col-md-6"><input className="form-control" required maxLength={160} {...bind('nome')} /></Campo>
-            <Campo label="Matrícula" col="col-md-3"><input className="form-control" {...bind('matricula')} /></Campo>
-            <Campo label="Lotação" col="col-md-3"><input className="form-control" {...bind('lotacao')} /></Campo>
-            <Campo label="CPF" obrigatorio col="col-md-3"><input className="form-control" required maxLength={14} placeholder="000.000.000-00" {...bind('cpf')} /></Campo>
-            <Campo label="RG" col="col-md-3"><input className="form-control" {...bind('rg')} /></Campo>
-            <Campo label="Órgão expedidor" col="col-md-3"><input className="form-control" {...bind('orgaoExpedidor')} /></Campo>
+            <Campo label="Matrícula" col="col-md-6 col-xl-3"><input className="form-control" {...bind('matricula')} /></Campo>
+            <Campo label="Lotação" col="col-md-6 col-xl-3"><input className="form-control" {...bind('lotacao')} /></Campo>
+            <Campo label="CPF" obrigatorio col="col-md-6 col-xl-3"><input className="form-control" required maxLength={14} placeholder="000.000.000-00" {...bind('cpf')} /></Campo>
+            <Campo label="RG" col="col-md-6 col-xl-3"><input className="form-control" {...bind('rg')} /></Campo>
+            <Campo label="Órgão expedidor" col="col-md-6 col-xl-3"><input className="form-control" {...bind('orgaoExpedidor')} /></Campo>
           </div>
         </Section>
         <Section icon="bi-table" titulo="Cargo e valores de diária" semBorda>
