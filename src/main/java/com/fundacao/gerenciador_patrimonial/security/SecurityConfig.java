@@ -151,6 +151,9 @@ public class SecurityConfig {
                                 "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/error",
                                 "/app", "/app/**"
                         ).permitAll()
+                        // Downloads públicos (APK do app Android): só leitura de arquivos.
+                        .requestMatchers(HttpMethod.GET, "/downloads/**").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/downloads/**").permitAll()
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")).permitAll()
                         .anyRequest().denyAll()
                 )

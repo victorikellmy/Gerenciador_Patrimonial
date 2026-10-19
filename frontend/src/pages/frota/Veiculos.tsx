@@ -5,6 +5,7 @@ import { api } from '../../api'
 import { useAuth } from '../../auth/AuthContext'
 import { Card, Carregando, EmptyState, Erro, Kpi, PageHeader, useToast } from '../../components/ui'
 import { data, hora, moeda, numero, rotulo } from '../../utils/format'
+import { BotaoBaixarApp } from '../../components/BaixarApp'
 
 export default function FrotaVeiculos() {
   const { temPerfil } = useAuth()
@@ -27,6 +28,7 @@ export default function FrotaVeiculos() {
   return (
     <>
       <PageHeader titulo="Frota" subtitulo="Veículos da Fundação com histórico de deslocamentos, abastecimentos e manutenções." acoes={<>
+        <BotaoBaixarApp />
         {temPerfil('ADMINISTRADOR') && importacao.data?.configurada && <button className="btn btn-secondary" disabled={importando} onClick={importar}><i className="bi bi-cloud-download"></i> Importar do Transportes</button>}
         {temPerfil('ADMINISTRADOR', 'FISCAL') && <Link className="btn btn-primary" to="/frota/veiculos/novo"><i className="bi bi-plus-lg"></i> Novo veículo</Link>}
       </>} />

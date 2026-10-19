@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth, destinoInicial } from '../auth/AuthContext'
+import { BotaoBaixarApp } from '../components/BaixarApp'
 
 export default function Login() {
   const { usuario, carregando, login } = useAuth()
@@ -56,6 +57,7 @@ export default function Login() {
             </button>
           </form>
         </div>
+        <BotaoBaixarApp variante="bloco" />
         <div className="login-footer">Fundação Pró-Tocantins · {new Date().getFullYear()}</div>
       </div>
     </div>
