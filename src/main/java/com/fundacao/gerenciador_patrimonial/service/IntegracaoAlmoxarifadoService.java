@@ -120,6 +120,20 @@ public class IntegracaoAlmoxarifadoService {
                 .findFirst();
     }
 
+    private static final java.util.Set<String> TIPOS_NF = java.util.Set.of(
+            "application/pdf", "image/jpeg", "image/png", "image/webp");
+
+    /**
+     * O tipo declarado pelo sistema de origem só é aceito se for PDF ou imagem comum; qualquer
+     * outro (ex.: text/html, image/svg+xml) é guardado como binário genérico, para o arquivo
+     * nunca ser servido com um tipo ativo a quem baixa a nota.
+     */
+    static String tipoPermitido(String declarado) {
+        if (declarado == null || declarado.isBlank()) return "application/pdf";
+        String base = declarado.split(";", 2)[0].trim().toLowerCase(java.util.Locale.ROOT);
+        return TIPOS_NF.contains(base) ? base : "application/octet-stream";
+    }
+
     private void gravarNotaFiscal(PendenciaPatrimoniamento p, RecebimentoAlmoxarifadoRequest.Anexo nf) {
         byte[] bytes;
         try {
@@ -140,7 +154,7 @@ public class IntegracaoAlmoxarifadoService {
                 new ByteArrayInputStream(bytes), nome, "pendencias/" + p.getId());
 
         p.setNfNomeOriginal(nome);
-        p.setNfContentType(nf.contentType() != null ? nf.contentType() : "application/pdf");
+        p.setNfContentType(tipoPermitido(nf.contentType()));
         p.setNfTamanhoBytes((long) bytes.length);
         p.setNfCaminho(caminho);
     }

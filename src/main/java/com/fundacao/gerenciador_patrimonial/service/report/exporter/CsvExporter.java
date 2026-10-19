@@ -72,9 +72,13 @@ public class CsvExporter {
 
     private static String str(Object o) { return o == null ? "" : o.toString(); }
 
-    /** Escapa aspas e envolve em aspas se houver ; ou aspas ou quebra de linha. */
+    /**
+     * Escapa aspas e envolve em aspas se houver ; ou aspas ou quebra de linha. Texto que começa
+     * com = + - @ (ou tab/CR) recebe um apóstrofo na frente para o Excel não o tratar como fórmula.
+     */
     private static String esc(String s) {
         if (s == null) return "";
+        if (!s.isEmpty() && "=+-@\t\r".indexOf(s.charAt(0)) >= 0) s = "'" + s;
         boolean precisa = s.contains(SEP) || s.contains("\"") || s.contains("\n") || s.contains("\r");
         String limpo = s.replace("\"", "\"\"");
         return precisa ? "\"" + limpo + "\"" : limpo;

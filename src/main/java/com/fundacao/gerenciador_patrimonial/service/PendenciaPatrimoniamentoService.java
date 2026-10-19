@@ -216,13 +216,15 @@ public class PendenciaPatrimoniamentoService {
     /** Expande os itens por quantidade e devolve o que corresponde à unidade de índice {@code posicao}. */
     static ItemPendencia itemDaProximaUnidade(List<ItemPendencia> itens, int posicao) {
         if (itens.isEmpty()) return null;
-        List<ItemPendencia> expandido = new ArrayList<>();
+        // Percorre somando as quantidades, sem montar a lista expandida (a quantidade vem do
+        // sistema de origem e não deve virar uma lista do mesmo tamanho em memória).
+        long acumulado = 0;
         for (ItemPendencia it : itens) {
-            int q = it.quantidade() == null || it.quantidade() < 1 ? 1 : it.quantidade();
-            for (int i = 0; i < q; i++) expandido.add(it);
+            long q = it.quantidade() == null || it.quantidade() < 1 ? 1 : it.quantidade();
+            if (posicao >= 0 && posicao < acumulado + q) return it;
+            acumulado += q;
         }
-        if (posicao < 0 || posicao >= expandido.size()) return expandido.get(expandido.size() - 1);
-        return expandido.get(posicao);
+        return itens.get(itens.size() - 1);
     }
 
     private static BigDecimal valorDaUnidade(PendenciaPatrimoniamento p, List<ItemPendencia> itens, ItemPendencia atual) {

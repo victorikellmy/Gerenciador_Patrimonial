@@ -237,6 +237,8 @@ public class FrotaController {
         if (motorista && (nf == null || nf.isEmpty())) {
             throw new RegraDeNegocioException("Anexe a nota fiscal (PDF ou foto) para registrar o lançamento.");
         }
+        // Valida o arquivo ANTES de gravar o lançamento, para não sobrar lançamento sem NF.
+        if (nf != null && !nf.isEmpty()) FrotaService.validarArquivoNf(nf);
     }
 
     @PostMapping("/veiculos/{id}/deslocamentos")
@@ -291,7 +293,9 @@ public class FrotaController {
         try { if (nf.contentType() != null) mt = org.springframework.http.MediaType.parseMediaType(nf.contentType()); } catch (RuntimeException ignored) { }
         return ResponseEntity.ok().contentType(mt)
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"" + (nf.nomeOriginal() != null ? nf.nomeOriginal().replaceAll("[^\\x20-\\x7E]", "_") : "nota-fiscal") + "\"")
+                        org.springframework.http.ContentDisposition.inline()
+                                .filename(nf.nomeOriginal() != null ? nf.nomeOriginal() : "nota-fiscal", java.nio.charset.StandardCharsets.UTF_8)
+                                .build().toString())
                 .body(nf.recurso());
     }
 

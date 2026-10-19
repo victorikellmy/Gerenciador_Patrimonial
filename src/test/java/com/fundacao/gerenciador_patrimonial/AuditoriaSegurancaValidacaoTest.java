@@ -30,7 +30,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.springframework.web.filter.ForwardedHeaderFilter;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,9 +52,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Regressão dos seis itens da auditoria de segurança run-1 (19/10/2026).
  *
  * <p>Os seis foram confirmados localmente (H2, dados fictícios, sem rede) com a versão
- * anterior deste teste, que afirmava o comportamento vulnerável. Os itens 1 a 3 foram
- * corrigidos e aqui afirmam o comportamento seguro. Os itens 4 a 6 seguem em aberto:
- * os testes do comportamento esperado estão desativados até a correção.</p>
+ * anterior deste teste, que afirmava o comportamento vulnerável. Os itens 1 a 4 e 6 foram
+ * corrigidos e aqui afirmam o comportamento seguro. O item 5 depende da implantação (HTTPS)
+ * e o teste dele fica desativado. Os testes de endurecimento cobrem os achados do crítico.</p>
  */
 @SpringBootTest(properties = {
         "app.importacao.habilitada=false",
@@ -221,14 +220,15 @@ class AuditoriaSegurancaValidacaoTest {
         mvc.perform(get("/api/me").session(b)).andExpect(status().isUnauthorized());
     }
 
-    // ------------------------------------------------------------------ itens 4 a 6 (em aberto)
+    // ------------------------------------------------------------------ item 4 (corrigido)
 
+    /** Editar uma diária já deferida devolve para SOLICITADO: não dá para pagar sem nova aprovação. */
     @Test
-    @Disabled("Item 4 em aberto (decisão de negócio): diária CONFIRMADO/DEFERIDO ainda pode ser editada mantendo o status.")
-    void item4_diariaDeferidaNaoPodeSerEditada() throws Exception {
+    void item4_diariaDeferidaEditadaVoltaParaAprovacao() throws Exception {
         Long nivelId = nivelRepo.findByAtivoTrueOrderByIdAsc().get(0).getId();
         long prof = criarProfissional("Prof " + sufixo, nivelId);
         UsuarioAutenticado presidente = new UsuarioAutenticado(usuario("val.presidente", Perfil.PRESIDENTE));
+        UsuarioAutenticado financeiro = new UsuarioAutenticado(usuario("val.financeiro", Perfil.FINANCEIRO));
         String corpo = """
                 {"profissionalId":%d,"itinerario":"Palmas - Gurupi","partida":"%s","retorno":"%s","meioTransporte":"VEICULO_OFICIAL",
                  "recurso":"PROPRIO","numeroDiarias":%s,"valorUnitario":%s}""";
@@ -236,25 +236,124 @@ class AuditoriaSegurancaValidacaoTest {
                         .content(corpo.formatted(prof, LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), "1", "100")))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long id = json.readTree(criada).get("id").asLong();
-        mvc.perform(post("/api/diarias/" + id + "/confirmar").with(user(admin)).contentType(MediaType.APPLICATION_JSON).content("{}"));
-        mvc.perform(post("/api/diarias/" + id + "/deferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON).content("{}"));
+        mvc.perform(post("/api/diarias/" + id + "/confirmar").with(user(admin)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/diarias/" + id + "/deferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(jsonPath("$.status").value("DEFERIDO"));
+
         mvc.perform(put("/api/diarias/" + id).with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
                         .content(corpo.formatted(prof, LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), "10", "5000")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SOLICITADO"));
+        mvc.perform(post("/api/diarias/" + id + "/pagar").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().is4xxClientError());
     }
 
+    // ------------------------------------------------------------------ item 5 (implantação)
+
     @Test
-    @Disabled("Item 5 em aberto (implantação): cookie de sessão sem Secure enquanto o acesso for por HTTP na porta 8082.")
+    @Disabled("Item 5 depende da implantação: HTTPS no proxy + SESSION_COOKIE_SECURE=true e APP_BIND=127.0.0.1 no servidor.")
     void item5_cookieDeSessaoSecure() {
         assertThat(serverProperties.getServlet().getSession().getCookie().getSecure()).isTrue();
     }
 
+    // ------------------------------------------------------------------ item 6 (corrigido)
+
+    /** O IP da auditoria é o da conexão; um X-Forwarded-For enviado pelo cliente não é gravado. */
     @Test
-    @Disabled("Item 6 em aberto: IP da auditoria ainda vem do X-Forwarded-For enviado pelo cliente.")
     void item6_ipDeAuditoriaNaoVemDoCliente() throws Exception {
         assertThat(ipGravado(mvc)).isEqualTo("127.0.0.1");
-        MockMvc comFiltro = MockMvcBuilders.webAppContextSetup(ctx).addFilters(new ForwardedHeaderFilter()).apply(springSecurity()).build();
-        assertThat(ipGravado(comFiltro)).isEqualTo("127.0.0.1");
+    }
+
+    // ------------------------------------------------------------------ endurecimento
+
+    /** Depois de 10 senhas erradas o login fica bloqueado (429), mesmo com a senha certa. */
+    @Test
+    void login_bloqueiaDepoisDeFalhasSeguidas() throws Exception {
+        Usuario alvo = novoUsuario("val.forca", Perfil.FISCAL, "senha-certa", false);
+        for (int i = 0; i < 10; i++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"login\":\"%s\",\"senha\":\"errada-%d\"}".formatted(alvo.getLogin(), i)))
+                    .andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"%s\",\"senha\":\"senha-certa\"}".formatted(alvo.getLogin())))
+                .andExpect(status().isTooManyRequests());
+        mvc.perform(get("/api/me").with(httpBasic(alvo.getLogin(), "senha-certa"))).andExpect(status().isUnauthorized());
+    }
+
+    /** Usuário desativado recebe a mesma resposta de senha errada (não revela que a conta existe). */
+    @Test
+    void login_inativoMesmaMensagemDeSenhaErrada() throws Exception {
+        Usuario inativo = novoUsuario("val.inativo", Perfil.FISCAL, "senha-ok", false);
+        inativo.setAtivo(false);
+        usuarioRepo.save(inativo);
+        String inativoResp = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"%s\",\"senha\":\"senha-ok\"}".formatted(inativo.getLogin())))
+                .andExpect(status().isUnauthorized()).andReturn().getResponse().getContentAsString();
+        String erradaResp = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"%s\",\"senha\":\"outra\"}".formatted(inativo.getLogin() + "x")))
+                .andExpect(status().isUnauthorized()).andReturn().getResponse().getContentAsString();
+        assertThat(json.readTree(inativoResp).path("mensagem")).isEqualTo(json.readTree(erradaResp).path("mensagem"));
+    }
+
+    /** Veículo desativado não recebe lançamento novo. */
+    @Test
+    void frota_veiculoDesativadoNaoRecebeLancamento() throws Exception {
+        long veiculoId = criarVeiculo("INA");
+        mvc.perform(post("/api/frota/veiculos/" + veiculoId + "/ativo").param("ativo", "false").with(user(admin)))
+                .andExpect(status().isOk());
+        String dados = """
+                {"veiculoId":%d,"data":"%s","km":1000,"combustivel":"GASOLINA","quantidadeLitros":30,"valor":150.00,"motorista":"Fiscal"}"""
+                .formatted(veiculoId, LocalDate.now());
+        mvc.perform(multipart("/api/frota/veiculos/" + veiculoId + "/abastecimentos")
+                        .file(new MockMultipartFile("dados", "", "application/json", dados.getBytes()))
+                        .with(user(fiscal)))
+                .andExpect(status().isConflict());
+    }
+
+    /** NF com tipo não permitido é recusada antes de o lançamento ser gravado. */
+    @Test
+    void frota_nfComTipoInvalidoRecusada() throws Exception {
+        long veiculoId = criarVeiculo("TIP");
+        long antes = abastecimentoRepo.count();
+        String dados = """
+                {"veiculoId":%d,"data":"%s","km":1000,"combustivel":"GASOLINA","quantidadeLitros":30,"valor":150.00,"motorista":"Motorista"}"""
+                .formatted(veiculoId, LocalDate.now());
+        mvc.perform(multipart("/api/frota/veiculos/" + veiculoId + "/abastecimentos")
+                        .file(new MockMultipartFile("dados", "", "application/json", dados.getBytes()))
+                        .file(new MockMultipartFile("arquivo", "pagina.html", "text/html", "<script>x</script>".getBytes()))
+                        .with(user(motorista)))
+                .andExpect(status().is4xxClientError());
+        assertThat(abastecimentoRepo.count()).isEqualTo(antes);
+    }
+
+    /** Cadastro de profissionais (CPF, dados bancários) é só de ADMIN/FISCAL. */
+    @Test
+    void diarias_profissionaisSoAdminOuFiscal() throws Exception {
+        UsuarioAutenticado gerente = new UsuarioAutenticado(usuario("val.gerente", Perfil.GERENTE));
+        mvc.perform(get("/api/diarias/profissionais").with(user(gerente))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/diarias/profissionais").with(user(motorista))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/diarias/profissionais").with(user(fiscal))).andExpect(status().isOk());
+    }
+
+    /** A integração recusa quantidade que viraria milhões de bens. */
+    @Test
+    void integracao_limitesDoRecebimento() throws Exception {
+        UsuarioAutenticado integ = new UsuarioAutenticado(usuario("val.integ", Perfil.INTEGRACAO));
+        mvc.perform(post("/api/integracao/almoxarifado/recebimentos").with(user(integ)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"compraId\":%d,\"itens\":[{\"descricao\":\"CADEIRA\",\"quantidade\":2000000000}]}"
+                                .formatted(900_000 + new java.util.Random().nextInt(99_999))))
+                .andExpect(status().isBadRequest());
+    }
+
+    /** JSON com tipo errado devolve só o nome do campo, sem a mensagem interna do parser. */
+    @Test
+    void erros_naoExpoemDetalhesInternos() throws Exception {
+        String r = mvc.perform(post("/api/frota/veiculos").with(user(admin)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placa\":\"a\",\"modelo\":\"GOL\",\"lotacaoId\":\"nao-numero\"}"))
+                .andExpect(status().isBadRequest()).andReturn().getResponse().getContentAsString();
+        assertThat(r).contains("lotacaoId").doesNotContain("java.").doesNotContain("Cannot deserialize");
     }
 
     // ------------------------------------------------------------------ apoio

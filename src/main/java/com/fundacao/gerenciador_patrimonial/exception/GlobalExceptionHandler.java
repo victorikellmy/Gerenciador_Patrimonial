@@ -54,19 +54,30 @@ public class GlobalExceptionHandler {
             org.springframework.http.converter.HttpMessageNotReadableException ex, HttpServletRequest req) {
         String causa = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
         log.warn("Corpo ilegível em {}: {}", req.getRequestURI(), causa);
+        // Só o nome do campo com problema vai para o cliente; a mensagem do parser (classes,
+        // caminhos internos) fica no log.
+        List<String> detalhes = List.of();
+        for (Throwable t = ex.getCause(); t != null; t = t.getCause()) {
+            if (t instanceof com.fasterxml.jackson.databind.JsonMappingException jme && !jme.getPath().isEmpty()) {
+                String campo = jme.getPath().get(jme.getPath().size() - 1).getFieldName();
+                if (campo != null) detalhes = List.of(campo + ": valor em formato inválido");
+                break;
+            }
+            if (t.getCause() == t) break;
+        }
         return ResponseEntity.badRequest()
-                .body(ErroResponse.of(400, "Requisição inválida", "Corpo da requisição ilegível", req.getRequestURI(),
-                        causa != null ? List.of(causa) : List.of()));
+                .body(ErroResponse.of(400, "Requisição inválida", "Corpo da requisição ilegível", req.getRequestURI(), detalhes));
     }
 
     /** Constraints de unicidade do banco (ex.: matricula duplicada). */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErroResponse> handleDataIntegrity(DataIntegrityViolationException ex,
                                                             HttpServletRequest req) {
-        log.warn("Violação de integridade: {}", ex.getMostSpecificCause().getMessage());
+        // A mensagem do banco (nome de constraint, coluna e o valor em conflito) fica só no log.
+        log.warn("Violação de integridade em {}: {}", req.getRequestURI(), ex.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ErroResponse.of(409, "Conflito de dados",
-                        "Violação de integridade: " + ex.getMostSpecificCause().getMessage(),
+                        "O registro conflita com dados já existentes (valor duplicado ou em uso).",
                         req.getRequestURI()));
     }
 

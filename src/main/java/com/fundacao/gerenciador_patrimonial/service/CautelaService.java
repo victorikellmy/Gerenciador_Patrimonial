@@ -75,6 +75,7 @@ public class CautelaService {
         validar(req);
         Veiculo v = veiculoRepo.findById(req.veiculoId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Veículo", req.veiculoId()));
+        FrotaService.exigirAtivo(v);
         if (req.kmFinal() == null && cautelaRepo.findFirstByVeiculoIdAndKmFinalIsNullOrderByDataViagemDescIdDesc(v.getId()).isPresent()) {
             throw new RegraDeNegocioException("Este veículo já tem uma cautela em aberto. Finalize-a antes.");
         }

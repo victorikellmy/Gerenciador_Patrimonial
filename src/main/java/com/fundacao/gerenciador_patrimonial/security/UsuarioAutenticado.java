@@ -20,9 +20,16 @@ public class UsuarioAutenticado implements UserDetails {
 
     private final Usuario usuario;
     private final List<GrantedAuthority> autoridades;
+    /** Login com tentativas de senha demais ({@link TentativasLoginService}); só usado na autenticação. */
+    private final boolean bloqueado;
 
     public UsuarioAutenticado(Usuario usuario) {
+        this(usuario, false);
+    }
+
+    public UsuarioAutenticado(Usuario usuario, boolean bloqueado) {
         this.usuario = usuario;
+        this.bloqueado = bloqueado;
         // Spring Security espera roles com prefixo ROLE_
         this.autoridades = List.of(
                 new SimpleGrantedAuthority("ROLE_" + usuario.getPerfil().name())
@@ -34,7 +41,7 @@ public class UsuarioAutenticado implements UserDetails {
     @Override public String getUsername() { return usuario.getLogin(); }
 
     @Override public boolean isAccountNonExpired()     { return true; }
-    @Override public boolean isAccountNonLocked()      { return true; }
+    @Override public boolean isAccountNonLocked()      { return !bloqueado; }
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled()               { return usuario.isAtivo(); }
 

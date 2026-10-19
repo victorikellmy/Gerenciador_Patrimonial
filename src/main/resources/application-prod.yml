@@ -19,6 +19,23 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+# Proxy reverso e transporte.
+# - native: o Tomcat (RemoteIpValve) só aceita X-Forwarded-For/Proto vindos dos proxies em
+#   TRUSTED_PROXIES; de qualquer outro cliente o cabeçalho é ignorado. Assim o IP da auditoria
+#   não pode ser forjado e, atrás do HTTPS do proxy, a requisição é vista como segura (o cookie
+#   de sessão sai com Secure). O padrão confia só nas redes bridge do Docker e no loopback.
+# - SESSION_COOKIE_SECURE=true força Secure sempre (use quando TODO acesso for por HTTPS).
+server:
+  forward-headers-strategy: native
+  tomcat:
+    use-relative-redirects: true
+    remoteip:
+      internal-proxies: '${TRUSTED_PROXIES:172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+|127\.0\.0\.1|0:0:0:0:0:0:0:1}'
+  servlet:
+    session:
+      cookie:
+        secure: ${SESSION_COOKIE_SECURE:false}
+
 # Em produção o seed automático fica desligado — dados reais vêm via importação manual.
 app:
   importacao:

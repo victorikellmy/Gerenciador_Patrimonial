@@ -85,7 +85,10 @@ public class SecurityConfig {
                         // anexa a NF junto com o cadastro (multipart em /veiculos/{id}/abastecimentos|manutencoes).
                         .requestMatchers(HttpMethod.POST, "/api/frota/abastecimentos/*/nota-fiscal",
                                                           "/api/frota/manutencoes/*/nota-fiscal").hasAnyRole("ADMINISTRADOR", "FISCAL")
-                        .requestMatchers(HttpMethod.GET, "/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        // Painel gerencial: qualquer método (inclusive HEAD) só para quem vê a gestão.
+                        .requestMatchers("/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE")
+                        // Patrimônios ainda sem ficha de veículo: só para quem cadastra veículos.
+                        .requestMatchers("/api/frota/patrimonios-disponiveis").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         // --- Diárias: abrir/editar ADMIN e FISCAL; confirmar ADMIN; deferir/indeferir PRESIDENTE; pagar FINANCEIRO ---
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/confirmar", "/api/diarias/niveis/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/diarias/**").hasRole("ADMINISTRADOR")
@@ -93,6 +96,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/pagar").hasAnyRole("ADMINISTRADOR", "FINANCEIRO")
                         .requestMatchers(HttpMethod.POST, "/api/diarias", "/api/diarias/profissionais/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.PUT, "/api/diarias/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
+                        // Cadastro de profissionais (CPF, RG, dados bancários) e valores para o formulário:
+                        // só quem cadastra diárias. Os demais perfis veem os dados dentro de cada diária.
+                        .requestMatchers("/api/diarias/profissionais", "/api/diarias/profissionais/**",
+                                         "/api/diarias/valores/**").hasAnyRole("ADMINISTRADOR", "FISCAL")
                         .requestMatchers(HttpMethod.GET, "/api/diarias/**").hasAnyRole(LEITURA)
                         // --- Escrita/alteração exige ADMINISTRADOR ---
                         .requestMatchers(HttpMethod.POST, "/api/importacao/**").hasRole("ADMINISTRADOR")

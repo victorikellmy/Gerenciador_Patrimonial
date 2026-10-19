@@ -18,7 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -50,16 +49,15 @@ public class PendenciaController {
     public ResponseEntity<Resource> notaFiscal(@PathVariable Long id) {
         var nf = service.notaFiscal(id);
         String nome = nf.nomeOriginal() != null ? nf.nomeOriginal() : "nota-fiscal.pdf";
-        String nomeAscii = nome.replaceAll("[^\\x20-\\x7E]", "_");
-        String nomeUtf8 = URLEncoder.encode(nome, StandardCharsets.UTF_8).replace("+", "%20");
         MediaType tipo = MediaType.APPLICATION_OCTET_STREAM;
         try { if (nf.contentType() != null) tipo = MediaType.parseMediaType(nf.contentType()); }
         catch (RuntimeException ignored) { /* mantém octet-stream */ }
 
+        // ContentDisposition escapa aspas e codifica o nome (RFC 6266/5987); o nome vem do sistema de origem.
         return ResponseEntity.ok()
                 .contentType(tipo)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + nomeAscii + "\"; filename*=UTF-8''" + nomeUtf8)
+                        org.springframework.http.ContentDisposition.attachment().filename(nome, StandardCharsets.UTF_8).build().toString())
                 .body(nf.recurso());
     }
 

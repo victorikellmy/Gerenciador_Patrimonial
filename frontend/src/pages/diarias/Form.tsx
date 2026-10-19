@@ -33,6 +33,9 @@ export default function DiariaForm() {
   return (
     <>
       <PageHeader voltar={voltar} titulo={editando ? 'Editar solicitação de diária' : 'Nova solicitação de diária'} subtitulo="Preencha os dados da viagem. O valor unitário vem da tabela do cargo do profissional." />
+      {editando && existente.data && existente.data.status !== 'SOLICITADO' && (
+        <div className="alert alert-warning"><i className="bi bi-exclamation-triangle-fill"></i> Esta diária está <strong>{existente.data.status === 'CONFIRMADO' ? 'confirmada' : existente.data.status === 'DEFERIDO' ? 'deferida' : 'indeferida'}</strong>. Ao salvar alterações ela volta para <strong>Solicitada</strong> e precisa de nova confirmação e novo deferimento. Os valores de antes e depois ficam no histórico.</div>
+      )}
       <form onSubmit={salvar}><Card>
         {erro && <div className="alert alert-danger m-3 mb-0">{erro}</div>}
         <Section icon="bi-person-vcard" titulo="Profissional">

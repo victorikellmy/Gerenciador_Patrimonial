@@ -40,6 +40,10 @@ public enum StatusDiaria {
 
     public boolean podeIr(StatusDiaria destino) { return proximos().contains(destino); }
 
+    /**
+     * Pode ser alterada enquanto não foi paga. Alterar uma diária que já passou da solicitação
+     * (confirmada, deferida ou indeferida) a devolve para SOLICITADO (ver DiariaService.atualizar).
+     */
     public boolean isEditavel() { return this != PAGO; }
 
     /** Texto do banco antigo ("SOLICITADO", "PAGO", ...). */

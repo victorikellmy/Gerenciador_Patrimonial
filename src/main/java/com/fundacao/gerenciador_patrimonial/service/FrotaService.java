@@ -205,6 +205,7 @@ public class FrotaService {
     public AbastecimentoResponse registrarAbastecimento(Long veiculoId, AbastecimentoRequest req) {
         validarData(req.data());
         Veiculo v = carregarVeiculo(veiculoId);
+        exigirAtivo(v);
         Abastecimento a = Abastecimento.builder().veiculo(v).registradoPor(loginAtual()).build();
         aplicar(a, req);
         a = abastecimentoRepo.save(a);
@@ -286,6 +287,7 @@ public class FrotaService {
     public ManutencaoVeiculoResponse registrarManutencao(Long veiculoId, ManutencaoVeiculoRequest req) {
         validarData(req.data());
         Veiculo v = carregarVeiculo(veiculoId);
+        exigirAtivo(v);
         ManutencaoVeiculo m = ManutencaoVeiculo.builder().veiculo(v).registradoPor(loginAtual()).build();
         aplicar(m, req);
         m = manutencaoRepo.save(m);
@@ -369,6 +371,7 @@ public class FrotaService {
     public DeslocamentoResponse registrarDeslocamento(Long veiculoId, DeslocamentoRequest req) {
         validarDeslocamento(req);
         Veiculo v = carregarVeiculo(veiculoId);
+        exigirAtivo(v);
         if (req.kmFinal() == null && deslocamentoRepo.findFirstByVeiculoIdAndKmFinalIsNullOrderByDataViagemDescIdDesc(veiculoId).isPresent()) {
             throw new RegraDeNegocioException("Este veículo já tem uma saída em andamento. Finalize-a antes de registrar outra.");
         }
@@ -711,18 +714,23 @@ public class FrotaService {
 
     public record NotaFiscalArquivo(String nomeOriginal, String contentType, org.springframework.core.io.Resource recurso) {}
 
-    /**
-     * Anexa (ou substitui) a NF de um abastecimento ou manutenção. Ao substituir, o arquivo
-     * anterior NÃO é apagado (fica no armazenamento como evidência) e a auditoria registra os
-     * dois nomes. Quem pode substituir é definido na SecurityConfig (ADMIN/FISCAL).
-     */
-    public void anexarNotaFiscal(Tipo tipo, Long id, org.springframework.web.multipart.MultipartFile arquivo) {
+    /** Valida o arquivo da NF (não vazio, PDF ou imagem). Usado também antes de gravar o lançamento. */
+    public static void validarArquivoNf(org.springframework.web.multipart.MultipartFile arquivo) {
         if (arquivo == null || arquivo.isEmpty()) {
             throw new RegraDeNegocioException("Arquivo da nota fiscal vazio.");
         }
         if (arquivo.getContentType() == null || !TIPOS_NF.contains(arquivo.getContentType())) {
             throw new RegraDeNegocioException("Nota fiscal deve ser PDF ou foto (JPEG, PNG, WEBP).");
         }
+    }
+
+    /**
+     * Anexa (ou substitui) a NF de um abastecimento ou manutenção. Ao substituir, o arquivo
+     * anterior NÃO é apagado (fica no armazenamento como evidência) e a auditoria registra os
+     * dois nomes. Quem pode substituir é definido na SecurityConfig (ADMIN/FISCAL).
+     */
+    public void anexarNotaFiscal(Tipo tipo, Long id, org.springframework.web.multipart.MultipartFile arquivo) {
+        validarArquivoNf(arquivo);
         switch (tipo) {
             case ABASTECIMENTO -> {
                 Abastecimento a = abastecimentoRepo.findComVeiculo(id)
@@ -786,6 +794,11 @@ public class FrotaService {
     // =========================================================================
     // helpers
     // =========================================================================
+
+    /** Veículo desativado não recebe novos lançamentos nem cautelas. */
+    static void exigirAtivo(Veiculo v) {
+        if (!v.isAtivo()) throw new RegraDeNegocioException("Veículo " + v.getPlaca() + " está desativado e não recebe novos lançamentos.");
+    }
 
     private Veiculo carregarVeiculo(Long id) {
         return veiculoRepo.findComPatrimonio(id)
