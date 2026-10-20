@@ -14,7 +14,7 @@ const tipoCor: Record<string, string> = { ABASTECIMENTO: 'text-bg-light', MANUTE
 export default function FrotaVeiculo() {
   const { id } = useParams()
   const vid = Number(id)
-  const { temPerfil } = useAuth()
+  const { temPerfil, podeAbastecer } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
@@ -45,7 +45,7 @@ export default function FrotaVeiculo() {
       <PageHeader voltar="/frota" titulo={<><span className="chip-tombo me-2">{v.placa}</span>{v.modelo}</>} subtitulo={<>{v.marca}{v.ano ? ` · ${v.ano}` : ''}{v.cidade ? ` · ${v.cidade}` : ''} · {!v.ativo ? <span className="badge badge-plain text-bg-secondary">Inativo</span> : v.naRua ? <span className="badge badge-plain text-bg-info">Na rua</span> : v.situacao === 'MANUTENCAO' ? <span className="badge badge-plain text-bg-warning">Em manutenção</span> : <span className="badge badge-plain text-bg-success">Disponível</span>}</>}
         acoes={<>
           {opera && v.ativo && !v.naRua && <Link className="btn btn-primary" to={`/frota/${v.id}/deslocamentos/novo`}><i className="bi bi-signpost-2"></i> Saída</Link>}
-          {opera && v.ativo && <Link className="btn btn-secondary" to={`/frota/${v.id}/abastecimentos/novo`}><i className="bi bi-fuel-pump"></i> Abastecimento</Link>}
+          {podeAbastecer && v.ativo && <Link className="btn btn-secondary" to={`/frota/${v.id}/abastecimentos/novo`}><i className="bi bi-fuel-pump"></i> Abastecimento</Link>}
           {opera && v.ativo && <Link className="btn btn-secondary" to={`/frota/${v.id}/manutencoes/novo`}><i className="bi bi-wrench-adjustable"></i> Manutenção</Link>}
           {gestor && <Link className="btn btn-secondary" to={`/frota/${v.id}/editar`}><i className="bi bi-pencil"></i> Editar</Link>}
           {gestor && v.ativo && (v.situacao === 'MANUTENCAO' ? <button className="btn btn-outline-success" disabled={ocupado} onClick={() => acao(() => api.frota.manutencaoStatus(v.id, false), 'Veículo liberado da manutenção.')}><i className="bi bi-check2"></i> Liberar</button> : <button className="btn btn-outline-warning" onClick={() => setManut({ aberto: !manut.aberto, motivo: '' })}><i className="bi bi-wrench"></i> Para manutenção</button>)}

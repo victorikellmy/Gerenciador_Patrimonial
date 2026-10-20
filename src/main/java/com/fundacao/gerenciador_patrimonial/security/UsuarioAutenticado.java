@@ -30,11 +30,14 @@ public class UsuarioAutenticado implements UserDetails {
     public UsuarioAutenticado(Usuario usuario, boolean bloqueado) {
         this.usuario = usuario;
         this.bloqueado = bloqueado;
-        // Spring Security espera roles com prefixo ROLE_
-        this.autoridades = List.of(
-                new SimpleGrantedAuthority("ROLE_" + usuario.getPerfil().name())
-        );
+        // Spring Security espera roles com prefixo ROLE_; permissões extras entram sem prefixo.
+        this.autoridades = usuario.isPodeAbastecer()
+                ? List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getPerfil().name()), new SimpleGrantedAuthority(FROTA_ABASTECER))
+                : List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getPerfil().name()));
     }
+
+    /** Autoridade de quem tem {@code Usuario.podeAbastecer}: registra abastecimentos da frota. */
+    public static final String FROTA_ABASTECER = "FROTA_ABASTECER";
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() { return autoridades; }
     @Override public String getPassword() { return usuario.getSenhaHash(); }

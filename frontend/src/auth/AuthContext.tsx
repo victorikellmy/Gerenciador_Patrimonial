@@ -10,6 +10,8 @@ interface AuthState {
   logout: () => Promise<void>
   recarregar: () => Promise<void>
   temPerfil: (...perfis: Perfil[]) => boolean
+  /** Registra abastecimentos: perfis que lançam na frota ou a permissão extra do usuário (ex.: GERENTE). */
+  podeAbastecer: boolean
 }
 
 const Ctx = createContext<AuthState | null>(null)
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login: async (l, s) => { const u = await api.auth.login(l, s); setUsuario(u); return u },
     logout: async () => { try { await api.auth.logout() } finally { setUsuario(null) } },
     temPerfil: (...perfis) => !!usuario && perfis.includes(usuario.perfil),
+    podeAbastecer: !!usuario && (['ADMINISTRADOR', 'FISCAL', 'PRESIDENTE', 'MOTORISTA'].includes(usuario.perfil) || !!usuario.podeAbastecer),
   }), [usuario, carregando, recarregar])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

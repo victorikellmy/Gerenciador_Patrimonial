@@ -20,7 +20,7 @@ export default function Usuarios() {
             <div className="table-responsive table-livre"><table className="table table-hover table-compacta mb-0">
               <thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Situação</th><th>Senha</th><th>Criado em</th><th></th></tr></thead>
               <tbody>{q.data!.content.map(u => <tr key={u.id} className={u.ativo ? '' : 'text-muted'}>
-                <td><strong>{u.nomeCompleto}</strong></td><td><code>{u.login}</code></td><td><span className="badge badge-plain text-bg-light">{rotulo(u.perfil)}</span></td>
+                <td><strong>{u.nomeCompleto}</strong></td><td><code>{u.login}</code></td><td><span className="badge badge-plain text-bg-light">{rotulo(u.perfil)}</span>{u.podeAbastecer && <span className="badge badge-plain text-bg-info ms-1" title="Pode registrar abastecimentos da frota"><i className="bi bi-fuel-pump"></i> abastece</span>}</td>
                 <td><span className={`badge badge-plain ${u.ativo ? 'text-bg-success' : 'text-bg-secondary'}`}>{u.ativo ? 'Ativo' : 'Inativo'}</span></td>
                 <td>{u.senhaProvisoria ? <span className="badge badge-plain text-bg-warning" title="Deverá trocar a senha no próximo acesso">Provisória</span> : <span className="text-muted small">definida</span>}</td>
                 <td className="small">{dataHora(u.criadoEm)}</td>

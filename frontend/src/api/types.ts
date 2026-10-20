@@ -24,10 +24,10 @@ export interface Page<T> {
 }
 
 export interface Usuario {
-  id: number; nomeCompleto: string; login: string; perfil: Perfil; ativo: boolean; senhaProvisoria: boolean; criadoEm?: string
+  id: number; nomeCompleto: string; login: string; perfil: Perfil; ativo: boolean; senhaProvisoria: boolean; podeAbastecer?: boolean; criadoEm?: string
 }
 export interface UsuarioRequest {
-  nomeCompleto: string; login: string; senha?: string; perfil: Perfil; ativo: boolean; exigirTrocaSenha: boolean
+  nomeCompleto: string; login: string; senha?: string; perfil: Perfil; ativo: boolean; exigirTrocaSenha: boolean; podeAbastecer?: boolean
 }
 
 export interface Lotacao { id: number; upm: string; nome: string; cidade?: string; tipoLocal: string; responsavelAtualId?: number; responsavelAtualNome?: string }

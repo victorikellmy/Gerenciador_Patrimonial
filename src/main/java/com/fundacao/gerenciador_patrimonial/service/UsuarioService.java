@@ -63,6 +63,7 @@ public class UsuarioService {
                 .ativo(req.ativo() == null || req.ativo())
                 // Senha definida pelo administrador é provisória: troca obrigatória no primeiro acesso.
                 .senhaProvisoria(req.exigirTrocaSenha() == null || req.exigirTrocaSenha())
+                .podeAbastecer(Boolean.TRUE.equals(req.podeAbastecer()))
                 .build();
         return UsuarioResponse.from(repo.save(u));
     }
@@ -81,6 +82,7 @@ public class UsuarioService {
         u.setLogin(novoLogin);
         u.setPerfil(req.perfil());
         if (req.ativo() != null) u.setAtivo(req.ativo());
+        if (req.podeAbastecer() != null) u.setPodeAbastecer(req.podeAbastecer());
 
         // Senha só é alterada se informada; redefinida pelo admin volta a ser provisória.
         if (req.senha() != null && !req.senha().isBlank()) {
