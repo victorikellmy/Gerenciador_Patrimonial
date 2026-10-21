@@ -24,6 +24,9 @@ import LancamentoForm from './pages/frota/LancamentoForm'
 import FrotaListas from './pages/frota/Listas'
 import Cautelas from './pages/frota/Cautelas'
 import CautelaForm from './pages/frota/CautelaForm'
+import Seguros from './pages/frota/Seguros'
+import SeguroForm from './pages/frota/SeguroForm'
+import SinistroForm from './pages/frota/SinistroForm'
 import DiariasLista from './pages/diarias/Lista'
 import DiariaForm from './pages/diarias/Form'
 import DiariaDetalhe from './pages/diarias/Detalhe'
@@ -119,6 +122,13 @@ export default function App() {
           <Route path="/frota/cautelas" element={<Cautelas />} />
           <Route path="/frota/cautelas/nova" element={<CautelaForm />} />
           <Route path="/frota/cautelas/:id/editar" element={<CautelaForm />} />
+          <Route path="/frota/seguros" element={<Seguros />} />
+          <Route element={<Perfis perfis={['ADMINISTRADOR', 'FISCAL', 'PRESIDENTE']} />}>
+            <Route path="/frota/seguros/novo" element={<SeguroForm />} />
+            <Route path="/frota/seguros/:id/editar" element={<SeguroForm />} />
+            <Route path="/frota/sinistros/novo" element={<SinistroForm />} />
+            <Route path="/frota/sinistros/:id/editar" element={<SinistroForm />} />
+          </Route>
         </Route>
 
         <Route element={<Perfis perfis={ADM} />}>

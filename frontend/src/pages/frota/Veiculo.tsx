@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import AbaSeguro from './AbaSeguro'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api'
 import { abrirArquivo } from '../../api/http'
@@ -24,6 +25,9 @@ export default function FrotaVeiculo() {
   const [manut, setManut] = useState<{ aberto: boolean; motivo: string }>({ aberto: false, motivo: '' })
   const [ocupado, setOcupado] = useState(false)
   const [filtro, setFiltro] = useState<'' | 'ABASTECIMENTO' | 'MANUTENCAO' | 'DESLOCAMENTO'>('')
+  const [params, setParams] = useSearchParams()
+  const aba = params.get('aba') === 'seguro' ? 'seguro' : 'historico'
+  const trocarAba = (a: 'historico' | 'seguro') => setParams(a === 'seguro' ? { aba: 'seguro' } : {}, { replace: true })
   const invalidar = () => { qc.invalidateQueries({ queryKey: ['veiculo', id] }); qc.invalidateQueries({ queryKey: ['veiculo-historico', id] }); qc.invalidateQueries({ queryKey: ['veiculos'] }); qc.invalidateQueries({ queryKey: ['frota-resumo'] }); qc.invalidateQueries({ queryKey: ['frota-gestao'] }) }
   const acao = async (fn: () => Promise<unknown>, msg: string) => { setOcupado(true); try { await fn(); toast.sucesso(msg); invalidar() } catch (ex) { toast.erro(ex instanceof Error ? ex.message : 'Falha.') } finally { setOcupado(false) } }
   if (ficha.isLoading) return <Carregando />
@@ -71,11 +75,14 @@ export default function FrotaVeiculo() {
         {v.observacao && <div className="mt-3"><div className="kpi-label">Observação</div><div className="obs-pre">{v.observacao}</div></div>}
       </Section></Card>
       <Card>
-        <div className="p-3 border-bottom d-flex flex-wrap gap-2 align-items-center">
-          <div className="form-section-title"><i className="bi bi-clock-history me-1"></i> Histórico</div>
-          <div className="btn-group btn-group-sm ms-auto">{([['', 'Tudo'], ['DESLOCAMENTO', 'Saídas'], ['ABASTECIMENTO', 'Abastecimentos'], ['MANUTENCAO', 'Manutenções']] as const).map(([k, l]) => <button key={k} className={`btn ${filtro === k ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFiltro(k)}>{l}</button>)}</div>
+        <div className="px-3 pt-2 border-bottom d-flex flex-wrap gap-2 align-items-end">
+          <ul className="nav nav-tabs border-0 me-auto">
+            <li className="nav-item"><button className={`nav-link ${aba === 'historico' ? 'active' : ''}`} onClick={() => trocarAba('historico')}><i className="bi bi-clock-history me-1"></i> Histórico</button></li>
+            <li className="nav-item"><button className={`nav-link ${aba === 'seguro' ? 'active' : ''}`} onClick={() => trocarAba('seguro')}><i className="bi bi-shield-check me-1"></i> Seguro</button></li>
+          </ul>
+          {aba === 'historico' && <div className="btn-group btn-group-sm mb-2">{([['', 'Tudo'], ['DESLOCAMENTO', 'Saídas'], ['ABASTECIMENTO', 'Abastecimentos'], ['MANUTENCAO', 'Manutenções']] as const).map(([k, l]) => <button key={k} className={`btn ${filtro === k ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFiltro(k)}>{l}</button>)}</div>}
         </div>
-        {hist.isLoading ? <Carregando /> : !historico.length ? <div className="empty-state"><div className="empty-state-icon"><i className="bi bi-clock-history"></i></div><div className="empty-state-title">Nenhum lançamento</div></div> : (
+        {aba === 'seguro' ? <AbaSeguro veiculoId={v.id} /> : hist.isLoading ? <Carregando />: !historico.length ? <div className="empty-state"><div className="empty-state-icon"><i className="bi bi-clock-history"></i></div><div className="empty-state-title">Nenhum lançamento</div></div> : (
           <div className="table-responsive table-livre"><table className="table table-hover table-compacta mb-0">
             <thead><tr><th>Data</th><th>Tipo</th><th>Lançamento</th><th className="text-end">Km</th><th className="text-end">Valor</th><th>Motorista</th><th>NF</th><th></th></tr></thead>
             <tbody>{historico.map(h => (

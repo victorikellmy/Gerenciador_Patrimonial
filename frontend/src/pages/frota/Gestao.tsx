@@ -5,7 +5,7 @@ import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Lege
 import { api } from '../../api'
 import { abrirArquivo } from '../../api/http'
 import { Card, Carregando, Erro, Kpi, PageHeader, Section } from '../../components/ui'
-import { data, hora, moeda, numero } from '../../utils/format'
+import { data, hora, moeda, numero, prazoSeguro } from '../../utils/format'
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 const estadoBadge: Record<string, string> = { NA_RUA: 'text-bg-info', MANUTENCAO: 'text-bg-warning', DISPONIVEL: 'text-bg-success', INATIVO: 'text-bg-secondary' }
@@ -13,6 +13,7 @@ const estadoRotulo: Record<string, string> = { NA_RUA: 'Na rua', MANUTENCAO: 'Em
 
 export default function FrotaGestao() {
   const q = useQuery({ queryKey: ['frota-gestao'], queryFn: api.frota.gestao, refetchInterval: 120000 })
+  const seg = useQuery({ queryKey: ['seguros-alertas'], queryFn: api.frota.alertasSeguro })
   if (q.isLoading) return <Carregando />
   if (q.error || !q.data) return <Erro erro={q.error} />
   const g = q.data
@@ -37,6 +38,15 @@ export default function FrotaGestao() {
         <div className="col-md-6 col-xl-3"><Kpi icon="bi-calculator" cor="info" label="Custo médio por km (ano)" valor={g.custoMedioPorKmAno ? moeda(g.custoMedioPorKmAno) : '—'} /></div>
       </div>
       {g.alertasRevisao.length > 0 && <div className="alert alert-danger"><i className="bi bi-exclamation-triangle-fill"></i> <strong>Revisão vencida:</strong> {g.alertasRevisao.map(a => <Link key={a.veiculoId} className="alert-link me-2" to={`/frota/${a.veiculoId}`}>{a.placa} ({a.modelo})</Link>)}</div>}
+      {seg.data && seg.data.vencidos.length + seg.data.vencendo.length + seg.data.semSeguro.length > 0 && <div className="alert alert-warning d-flex flex-wrap gap-2 align-items-start">
+        <i className="bi bi-shield-exclamation"></i>
+        <div className="me-auto">
+          {seg.data.vencidos.length > 0 && <div><strong>Seguro vencido:</strong> {seg.data.vencidos.map(s => <Link key={s.id} className="alert-link me-2" to={`/frota/${s.veiculoId}?aba=seguro`}>{s.placa} ({prazoSeguro(s)})</Link>)}</div>}
+          {seg.data.vencendo.length > 0 && <div><strong>Seguro vencendo:</strong> {seg.data.vencendo.map(s => <Link key={s.id} className="alert-link me-2" to={`/frota/${s.veiculoId}?aba=seguro`}>{s.placa} ({prazoSeguro(s)})</Link>)}</div>}
+          {seg.data.semSeguro.length > 0 && <div><strong>Sem seguro:</strong> {seg.data.semSeguro.map(v => <Link key={v.veiculoId} className="alert-link me-2" to={`/frota/${v.veiculoId}?aba=seguro`}>{v.placa}</Link>)}</div>}
+        </div>
+        <Link className="btn btn-sm btn-outline-dark" to="/frota/seguros">Ver seguros</Link>
+      </div>}
       <div className="row g-3 mb-4">
         <div className="col-12">
           <Card><Section icon="bi-truck-front" titulo="Situação dos veículos" desc="Quem está com qual viatura, onde foi e desde quando." semBorda>
