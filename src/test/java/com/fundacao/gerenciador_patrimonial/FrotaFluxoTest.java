@@ -42,6 +42,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -271,6 +272,74 @@ class FrotaFluxoTest {
         mvc.perform(post("/api/frota/veiculos/" + v.getId() + "/manutencoes").contentType(MediaType.APPLICATION_JSON).content(manut))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.possuiNotaFiscal").value(false));
+    }
+
+    @Test
+    void gerenteComPermissaoExtraRegistraAbastecimentoComNf() throws Exception {
+        mvc.perform(post("/api/frota/veiculos").contentType(MediaType.APPLICATION_JSON)
+                        .content(veiculoJson(placa, "HILUX", ",\"combustivelPadrao\":\"DIESEL\"")))
+                .andExpect(status().isCreated());
+        Veiculo v = veiculoRepo.findByPlacaIgnoreCase(placa).orElseThrow();
+
+        // Admin liga a permissão no cadastro do usuário (o perfil continua GERENTE)
+        Usuario u = usuario("gerente.abastece", Perfil.GERENTE);
+        mvc.perform(put("/api/usuarios/" + u.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nomeCompleto":"%s","login":"%s","perfil":"GERENTE","podeAbastecer":true}"""
+                                .formatted(u.getNomeCompleto(), u.getLogin())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.perfil").value("GERENTE"))
+                .andExpect(jsonPath("$.podeAbastecer").value(true));
+        UsuarioAutenticado gerente = new UsuarioAutenticado(usuarioRepo.findById(u.getId()).orElseThrow());
+        mvc.perform(get("/api/me").with(user(gerente))).andExpect(jsonPath("$.podeAbastecer").value(true));
+
+        String dados = """
+                {"veiculoId":%d,"data":"%s","km":5000,"combustivel":"DIESEL","quantidadeLitros":40,"valor":250.00,"motorista":"Gerente Demo"}"""
+                .formatted(v.getId(), hoje());
+
+        // Sem NF → recusado, como o motorista
+        mvc.perform(post("/api/frota/veiculos/" + v.getId() + "/abastecimentos").with(user(gerente))
+                        .contentType(MediaType.APPLICATION_JSON).content(dados))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem", containsString("Anexe a nota fiscal")));
+        assertThat(abastecimentoRepo.countByVeiculoId(v.getId())).isZero();
+
+        // Com NF → grava
+        mvc.perform(multipart("/api/frota/veiculos/" + v.getId() + "/abastecimentos")
+                        .file(new MockMultipartFile("dados", "", "application/json", dados.getBytes()))
+                        .file(new MockMultipartFile("arquivo", "nf.pdf", "application/pdf", "%PDF-1.4".getBytes())).with(user(gerente)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.possuiNotaFiscal").value(true));
+        assertThat(abastecimentoRepo.countByVeiculoId(v.getId())).isEqualTo(1);
+
+        // A permissão é só de abastecimento: manutenção, saída, edição e cautela continuam bloqueadas
+        String manut = """
+                {"veiculoId":%d,"data":"%s","servico":"PNEUS","valor":900.00,"motorista":"X"}""".formatted(v.getId(), hoje());
+        mvc.perform(multipart("/api/frota/veiculos/" + v.getId() + "/manutencoes")
+                        .file(new MockMultipartFile("dados", "", "application/json", manut.getBytes()))
+                        .file(new MockMultipartFile("arquivo", "nf.pdf", "application/pdf", "%PDF-1.4".getBytes())).with(user(gerente)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/frota/veiculos/" + v.getId() + "/deslocamentos").with(user(gerente))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        var abast = abastecimentoRepo.findByVeiculoIdOrderByDataDescIdDesc(v.getId()).get(0);
+        mvc.perform(put("/api/frota/abastecimentos/" + abast.getId()).with(user(gerente))
+                        .contentType(MediaType.APPLICATION_JSON).content(dados))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/frota/cautelas").with(user(gerente)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+
+        // Admin desliga a permissão → volta a ser só leitura
+        mvc.perform(put("/api/usuarios/" + u.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nomeCompleto":"%s","login":"%s","perfil":"GERENTE","podeAbastecer":false}"""
+                                .formatted(u.getNomeCompleto(), u.getLogin())))
+                .andExpect(jsonPath("$.podeAbastecer").value(false));
+        UsuarioAutenticado semPermissao = new UsuarioAutenticado(usuarioRepo.findById(u.getId()).orElseThrow());
+        mvc.perform(multipart("/api/frota/veiculos/" + v.getId() + "/abastecimentos")
+                        .file(new MockMultipartFile("dados", "", "application/json", dados.getBytes()))
+                        .file(new MockMultipartFile("arquivo", "nf.pdf", "application/pdf", "%PDF-1.4".getBytes())).with(user(semPermissao)))
+                .andExpect(status().isForbidden());
     }
 
     @Test

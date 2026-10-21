@@ -25,10 +25,25 @@ export const rotulos: Record<string, string> = {
   // perfis
   ADMINISTRADOR: 'Administrador', FISCAL: 'Fiscal', GERENTE: 'Gerente', PRESIDENTE: 'Presidente', FINANCEIRO: 'Financeiro', MOTORISTA: 'Motorista', INTEGRACAO: 'Integração',
   NOTA_FISCAL: 'Nota fiscal', FOTO: 'Foto', MANUAL: 'Manual',
+  // seguro da frota
+  VIGENTE: 'Vigente', VENCENDO: 'Vencendo', VENCIDO: 'Vencido', FUTURO: 'A iniciar',
+  ABERTO: 'Aberto', EM_ANALISE: 'Em análise', INDENIZADO: 'Indenizado', NEGADO: 'Negado', ENCERRADO: 'Encerrado',
 }
 export const rotulo = (v?: string | null) => v ? (rotulos[v] ?? v) : '—'
+
+export const badgeSituacaoSeguro: Record<string, string> = { VIGENTE: 'text-bg-success', VENCENDO: 'text-bg-warning', VENCIDO: 'text-bg-danger', FUTURO: 'text-bg-info' }
+export const badgeSituacaoSinistro: Record<string, string> = { ABERTO: 'text-bg-warning', EM_ANALISE: 'text-bg-info', INDENIZADO: 'text-bg-success', NEGADO: 'text-bg-danger', ENCERRADO: 'text-bg-secondary' }
+export const SITUACOES_SINISTRO = ['ABERTO', 'EM_ANALISE', 'INDENIZADO', 'NEGADO', 'ENCERRADO'] as const
 
 export const badgeStatusDiaria: Record<string, string> = { SOLICITADO: 'text-bg-secondary', CONFIRMADO: 'text-bg-warning', DEFERIDO: 'text-bg-info', INDEFERIDO: 'text-bg-dark', PAGO: 'text-bg-success' }
 export const CONSERVACOES = ['NOVO', 'OTIMO', 'BOM', 'BOM_REGULAR', 'REGULAR', 'REGULAR_RUIM', 'RUIM', 'INSERVIVEL'] as const
 export const SITUACOES = ['ATIVO', 'BAIXADO', 'MANUTENCAO', 'CAUTELADO', 'EM_APURACAO'] as const
 export const PERFIS = ['ADMINISTRADOR', 'FISCAL', 'GERENTE', 'PRESIDENTE', 'FINANCEIRO', 'MOTORISTA', 'INTEGRACAO'] as const
+
+/** Prazo da apólice em texto curto ("vence em 12 dia(s)", "venceu há 3 dia(s)"...). */
+export function prazoSeguro(s: { situacao: string; diasParaVencer: number; inicioVigencia: string }) {
+  if (s.situacao === 'FUTURO') return `começa em ${data(s.inicioVigencia)}`
+  if (s.diasParaVencer < 0) return `venceu há ${-s.diasParaVencer} dia(s)`
+  if (s.diasParaVencer === 0) return 'vence hoje'
+  return `vence em ${s.diasParaVencer} dia(s)`
+}

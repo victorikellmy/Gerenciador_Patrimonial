@@ -24,10 +24,10 @@ export interface Page<T> {
 }
 
 export interface Usuario {
-  id: number; nomeCompleto: string; login: string; perfil: Perfil; ativo: boolean; senhaProvisoria: boolean; criadoEm?: string
+  id: number; nomeCompleto: string; login: string; perfil: Perfil; ativo: boolean; senhaProvisoria: boolean; podeAbastecer?: boolean; criadoEm?: string
 }
 export interface UsuarioRequest {
-  nomeCompleto: string; login: string; senha?: string; perfil: Perfil; ativo: boolean; exigirTrocaSenha: boolean
+  nomeCompleto: string; login: string; senha?: string; perfil: Perfil; ativo: boolean; exigirTrocaSenha: boolean; podeAbastecer?: boolean
 }
 
 export interface Lotacao { id: number; upm: string; nome: string; cidade?: string; tipoLocal: string; responsavelAtualId?: number; responsavelAtualNome?: string }
@@ -133,6 +133,23 @@ export interface Cautela {
   horaSaida?: string; kmInicial?: number; horaChegada?: string; kmFinal?: number; kmRodados?: number; emAndamento: boolean; motoristaNome: string; rg?: string; cpf?: string; fone?: string; lotacao?: string; observacao?: string
 }
 export interface CautelaRequest { veiculoId: number | ''; dataViagem: string; destino: string; motivo: string; responsavel?: string; assistido?: string; horaSaida?: string; kmInicial?: number | ''; horaChegada?: string; kmFinal?: number | ''; motoristaNome: string; rg: string; cpf: string; fone: string; lotacao: string; observacao?: string }
+
+// --- Seguro da frota ---
+export type SituacaoSeguro = 'VIGENTE' | 'VENCENDO' | 'VENCIDO' | 'FUTURO'
+export type SituacaoSinistro = 'ABERTO' | 'EM_ANALISE' | 'INDENIZADO' | 'NEGADO' | 'ENCERRADO'
+export interface Seguro {
+  id: number; veiculoId: number; placa: string; modelo: string; seguradora: string; numeroApolice: string; corretor?: string
+  inicioVigencia: string; fimVigencia: string; situacao: SituacaoSeguro; diasParaVencer: number; valorPremio?: number; franquia?: number
+  coberturas?: string; telefoneAssistencia?: string; observacao?: string; possuiApolice: boolean; apoliceNomeOriginal?: string; registradoPor?: string
+}
+export interface SeguroRequest { veiculoId: number | ''; seguradora: string; numeroApolice: string; corretor?: string; inicioVigencia: string; fimVigencia: string; valorPremio?: number | ''; franquia?: number | ''; coberturas?: string; telefoneAssistencia?: string; observacao?: string }
+export interface Sinistro {
+  id: number; veiculoId: number; placa: string; modelo: string; seguroId?: number; seguradora?: string; numeroApolice?: string
+  dataOcorrencia: string; numeroSinistro?: string; descricao: string; localOcorrencia?: string; condutor?: string
+  valorPrejuizo?: number; valorIndenizado?: number; situacao: SituacaoSinistro; emAndamento: boolean; observacao?: string; registradoPor?: string
+}
+export interface SinistroRequest { veiculoId: number | ''; seguroId?: number | ''; dataOcorrencia: string; numeroSinistro?: string; descricao: string; localOcorrencia?: string; condutor?: string; valorPrejuizo?: number | ''; valorIndenizado?: number | ''; situacao: SituacaoSinistro; observacao?: string }
+export interface AlertasSeguro { diasAviso: number; vencidos: Seguro[]; vencendo: Seguro[]; semSeguro: { veiculoId: number; placa: string; modelo: string }[]; sinistrosEmAndamento: Sinistro[] }
 
 // --- Diárias ---
 export interface NivelDiaria { id: number; descricao: string; valorCapitais: number; valorInteriorEstado: number; valorInteriorOutroEstado: number; ativo: boolean }

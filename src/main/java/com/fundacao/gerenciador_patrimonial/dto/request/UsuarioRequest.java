@@ -32,5 +32,8 @@ public record UsuarioRequest(
 
         Boolean ativo,
 
-        Boolean exigirTrocaSenha
+        Boolean exigirTrocaSenha,
+
+        /** Permissão extra para registrar abastecimentos da frota; nulo mantém o valor atual na edição. */
+        Boolean podeAbastecer
 ) {}

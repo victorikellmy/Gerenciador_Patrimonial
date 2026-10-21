@@ -53,6 +53,15 @@ public class Usuario {
     @Builder.Default
     private boolean senhaProvisoria = false;
 
+    /**
+     * Permissão extra: registra abastecimentos da frota (com nota fiscal, como o
+     * motorista) mesmo sem perfil de frota — ex.: um GERENTE. Vira a autoridade
+     * {@code FROTA_ABASTECER} em {@code UsuarioAutenticado}.
+     */
+    @Column(name = "pode_abastecer", nullable = false)
+    @Builder.Default
+    private boolean podeAbastecer = false;
+
     @CreatedDate
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm;

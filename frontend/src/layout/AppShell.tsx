@@ -55,6 +55,7 @@ export default function AppShell() {
         { to: '/frota/abastecimentos', icon: 'bi-fuel-pump', label: 'Abastecimentos' },
         { to: '/frota/manutencoes', icon: 'bi-wrench-adjustable', label: 'Manutenções' },
         { to: '/frota/cautelas', icon: 'bi-key', label: 'Cautelas' },
+        { to: '/frota/seguros', icon: 'bi-shield-check', label: 'Seguros' },
       ],
     },
     {

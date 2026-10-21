@@ -15,11 +15,14 @@ type Form = AbastecimentoRequest & ManutencaoRequest & DeslocamentoRequest
 export default function LancamentoForm({ tipo }: { tipo: Tipo }) {
   const { id, lancamentoId } = useParams()
   const editando = !!lancamentoId
-  const { usuario, temPerfil } = useAuth()
+  const { usuario, temPerfil, podeAbastecer } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
   const motorista = temPerfil('MOTORISTA')
+  // Quem não gere a frota (motorista ou permissão extra de abastecer, ex.: GERENTE) lança com NF e com o próprio nome.
+  const gestorFrota = temPerfil('ADMINISTRADOR', 'FISCAL', 'PRESIDENTE')
+  const preencheProprioNome = motorista || (podeAbastecer && !gestorFrota)
   const veiculos = useQuery({ queryKey: ['veiculos', false], queryFn: () => api.frota.veiculos(false) })
   const cat = useQuery({ queryKey: ['frota-catalogos'], queryFn: api.frota.catalogos })
   // edição: busca o lançamento pela listagem paginada filtrada (sem endpoint GET individual)
@@ -36,7 +39,7 @@ export default function LancamentoForm({ tipo }: { tipo: Tipo }) {
   const veiculoId = editando ? existente.data?.veiculoId : Number(id)
   const veiculo = veiculos.data?.find(v => v.id === veiculoId)
   const inicial = useMemo<Form>(() => {
-    const base: Form = { veiculoId: veiculoId ?? '', data: hojeIso(), dataViagem: hojeIso(), km: '', combustivel: veiculo?.combustivelPadrao ?? '', quantidadeLitros: '', valor: '', postoCidade: veiculo?.cidade ?? '', motorista: motorista ? (usuario?.nomeCompleto ?? '') : '', observacao: '', servico: '', descricao: '', fornecedor: '', notaFiscal: '', proximaRevisaoKm: '', proximaRevisaoData: '', destino: '', motivo: '', titular: '', assistido: '', horaSaida: agoraHora(), kmInicial: veiculo?.kmAtual ?? '', horaChegada: '', kmFinal: '', lotacao: '' }
+    const base: Form = { veiculoId: veiculoId ?? '', data: hojeIso(), dataViagem: hojeIso(), km: '', combustivel: veiculo?.combustivelPadrao ?? '', quantidadeLitros: '', valor: '', postoCidade: veiculo?.cidade ?? '', motorista: preencheProprioNome ? (usuario?.nomeCompleto ?? '') : '', observacao: '', servico: '', descricao: '', fornecedor: '', notaFiscal: '', proximaRevisaoKm: '', proximaRevisaoData: '', destino: '', motivo: '', titular: '', assistido: '', horaSaida: agoraHora(), kmInicial: veiculo?.kmAtual ?? '', horaChegada: '', kmFinal: '', lotacao: '' }
     const e = existente.data as (Abastecimento & Manutencao & Deslocamento) | undefined
     if (!e) return base
     return { ...base, veiculoId: e.veiculoId, data: e.data ?? base.data, dataViagem: e.dataViagem ?? base.dataViagem, km: e.km ?? '', combustivel: e.combustivel ?? '', quantidadeLitros: e.quantidadeLitros ?? '', valor: e.valor ?? '', postoCidade: e.postoCidade ?? '', motorista: e.motorista ?? '', observacao: e.observacao ?? '', servico: e.servico ?? '', descricao: e.descricao ?? '', fornecedor: e.fornecedor ?? '', notaFiscal: e.notaFiscal ?? '', proximaRevisaoKm: e.proximaRevisaoKm ?? '', proximaRevisaoData: e.proximaRevisaoData ?? '', destino: e.destino ?? '', motivo: e.motivo ?? '', titular: e.titular ?? '', assistido: e.assistido ?? '', horaSaida: e.horaSaida?.substring(0, 5) ?? '', kmInicial: e.kmInicial ?? '', horaChegada: e.horaChegada?.substring(0, 5) ?? '', kmFinal: e.kmFinal ?? '', lotacao: e.lotacao ?? '' }
@@ -48,7 +51,7 @@ export default function LancamentoForm({ tipo }: { tipo: Tipo }) {
   const [sugestoes, setSugestoes] = useState<string[]>([])
   useEffect(() => { if (tipo !== 'deslocamento' || !valores.titular || valores.titular.length < 2) { setSugestoes([]); return }; const t = setTimeout(() => api.frota.titulares(valores.titular!).then(setSugestoes).catch(() => {}), 250); return () => clearTimeout(t) }, [valores.titular, tipo])
   const precoLitro = valores.valor && valores.quantidadeLitros ? Number(valores.valor) / Number(valores.quantidadeLitros) : null
-  const nfObrigatoria = motorista && !editando && tipo !== 'deslocamento'
+  const nfObrigatoria = !gestorFrota && !editando && tipo !== 'deslocamento'
 
   const salvar = async (e: FormEvent) => {
     e.preventDefault(); setErro(null)

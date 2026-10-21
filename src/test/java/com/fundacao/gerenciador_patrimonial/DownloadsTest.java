@@ -43,6 +43,11 @@ class DownloadsTest {
                 .andExpect(header().string("Content-Type", startsWith("application/vnd.android.package-archive")))
                 .andExpect(header().string("Cache-Control", "no-cache"))
                 .andExpect(content().bytes("PK-teste".getBytes()));
+        // o botão usa ?v=<data de publicação> para furar caches; o arquivo é o mesmo
+        mvc.perform(get("/downloads/AppPatrimonio.apk").param("v", "20261019-1636"))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("Last-Modified"))
+                .andExpect(content().bytes("PK-teste".getBytes()));
     }
 
     @Test

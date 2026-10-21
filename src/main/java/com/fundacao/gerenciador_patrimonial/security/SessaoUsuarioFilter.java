@@ -20,7 +20,7 @@ import java.util.Objects;
  *
  * <ul>
  *   <li>A sessão do SPA guarda um retrato do usuário feito no login. Se no banco ele foi
- *       desativado, mudou de perfil ou teve a senha trocada/redefinida, a sessão é
+ *       desativado, mudou de perfil ou de permissão extra ou teve a senha trocada/redefinida, a sessão é
  *       encerrada e a requisição recebe 401 (o retrato antigo não vale mais).</li>
  *   <li>Usuário com senha provisória só acessa {@code /api/me/**} e {@code /api/auth/**}
  *       até trocar a senha; o resto da API responde 403. Vale para sessão e HTTP Basic.</li>
@@ -47,6 +47,7 @@ public class SessaoUsuarioFilter extends OncePerRequestFilter {
             boolean revogado = atual == null
                     || !atual.isAtivo()
                     || atual.getPerfil() != retrato.getPerfil()
+                    || atual.isPodeAbastecer() != retrato.isPodeAbastecer()
                     || !Objects.equals(atual.getSenhaHash(), retrato.getSenhaHash());
             if (revogado) {
                 SecurityContextHolder.clearContext();

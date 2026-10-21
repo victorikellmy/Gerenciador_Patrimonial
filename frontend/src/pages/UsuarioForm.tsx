@@ -6,7 +6,9 @@ import type { Perfil, UsuarioRequest } from '../api/types'
 import { AcoesForm, Campo, Card, Carregando, Erro, PageHeader, Section, useForm, useToast } from '../components/ui'
 import { rotulo, PERFIS } from '../utils/format'
 
-const vazio: UsuarioRequest = { nomeCompleto: '', login: '', senha: '', perfil: 'FISCAL', ativo: true, exigirTrocaSenha: true }
+const vazio: UsuarioRequest = { nomeCompleto: '', login: '', senha: '', perfil: 'FISCAL', ativo: true, exigirTrocaSenha: true, podeAbastecer: false }
+// Perfil que vê a frota sem lançar nela: pode receber a permissão extra de registrar abastecimentos.
+const ACEITA_ABASTECER: Perfil[] = ['GERENTE']
 const descPerfil: Record<Perfil, string> = { ADMINISTRADOR: 'Acesso total, incluindo usuários, auditoria e importações.', FISCAL: 'Opera patrimônio, levantamentos, frota e diárias.', GERENTE: 'Somente leitura: painel da frota, patrimônios e relatórios.', PRESIDENTE: 'Defere ou indefere diárias; consulta patrimônio; consulta e edita toda a frota (veículos, lançamentos e cautelas).', FINANCEIRO: 'Registra pagamento de diárias; consulta patrimônio.', MOTORISTA: 'Somente frota: saídas, abastecimentos e manutenções com nota fiscal.', INTEGRACAO: 'Conta técnica usada pelo Almoxarifado (API).' }
 
 export default function UsuarioForm() {
@@ -16,13 +18,13 @@ export default function UsuarioForm() {
   const qc = useQueryClient()
   const toast = useToast()
   const existente = useQuery({ queryKey: ['usuario', id], queryFn: () => api.usuarios.buscar(Number(id)), enabled: editando })
-  const inicial = useMemo<UsuarioRequest>(() => { const u = existente.data; if (!u) return vazio; return { nomeCompleto: u.nomeCompleto, login: u.login, senha: '', perfil: u.perfil, ativo: u.ativo, exigirTrocaSenha: u.senhaProvisoria } }, [existente.data])
+  const inicial = useMemo<UsuarioRequest>(() => { const u = existente.data; if (!u) return vazio; return { nomeCompleto: u.nomeCompleto, login: u.login, senha: '', perfil: u.perfil, ativo: u.ativo, exigirTrocaSenha: u.senhaProvisoria, podeAbastecer: !!u.podeAbastecer } }, [existente.data])
   const { valores, bind, set } = useForm(inicial)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const salvar = async (e: FormEvent) => {
     e.preventDefault(); setErro(null); setSalvando(true)
-    try { const req = { ...valores, senha: valores.senha || undefined }; if (editando) await api.usuarios.atualizar(Number(id), req); else await api.usuarios.criar(req); qc.invalidateQueries({ queryKey: ['usuarios'] }); qc.invalidateQueries({ queryKey: ['usuario', id] }); toast.sucesso('Usuário salvo.'); navigate('/usuarios') }
+    try { const req = { ...valores, senha: valores.senha || undefined, podeAbastecer: ACEITA_ABASTECER.includes(valores.perfil) && !!valores.podeAbastecer }; if (editando) await api.usuarios.atualizar(Number(id), req); else await api.usuarios.criar(req); qc.invalidateQueries({ queryKey: ['usuarios'] }); qc.invalidateQueries({ queryKey: ['usuario', id] }); toast.sucesso('Usuário salvo.'); navigate('/usuarios') }
     catch (ex) { setErro(ex instanceof Error ? ex.message : 'Falha ao salvar.') } finally { setSalvando(false) }
   }
   if (editando && existente.isLoading) return <Carregando />
@@ -44,6 +46,7 @@ export default function UsuarioForm() {
             <Campo label="Perfil" obrigatorio col="col-md-6 col-xl-3" hint={descPerfil[valores.perfil]}><select className="form-select" {...bind('perfil')}>{PERFIS.map(p => <option key={p} value={p}>{rotulo(p)}</option>)}</select></Campo>
             <div className="col-md-4"><div className="form-check form-switch mt-md-4 pt-md-2"><input className="form-check-input" type="checkbox" id="ativo" checked={valores.ativo} onChange={e => set('ativo', e.target.checked)} /><label className="form-check-label" htmlFor="ativo">Usuário ativo</label></div></div>
             <div className="col-md-4"><div className="form-check form-switch mt-md-4 pt-md-2"><input className="form-check-input" type="checkbox" id="troca" checked={valores.exigirTrocaSenha} onChange={e => set('exigirTrocaSenha', e.target.checked)} /><label className="form-check-label" htmlFor="troca">Exigir troca de senha no próximo acesso</label></div></div>
+            {ACEITA_ABASTECER.includes(valores.perfil) && <div className="col-12"><div className="form-check form-switch"><input className="form-check-input" type="checkbox" id="abastecer" checked={!!valores.podeAbastecer} onChange={e => set('podeAbastecer', e.target.checked)} /><label className="form-check-label" htmlFor="abastecer">Pode registrar abastecimentos da frota</label><div className="form-text">Lança abastecimentos com nota fiscal obrigatória, como o motorista, sem acesso a saídas, manutenções ou edição.</div></div></div>}
           </div>
         </Section>
         <AcoesForm cancelarTo="/usuarios" salvando={salvando} />

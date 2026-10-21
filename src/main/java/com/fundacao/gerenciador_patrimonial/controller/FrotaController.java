@@ -231,10 +231,14 @@ public class FrotaController {
         return frota.buscarManutencao(m.id());
     }
 
-    /** Regra de negócio: motorista não registra abastecimento/manutenção sem a nota fiscal. */
+    /**
+     * Regra de negócio: só quem gere a frota (ADMIN/FISCAL/PRESIDENTE) lança abastecimento/manutenção
+     * sem a nota fiscal. Motorista e quem tem a permissão extra de abastecer (ex.: GERENTE) precisam da NF.
+     */
     private static void exigirNfDeMotorista(UsuarioAutenticado logado, MultipartFile nf) {
-        boolean motorista = logado != null && logado.getUsuario().getPerfil() == Perfil.MOTORISTA;
-        if (motorista && (nf == null || nf.isEmpty())) {
+        Perfil perfil = logado == null ? null : logado.getUsuario().getPerfil();
+        boolean gestor = perfil == Perfil.ADMINISTRADOR || perfil == Perfil.FISCAL || perfil == Perfil.PRESIDENTE;
+        if (!gestor && (nf == null || nf.isEmpty())) {
             throw new RegraDeNegocioException("Anexe a nota fiscal (PDF ou foto) para registrar o lançamento.");
         }
         // Valida o arquivo ANTES de gravar o lançamento, para não sobrar lançamento sem NF.

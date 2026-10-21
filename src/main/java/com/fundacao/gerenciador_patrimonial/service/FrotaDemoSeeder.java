@@ -75,6 +75,7 @@ public class FrotaDemoSeeder implements ApplicationRunner {
     private final FrotaService frota;
     private final DiariaService diarias;
     private final CautelaService cautelas;
+    private final SeguroVeiculoService seguros;
     private final StorageService storage;
 
     @Value("${app.frota.seed-senha-motorista:trocar123}")
@@ -252,6 +253,24 @@ public class FrotaDemoSeeder implements ApplicationRunner {
                     "Cautela", "Sgt. João Silva", null, LocalTime.of(7, 0), v.getKmAtual(), null, null,
                     "Cb. Carlos Pereira", "4455667", "444.777.000-61", "(63) 99999-0000", "9º BPM - ARAGUATINS",
                     "Apoio à operação de fim de semana"));
+        }
+
+        // Seguro: uma apólice vigente (com sinistro em análise), uma vencendo e uma vencida; o resto fica sem seguro.
+        if (veiculos.size() > 2) {
+            var vig = seguros.criar(new com.fundacao.gerenciador_patrimonial.dto.request.SeguroVeiculoRequest(veiculos.get(0).getId(),
+                    "Porto Seguro", "0531.22.004781", "Corretora Tocantins Seguros", hoje.minusDays(200), hoje.plusDays(165),
+                    new BigDecimal("3180.40"), new BigDecimal("2950.00"), "Casco (100% FIPE), terceiros R$ 100 mil, vidros e carro reserva 7 dias",
+                    "0800 727 0800", null), null);
+            seguros.criarSinistro(new com.fundacao.gerenciador_patrimonial.dto.request.SinistroVeiculoRequest(veiculos.get(0).getId(), vig.id(),
+                    hoje.minusDays(12), "PS-2026-118844", "Colisão traseira em semáforo; para-choque e lanterna danificados",
+                    "Av. Teotônio Segurado, Palmas", MOTORISTAS[0], new BigDecimal("4200.00"), null,
+                    com.fundacao.gerenciador_patrimonial.domain.enums.SituacaoSinistro.EM_ANALISE, "Aguardando vistoria"));
+            seguros.criar(new com.fundacao.gerenciador_patrimonial.dto.request.SeguroVeiculoRequest(veiculos.get(1).getId(),
+                    "Mapfre", "4402.77.019920", null, hoje.minusDays(345), hoje.plusDays(20),
+                    new BigDecimal("2740.00"), new BigDecimal("2500.00"), "Casco e terceiros", "0800 775 4545", null), null);
+            seguros.criar(new com.fundacao.gerenciador_patrimonial.dto.request.SeguroVeiculoRequest(veiculos.get(2).getId(),
+                    "Tokio Marine", "TM-88.120.334", null, hoje.minusDays(400), hoje.minusDays(35),
+                    new BigDecimal("2215.90"), new BigDecimal("2100.00"), "Casco e terceiros", "0300 337 8000", null), null);
         }
     }
 

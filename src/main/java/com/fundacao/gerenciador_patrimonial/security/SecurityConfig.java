@@ -79,6 +79,12 @@ public class SecurityConfig {
                         // --- Frota ---
                         .requestMatchers(HttpMethod.DELETE, "/api/frota/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/frota/importar-transportes", "/api/frota/veiculos/*/ativo").hasRole("ADMINISTRADOR")
+                        // Abastecimento: quem lança na frota + quem tem a permissão extra (Usuario.podeAbastecer).
+                        .requestMatchers(HttpMethod.POST, "/api/frota/veiculos/*/abastecimentos").hasAnyAuthority(
+                                "ROLE_ADMINISTRADOR", "ROLE_FISCAL", "ROLE_PRESIDENTE", "ROLE_MOTORISTA", UsuarioAutenticado.FROTA_ABASTECER)
+                        // Seguro e sinistros: só quem gere a frota cadastra (PUT/DELETE já seguem as regras acima).
+                        .requestMatchers(HttpMethod.POST, "/api/frota/seguros", "/api/frota/seguros/**",
+                                                          "/api/frota/sinistros", "/api/frota/sinistros/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
                         .requestMatchers(HttpMethod.POST, "/api/frota/veiculos", "/api/frota/veiculos/*/manutencao-status").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
                         .requestMatchers(HttpMethod.PUT, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
                         // Trocar a NF de um lançamento existente é edição: só ADMIN/FISCAL/PRESIDENTE. O motorista
