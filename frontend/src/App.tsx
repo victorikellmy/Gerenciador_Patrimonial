@@ -4,6 +4,8 @@ import type { Perfil } from './api/types'
 import AppShell from './layout/AppShell'
 import { Carregando } from './components/ui'
 import Login from './pages/Login'
+import PoliticaPrivacidade from './pages/PoliticaPrivacidade'
+import Sobre from './pages/Sobre'
 import TrocarSenha from './pages/TrocarSenha'
 import Dashboard from './pages/Dashboard'
 import PatrimoniosLista from './pages/patrimonios/Lista'
@@ -70,6 +72,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+      <Route path="/sobre" element={<Sobre />} />
       <Route element={<Protegida />}>
         <Route path="/" element={<Inicio />} />
         <Route path="/minha-conta/senha" element={<TrocarSenha />} />

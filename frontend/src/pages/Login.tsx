@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth, destinoInicial } from '../auth/AuthContext'
 import { BotaoBaixarApp } from '../components/BaixarApp'
 
@@ -58,7 +58,9 @@ export default function Login() {
           </form>
         </div>
         <BotaoBaixarApp variante="bloco" />
-        <div className="login-footer">Fundação Pró-Tocantins · {new Date().getFullYear()}</div>
+        <div className="login-footer">
+          Fundação Pró-Tocantins · {new Date().getFullYear()} · <Link to="/sobre" style={{ color: 'inherit' }}>Sobre</Link> · <Link to="/politica-de-privacidade" style={{ color: 'inherit' }}>Política de Privacidade</Link>
+        </div>
       </div>
     </div>
   )
