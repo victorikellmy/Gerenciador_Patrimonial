@@ -13,8 +13,9 @@ export default function Sobre() {
 
       <div className="alert alert-warning" role="note">
         <strong>Aviso:</strong> este aplicativo <strong>não é uma entidade governamental</strong> e não representa,
-        nem é oficial de, órgão público. Não somos afiliados à Polícia Militar do Tocantins (PMTO) nem ao Corpo de
-        Bombeiros Militar do Tocantins (CBMTO), que são citados apenas como instituições apoiadas pela Fundação.
+        nem é oficial de, órgão público. A Fundação Pró-Tocantins é uma entidade privada de apoio à Polícia Militar do
+        Tocantins (PMTO) e ao Corpo de Bombeiros Militar do Tocantins (CBMTO), mas não é órgão público nem faz parte
+        dessas corporações.
       </div>
 
       <h2 className="h5 mt-4">Fontes oficiais de informações governamentais</h2>
