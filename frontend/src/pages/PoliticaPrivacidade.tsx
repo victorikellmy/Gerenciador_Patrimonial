@@ -2,11 +2,11 @@ export default function PoliticaPrivacidade() {
   return (
     <main className="container py-4" style={{ maxWidth: 820 }}>
       <h1 className="h3 mb-1">Política de Privacidade</h1>
-      <p className="text-muted small">Gerenciador Patrimonial · Fundação Pró-Tocantins · Última atualização: 29/10/2026</p>
+      <p className="text-muted small">Patrimônio FPTO · Gerenciador Patrimonial · Fundação Pró-Tocantins · Última atualização: 03/11/2026</p>
 
       <p>
-        Esta política explica quais dados o aplicativo <strong>Gerenciador Patrimonial</strong> trata, para que finalidade,
-        e como o usuário pode exercer seus direitos.
+        Esta política explica quais dados o aplicativo <strong>Patrimônio FPTO</strong> (Android) e o portal{' '}
+        <strong>Gerenciador Patrimonial</strong> tratam, para que finalidade, e como o usuário pode exercer seus direitos.
       </p>
 
       <h2 className="h5 mt-4">1. Controlador</h2>
