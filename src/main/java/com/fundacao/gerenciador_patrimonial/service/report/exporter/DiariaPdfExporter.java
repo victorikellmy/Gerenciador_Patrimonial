@@ -55,13 +55,14 @@ public class DiariaPdfExporter {
 
     /** Formulário de solicitação de diária, com campos para assinatura. */
     public byte[] solicitacaoDiaria(DiariaResponse d, List<DiariaHistoricoResponse> historico) {
-        return gerar(PageSize.A4, "Solicitação de Pagamento de Diária nº " + d.id(),
-                "Portaria 004/2018 GAB. Pres FPTO | Situação: " + d.status().getRotulo(), doc -> {
+        String numero = d.numeroRequerimento() != null ? d.numeroRequerimento() : String.valueOf(d.id());
+        return gerar(PageSize.A4, "Extrato da Diária nº " + numero,
+                "Portaria 001/2019 GAB. PRES FPTO | Situação: " + d.status().getRotulo(), doc -> {
             doc.add(secao("Dados do profissional"));
             PdfPTable p = grade(2);
             campo(p, "Nome", d.profissionalNome());
             campo(p, "Matrícula", d.profissionalMatricula());
-            campo(p, "Cargo / Posto / Graduação", d.profissionalNivel());
+            campo(p, "Cargo / Posto / Função", d.profissionalCargo());
             campo(p, "Lotação", d.profissionalLotacao());
             campo(p, "CPF", d.profissionalCpf());
             campo(p, "RG / Órgão", juntar(d.profissionalRg(), d.profissionalOrgaoExpedidor()));
@@ -71,13 +72,14 @@ public class DiariaPdfExporter {
 
             doc.add(secao("Dados da viagem"));
             PdfPTable v = grade(2);
-            campo(v, "Itinerário", d.itinerario());
+            campo(v, "Itinerário", juntar(d.origem(), d.itinerario()));
             campo(v, "Meio de transporte", d.meioTransporte().getRotulo());
             campo(v, "Partida", data(d.partida()) + (d.horaSaida() == null ? "" : " às " + hora(d.horaSaida())));
             campo(v, "Retorno", data(d.retorno()) + (d.horaChegada() == null ? "" : " às " + hora(d.horaChegada())));
             campo(v, "Recurso", d.recurso().getRotulo());
             campo(v, "Nº de diárias", d.numeroDiarias().stripTrailingZeros().toPlainString().replace('.', ','));
-            campo(v, "Valor unitário", "R$ " + MOEDA.format(d.valorUnitario()));
+            campo(v, "Valor unitário", "R$ " + MOEDA.format(d.valorUnitario())
+                    + (d.tipoDiaria() != null ? " (" + d.tipoDiaria().getRotulo() + ")" : ""));
             campo(v, "Valor total", "R$ " + MOEDA.format(d.valorTotal()));
             doc.add(v);
 

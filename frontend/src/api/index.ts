@@ -132,7 +132,10 @@ export const api = {
     contagens: () => http.get<Record<T.StatusDiaria, number>>('/api/diarias/contagens'),
     buscar: (id: number) => http.get<T.Diaria>(`/api/diarias/${id}`),
     historico: (id: number) => http.get<T.DiariaHistorico[]>(`/api/diarias/${id}/historico`),
+    /** Requerimento de Diárias preenchido (Anexo II), para salvar e enviar pelo SGD. */
     pdfUrl: (id: number) => `/api/diarias/${id}/pdf`,
+    extratoUrl: (id: number) => `/api/diarias/${id}/extrato`,
+    calculo: (partida: string, horaSaida: string, retorno: string, horaChegada: string) => http.get<T.CalculoDiaria>('/api/diarias/calculo' + qs({ partida, horaSaida, retorno, horaChegada })),
     criar: (r: T.DiariaRequest) => http.post<T.Diaria>('/api/diarias', limparVazios(r)),
     atualizar: (id: number, r: T.DiariaRequest) => http.put<T.Diaria>(`/api/diarias/${id}`, limparVazios(r)),
     excluir: (id: number) => http.del<void>(`/api/diarias/${id}`),
@@ -141,6 +144,8 @@ export const api = {
     pagas: (de?: string, ate?: string) => http.get<{ de: string; ate: string; lista: T.Diaria[]; total: number }>('/api/diarias/pagas' + qs({ de, ate })),
     pagasUrl: (de: string, ate: string, formato: 'xlsx' | 'pdf') => '/api/diarias/pagas/download' + qs({ de, ate, formato }),
     profissionais: (busca?: string, ativos = false) => http.get<T.Profissional[]>('/api/diarias/profissionais' + qs({ busca, ativos })),
+    /** Busca do formulário de diária: nome, CPF ou matrícula (até 10). */
+    buscarProfissionais: (termo: string) => http.get<T.Profissional[]>('/api/diarias/profissionais/busca' + qs({ termo })),
     profissional: (id: number) => http.get<T.Profissional>(`/api/diarias/profissionais/${id}`),
     criarProfissional: (r: T.ProfissionalRequest) => http.post<T.Profissional>('/api/diarias/profissionais', r),
     atualizarProfissional: (id: number, r: T.ProfissionalRequest) => http.put<T.Profissional>(`/api/diarias/profissionais/${id}`, r),

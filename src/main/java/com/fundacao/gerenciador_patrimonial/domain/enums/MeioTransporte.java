@@ -3,9 +3,10 @@ package com.fundacao.gerenciador_patrimonial.domain.enums;
 import java.text.Normalizer;
 
 public enum MeioTransporte {
-    VEICULO_OFICIAL("Veículo oficial"),
+    VEICULO_OFICIAL("Veículo da Fundação"),
     AEREO("Aéreo"),
-    RODOVIARIO("Rodoviário");
+    RODOVIARIO("Rodoviário"),
+    OUTRO("Outro");
 
     private final String rotulo;
 
@@ -19,6 +20,7 @@ public enum MeioTransporte {
         for (MeioTransporte m : values()) if (m.name().equals(t)) return m;
         if (t.startsWith("AER")) return AEREO;
         if (t.startsWith("ROD")) return RODOVIARIO;
+        if (t.startsWith("OUTR")) return OUTRO;
         return VEICULO_OFICIAL;
     }
 }

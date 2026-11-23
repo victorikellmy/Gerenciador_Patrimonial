@@ -19,7 +19,12 @@ public record ProfissionalResponse(
         String orgaoExpedidor,
         String dadosBancarios,
         boolean ativo,
-        String cadastradoPor
+        String cadastradoPor,
+        String cargo,
+        String banco,
+        String agencia,
+        String contaCorrente,
+        String pix
 ) {
     public static ProfissionalResponse from(Profissional p) {
         var n = p.getNivel();
@@ -27,6 +32,7 @@ public record ProfissionalResponse(
                 n != null ? n.getId() : null, n != null ? n.getDescricao() : null,
                 n != null ? n.getValorCapitais() : null, n != null ? n.getValorInteriorEstado() : null,
                 n != null ? n.getValorInteriorOutroEstado() : null,
-                p.getCpf(), p.getRg(), p.getOrgaoExpedidor(), p.getDadosBancarios(), p.isAtivo(), p.getCadastradoPor());
+                p.getCpf(), p.getRg(), p.getOrgaoExpedidor(), p.getDadosBancarios(), p.isAtivo(), p.getCadastradoPor(),
+                p.getCargo(), p.getBanco(), p.getAgencia(), p.getContaCorrente(), p.getPix());
     }
 }

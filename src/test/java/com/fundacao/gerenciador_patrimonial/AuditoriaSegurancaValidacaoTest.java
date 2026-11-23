@@ -229,11 +229,16 @@ class AuditoriaSegurancaValidacaoTest {
         long prof = criarProfissional("Prof " + sufixo, nivelId);
         UsuarioAutenticado presidente = new UsuarioAutenticado(usuario("val.presidente", Perfil.PRESIDENTE));
         UsuarioAutenticado financeiro = new UsuarioAutenticado(usuario("val.financeiro", Perfil.FINANCEIRO));
+        // numeroDiarias não é mais enviado: o servidor apura pelas datas e horários (aqui, 1,5)
         String corpo = """
-                {"profissionalId":%d,"itinerario":"Palmas - Gurupi","partida":"%s","retorno":"%s","meioTransporte":"VEICULO_OFICIAL",
-                 "recurso":"PROPRIO","numeroDiarias":%s,"valorUnitario":%s}""";
+                {"profissionalId":%d,"nome":"Prof Auditoria","matricula":"4455-6","cargo":"Analista","lotacao":"SEDE FPTO",
+                 "cpf":"CPF_DO_PROFISSIONAL","orgaoExpedidor":"SSP/TO","origem":"Palmas","itinerario":"Gurupi",
+                 "partida":"%s","horaSaida":"06:00","retorno":"%s","horaChegada":"20:00","meioTransporte":"VEICULO_OFICIAL",
+                 "recurso":"PROPRIO","finalidade":"Auditoria","banco":"001","agencia":"1234","contaCorrente":"5678-9",
+                 "pix":"chave@exemplo.org","tipoDiaria":"INTERIOR_ESTADO","valorUnitario":%s}"""
+                .replace("CPF_DO_PROFISSIONAL", cpfDoProfissional(prof));
         String criada = mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
-                        .content(corpo.formatted(prof, LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), "1", "100")))
+                        .content(corpo.formatted(prof, LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), "100")))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long id = json.readTree(criada).get("id").asLong();
         mvc.perform(post("/api/diarias/" + id + "/confirmar").with(user(admin)).contentType(MediaType.APPLICATION_JSON).content("{}"))
@@ -242,7 +247,7 @@ class AuditoriaSegurancaValidacaoTest {
                 .andExpect(jsonPath("$.status").value("DEFERIDO"));
 
         mvc.perform(put("/api/diarias/" + id).with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
-                        .content(corpo.formatted(prof, LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), "10", "5000")))
+                        .content(corpo.formatted(prof, LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), "5000")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SOLICITADO"));
         mvc.perform(post("/api/diarias/" + id + "/pagar").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON).content("{}"))
@@ -418,6 +423,12 @@ class AuditoriaSegurancaValidacaoTest {
                         .content("{\"nome\":\"%s\",\"nivelId\":%d,\"cpf\":\"%s\"}".formatted(nome, nivelId, cpfValido())))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return json.readTree(r).get("id").asLong();
+    }
+
+    @Autowired com.fundacao.gerenciador_patrimonial.repository.ProfissionalRepository profissionalRepo;
+
+    private String cpfDoProfissional(long id) {
+        return profissionalRepo.findById(id).orElseThrow().getCpf();
     }
 
     /** CPF fictício com dígitos verificadores válidos. */

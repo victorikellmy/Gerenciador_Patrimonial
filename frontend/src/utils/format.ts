@@ -17,7 +17,8 @@ export const rotulos: Record<string, string> = {
   REVISAO: 'Revisão', CONSERTO: 'Conserto', TROCA_OLEO: 'Troca de óleo', BALANCEAMENTO: 'Balanceamento / alinhamento', PNEUS: 'Pneus', FREIOS: 'Freios', ELETRICA: 'Elétrica', LAVA_JATO: 'Lava-jato', OUTRO: 'Outro',
   // diárias
   SOLICITADO: 'Solicitada', CONFIRMADO: 'Confirmada', DEFERIDO: 'Deferida', INDEFERIDO: 'Indeferida', PAGO: 'Paga',
-  VEICULO_OFICIAL: 'Veículo oficial', AEREO: 'Aéreo', RODOVIARIO: 'Rodoviário', PROPRIO: 'Próprio', CONVENIO: 'Convênio',
+  VEICULO_OFICIAL: 'Veículo da Fundação', AEREO: 'Aéreo', RODOVIARIO: 'Rodoviário', PROPRIO: 'Próprio', CONVENIO: 'Convênio', OUTRA: 'Outra',
+  CAPITAL: 'Capital', INTERIOR_ESTADO: 'Interior do Estado', INTERIOR_OUTRO_ESTADO: 'Interior de outro Estado',
   // patrimônio
   ATIVO: 'Ativo', BAIXADO: 'Baixado', MANUTENCAO: 'Em manutenção', CAUTELADO: 'Cautelado', EM_APURACAO: 'Em apuração',
   NOVO: 'Novo', OTIMO: 'Ótimo', BOM: 'Bom', BOM_REGULAR: 'Bom/Regular', REGULAR: 'Regular', REGULAR_RUIM: 'Regular/Ruim', RUIM: 'Ruim', INSERVIVEL: 'Inservível',

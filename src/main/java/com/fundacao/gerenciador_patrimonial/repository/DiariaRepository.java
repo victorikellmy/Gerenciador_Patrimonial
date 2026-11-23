@@ -14,10 +14,16 @@ import java.util.Optional;
 
 public interface DiariaRepository extends JpaRepository<Diaria, Long>, JpaSpecificationExecutor<Diaria> {
 
-    @Query("select d from Diaria d join fetch d.profissional p join fetch p.nivel where d.id = :id")
+    @Query("select d from Diaria d join fetch d.profissional p left join fetch p.nivel where d.id = :id")
     Optional<Diaria> findComProfissional(Long id);
 
     Optional<Diaria> findByIdTransportes(Integer idTransportes);
+
+    Optional<Diaria> findFirstByNumeroRequerimento(String numeroRequerimento);
+
+    /** Números já usados com o sufixo "/ano" (para gerar o próximo da sequência). */
+    @Query("select d.numeroRequerimento from Diaria d where d.numeroRequerimento like :sufixo")
+    List<String> numerosComSufixo(String sufixo);
 
     long countByStatus(StatusDiaria status);
 

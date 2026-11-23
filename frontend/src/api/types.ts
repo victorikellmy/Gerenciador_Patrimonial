@@ -9,8 +9,9 @@ export type StatusPendencia = 'PENDENTE' | 'CONCLUIDA' | 'DESCARTADA'
 export type Combustivel = 'GASOLINA' | 'ETANOL' | 'DIESEL' | 'GNV'
 export type TipoServicoVeiculo = 'REVISAO' | 'CONSERTO' | 'TROCA_OLEO' | 'BALANCEAMENTO' | 'PNEUS' | 'FREIOS' | 'ELETRICA' | 'LAVA_JATO' | 'OUTRO'
 export type StatusDiaria = 'SOLICITADO' | 'CONFIRMADO' | 'DEFERIDO' | 'INDEFERIDO' | 'PAGO'
-export type MeioTransporte = 'VEICULO_OFICIAL' | 'AEREO' | 'RODOVIARIO'
-export type RecursoDiaria = 'PROPRIO' | 'CONVENIO'
+export type MeioTransporte = 'VEICULO_OFICIAL' | 'AEREO' | 'RODOVIARIO' | 'OUTRO'
+export type RecursoDiaria = 'PROPRIO' | 'CONVENIO' | 'OUTRA'
+export type TipoDiaria = 'CAPITAL' | 'INTERIOR_ESTADO' | 'INTERIOR_OUTRO_ESTADO'
 
 export interface Page<T> {
   content: T[]
@@ -153,15 +154,28 @@ export interface AlertasSeguro { diasAviso: number; vencidos: Seguro[]; vencendo
 
 // --- Diárias ---
 export interface NivelDiaria { id: number; descricao: string; valorCapitais: number; valorInteriorEstado: number; valorInteriorOutroEstado: number; ativo: boolean }
-export interface Profissional { id: number; nome: string; matricula?: string; lotacao?: string; nivelId: number; nivelDescricao: string; valorCapitais: number; valorInteriorEstado: number; valorInteriorOutroEstado: number; cpf: string; rg?: string; orgaoExpedidor?: string; dadosBancarios?: string; ativo: boolean; cadastradoPor?: string }
-export interface ProfissionalRequest { nome: string; matricula?: string; lotacao?: string; nivelId: number | ''; cpf: string; rg?: string; orgaoExpedidor?: string; dadosBancarios?: string }
+export interface Profissional { id: number; nome: string; matricula?: string; lotacao?: string; nivelId?: number | null; nivelDescricao?: string | null; valorCapitais?: number | null; valorInteriorEstado?: number | null; valorInteriorOutroEstado?: number | null; cpf: string; rg?: string; orgaoExpedidor?: string; dadosBancarios?: string; ativo: boolean; cadastradoPor?: string; cargo?: string | null; banco?: string | null; agencia?: string | null; contaCorrente?: string | null; pix?: string | null }
+export interface ProfissionalRequest { nome: string; matricula?: string; lotacao?: string; nivelId: number | ''; cpf: string; rg?: string; orgaoExpedidor?: string; dadosBancarios?: string; cargo: string; banco: string; agencia: string; contaCorrente: string; pix: string }
 export interface Diaria {
   id: number; dataSolicitacao: string; profissionalId: number; profissionalNome: string; profissionalMatricula?: string; profissionalLotacao?: string; profissionalNivel?: string
   profissionalCpf?: string; profissionalRg?: string; profissionalOrgaoExpedidor?: string; profissionalDadosBancarios?: string
   itinerario: string; horaSaida?: string; meioTransporte: MeioTransporte; partida: string; retorno: string; horaChegada?: string; recurso: RecursoDiaria
   numeroDiarias: number; valorUnitario: number; valorTotal: number; finalidade?: string; solicitante: string; status: StatusDiaria; dataPagamento?: string; motivoIndeferimento?: string; criadoEm?: string; editavel: boolean
+  // requerimento (Anexo II)
+  numeroRequerimento?: string | null; origem?: string | null; tipoDiaria?: TipoDiaria | null; profissionalCargo?: string | null; profissionalNivelId?: number | null
+  banco?: string | null; agencia?: string | null; contaCorrente?: string | null; pix?: string | null; calculo?: CalculoDiaria | null
 }
-export interface DiariaRequest { profissionalId: number | ''; itinerario: string; partida: string; horaSaida?: string; retorno: string; horaChegada?: string; meioTransporte: MeioTransporte; recurso: RecursoDiaria; numeroDiarias: number | ''; valorUnitario: number | ''; finalidade?: string }
+/** Memória de cálculo da quantidade de diárias (service.CalculoDiarias.Resultado). */
+export interface CalculoDiaria { integrais: number; alimentacao: number; quantidade: number; duracaoMin: number; restoMin: number; inicioResto: string; refeicoes: string[]; avisoPortaria?: string | null }
+/** Requerimento de diária: os dados do profissional vão junto e alimentam o cadastro; a quantidade é apurada no servidor. */
+export interface DiariaRequest {
+  profissionalId: number | ''; numeroRequerimento: string; dataRequerimento: string
+  nome: string; matricula: string; cargo: string; lotacao: string; cpf: string; rg: string; orgaoExpedidor: string; nivelId: number | ''
+  origem: string; itinerario: string; partida: string; horaSaida: string; retorno: string; horaChegada: string
+  meioTransporte: MeioTransporte | ''; recurso: RecursoDiaria | ''; finalidade: string
+  banco: string; agencia: string; contaCorrente: string; pix: string
+  tipoDiaria: TipoDiaria | ''; valorUnitario: number | ''
+}
 export interface DiariaHistorico { id: number; deStatus?: StatusDiaria; paraStatus: StatusDiaria; usuario: string; instante: string; observacao?: string }
 
 export interface Auditoria { id: number; usuario: string; acao: string; entidade: string; entidadeId?: number; descricao?: string; ipOrigem?: string; dataHora: string }

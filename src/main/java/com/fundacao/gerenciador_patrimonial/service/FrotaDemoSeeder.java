@@ -205,6 +205,17 @@ public class FrotaDemoSeeder implements ApplicationRunner {
         log.warn("Seed da frota aplicado: {} veículos com histórico de demonstração; usuários motorista.demo, gerente.demo, presidente.demo e financeiro.demo criados.", CARROS.size());
     }
 
+    /** Requerimento de diária de demonstração (mesma ordem de campos do formulário). */
+    private static com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest pedido(
+            Long profissionalId, String nome, String matricula, String cargo, String lotacao, String cpf, String rg, String orgao,
+            Long nivelId, String origem, String destino, LocalDate partida, LocalTime saida, LocalDate retorno, LocalTime chegada,
+            MeioTransporte meio, RecursoDiaria recurso, String finalidade, String banco, String agencia, String conta, String pix,
+            com.fundacao.gerenciador_patrimonial.domain.enums.TipoDiaria tipo, BigDecimal valorUnitario, LocalDate dataRequerimento) {
+        return new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(profissionalId, null, dataRequerimento, nome, matricula,
+                cargo, lotacao, cpf, rg, orgao, nivelId, origem, destino, partida, saida, retorno, chegada, meio, recurso, finalidade,
+                banco, agencia, conta, pix, tipo, valorUnitario);
+    }
+
     /** Diárias em cada etapa do fluxo e uma cautela em aberto. */
     private void seedDiariasECautelas(LocalDate hoje) {
         var niveis = diarias.niveisAtivos();
@@ -213,32 +224,37 @@ public class FrotaDemoSeeder implements ApplicationRunner {
         Long nivelCap = niveis.stream().filter(n -> n.descricao().contains("Capitão")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
         Long nivelCb = niveis.stream().filter(n -> n.descricao().contains("Cabo")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
 
-        var p1 = diarias.salvarProfissional(null, new com.fundacao.gerenciador_patrimonial.dto.request.ProfissionalRequest(
-                "João da Silva", "12345-1", "1º BPM - PALMAS", nivelSgt, "111.444.777-35", "1234567", "SSP-TO", "BB ag 1234 cc 56789-0"));
-        var p2 = diarias.salvarProfissional(null, new com.fundacao.gerenciador_patrimonial.dto.request.ProfissionalRequest(
-                "Maria Souza", "22334-2", "FPTO - PALMAS", nivelCap, "222.555.888-19", "7654321", "SSP-TO", "CEF ag 0001 cc 12345-6"));
+        // Cadastro prévio só do terceiro; os dois primeiros nascem do próprio requerimento de diária
+        // (é assim que o cadastro de profissionais é alimentado no dia a dia).
         var p3 = diarias.salvarProfissional(null, new com.fundacao.gerenciador_patrimonial.dto.request.ProfissionalRequest(
-                "Pedro Lima", "33445-3", "2º BPM - ARAGUAINA", nivelCb, "333.666.999-03", null, null, null));
+                "Pedro Lima", "33445-3", "2º BPM - ARAGUAINA", nivelCb, "333.666.999-03", null, null, null,
+                "Cabo PM", null, null, null, null));
+        var valores = niveis.stream().collect(java.util.stream.Collectors.toMap(n -> n.id(), n -> n));
 
-        var d1 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p1.id(), "Palmas → Araguaína → Palmas",
-                hoje.plusDays(3), LocalTime.of(6, 0), hoje.plusDays(5), LocalTime.of(19, 0), MeioTransporte.VEICULO_OFICIAL,
-                RecursoDiaria.PROPRIO, new BigDecimal("2.5"), p1.valorInteriorEstado(), "Instrução no 2º BPM"));
-        var d2 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p2.id(), "Palmas → Brasília → Palmas",
-                hoje.plusDays(7), LocalTime.of(8, 0), hoje.plusDays(9), LocalTime.of(21, 0), MeioTransporte.AEREO,
-                RecursoDiaria.CONVENIO, new BigDecimal("2"), p2.valorCapitais(), "Reunião no Ministério da Saúde"));
-        var d3 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p3.id(), "Araguaína → Gurupi → Araguaína",
-                hoje.minusDays(20), LocalTime.of(5, 30), hoje.minusDays(18), LocalTime.of(22, 0), MeioTransporte.RODOVIARIO,
-                RecursoDiaria.PROPRIO, new BigDecimal("2"), p3.valorInteriorEstado(), "Apoio ao Levantamento patrimonial"));
-        var d4 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p1.id(), "Palmas → Porto Nacional → Palmas",
-                hoje.minusDays(40), LocalTime.of(7, 0), hoje.minusDays(40), LocalTime.of(18, 0), MeioTransporte.VEICULO_OFICIAL,
-                RecursoDiaria.PROPRIO, new BigDecimal("0.5"), p1.valorInteriorEstado(), "Entrega de documentos"));
-        var d5 = diarias.criar(new com.fundacao.gerenciador_patrimonial.dto.request.DiariaRequest(p2.id(), "Palmas → Goiânia → Palmas",
-                hoje.minusDays(30), null, hoje.minusDays(28), null, MeioTransporte.RODOVIARIO,
-                RecursoDiaria.PROPRIO, new BigDecimal("2"), p2.valorInteriorOutroEstado(), "Curso de capacitação"));
+        var d1 = diarias.criar(pedido(null, "João da Silva", "12345-1", "Segundo Sargento PM", "1º BPM - PALMAS", "111.444.777-35",
+                "1234567", "SSP-TO", nivelSgt, "Palmas", "Araguaína", hoje.plusDays(3), LocalTime.of(6, 0), hoje.plusDays(5), LocalTime.of(19, 0),
+                MeioTransporte.VEICULO_OFICIAL, RecursoDiaria.PROPRIO, "Instrução no 2º BPM", "001", "1234-5", "56789-0", "11144477735",
+                com.fundacao.gerenciador_patrimonial.domain.enums.TipoDiaria.INTERIOR_ESTADO, valores.get(nivelSgt).valorInteriorEstado(), null));
+        var d2 = diarias.criar(pedido(null, "Maria Souza", "22334-2", "Capitão PM", "FPTO - PALMAS", "222.555.888-19",
+                "7654321", "SSP-TO", nivelCap, "Palmas", "Brasília", hoje.plusDays(7), LocalTime.of(8, 0), hoje.plusDays(9), LocalTime.of(21, 0),
+                MeioTransporte.AEREO, RecursoDiaria.CONVENIO, "Reunião no Ministério da Saúde", "104", "0001", "12345-6", "maria.souza@exemplo.org",
+                com.fundacao.gerenciador_patrimonial.domain.enums.TipoDiaria.CAPITAL, valores.get(nivelCap).valorCapitais(), null));
+        var d3 = diarias.criar(pedido(p3.id(), "Pedro Lima", "33445-3", "Cabo PM", "2º BPM - ARAGUAINA", "333.666.999-03",
+                "998877", "PM-TO", nivelCb, "Araguaína", "Gurupi", hoje.minusDays(20), LocalTime.of(5, 30), hoje.minusDays(18), LocalTime.of(22, 0),
+                MeioTransporte.RODOVIARIO, RecursoDiaria.PROPRIO, "Apoio ao levantamento patrimonial", "756", "3040", "7788-X", "+5563999990003",
+                com.fundacao.gerenciador_patrimonial.domain.enums.TipoDiaria.INTERIOR_ESTADO, valores.get(nivelCb).valorInteriorEstado(), hoje.minusDays(25)));
+        var d4 = diarias.criar(pedido(d1.profissionalId(), "João da Silva", "12345-1", "Segundo Sargento PM", "1º BPM - PALMAS", "111.444.777-35",
+                "1234567", "SSP-TO", nivelSgt, "Palmas", "Porto Nacional", hoje.minusDays(40), LocalTime.of(7, 0), hoje.minusDays(40), LocalTime.of(18, 0),
+                MeioTransporte.VEICULO_OFICIAL, RecursoDiaria.PROPRIO, "Entrega de documentos", "001", "1234-5", "56789-0", "11144477735",
+                com.fundacao.gerenciador_patrimonial.domain.enums.TipoDiaria.INTERIOR_ESTADO, valores.get(nivelSgt).valorInteriorEstado(), hoje.minusDays(45)));
+        var d5 = diarias.criar(pedido(d2.profissionalId(), "Maria Souza", "22334-2", "Capitão PM", "FPTO - PALMAS", "222.555.888-19",
+                "7654321", "SSP-TO", nivelCap, "Palmas", "Anápolis", hoje.minusDays(30), LocalTime.of(8, 0), hoje.minusDays(28), LocalTime.of(18, 0),
+                MeioTransporte.RODOVIARIO, RecursoDiaria.PROPRIO, "Curso de capacitação", "104", "0001", "12345-6", "maria.souza@exemplo.org",
+                com.fundacao.gerenciador_patrimonial.domain.enums.TipoDiaria.INTERIOR_OUTRO_ESTADO, valores.get(nivelCap).valorInteriorOutroEstado(), hoje.minusDays(35)));
         // d1 fica solicitada; d2 confirmada; d3 deferida; d4 paga; d5 indeferida
         diarias.transicionar(d2.id(), StatusDiaria.CONFIRMADO, null, null);
         diarias.transicionar(d3.id(), StatusDiaria.CONFIRMADO, null, null);
-        diarias.transicionar(d3.id(), StatusDiaria.DEFERIDO, "Deferido conforme Portaria 004/2018", null);
+        diarias.transicionar(d3.id(), StatusDiaria.DEFERIDO, null, null);
         diarias.transicionar(d4.id(), StatusDiaria.CONFIRMADO, null, null);
         diarias.transicionar(d4.id(), StatusDiaria.DEFERIDO, null, null);
         diarias.transicionar(d4.id(), StatusDiaria.PAGO, "Pago via TED", hoje.minusDays(35));

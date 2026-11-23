@@ -6,7 +6,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 /**
- * Tabela de valores de diária por nível funcional (Portaria 004/2018 GAB. Pres FPTO):
+ * Tabela de valores de diária por nível funcional (Anexo I da portaria de diárias da FPTO):
  * capitais, interior do Estado e interior de outro Estado.
  */
 @Entity

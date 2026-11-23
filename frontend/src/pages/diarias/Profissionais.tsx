@@ -14,7 +14,7 @@ export default function Profissionais() {
   const alternar = async (id: number, ativo: boolean) => { try { await api.diarias.ativoProfissional(id, ativo); toast.sucesso(ativo ? 'Profissional reativado.' : 'Profissional inativado.'); qc.invalidateQueries({ queryKey: ['profissionais'] }) } catch (ex) { toast.erro(ex instanceof Error ? ex.message : 'Falha.') } }
   return (
     <>
-      <PageHeader titulo="Profissionais" subtitulo="Servidores e colaboradores que recebem diárias." acoes={<Link className="btn btn-primary" to="/diarias/profissionais/novo"><i className="bi bi-plus-lg"></i> Novo profissional</Link>} />
+      <PageHeader titulo="Profissionais" subtitulo="Militares, funcionários e prestadores que recebem diárias. O cadastro é alimentado pelos próprios requerimentos." acoes={<Link className="btn btn-primary" to="/diarias/profissionais/novo"><i className="bi bi-plus-lg"></i> Novo profissional</Link>} />
       <Card>
         <div className="p-3 border-bottom d-flex flex-wrap gap-2 align-items-center">
           <input className="form-control form-control-sm" style={{ maxWidth: 300 }} placeholder="Buscar por nome, matrícula ou CPF" value={busca} onChange={e => setBusca(e.target.value)} />
@@ -24,7 +24,7 @@ export default function Profissionais() {
           <div className="table-responsive table-livre"><table className="table table-hover table-compacta mb-0">
             <thead><tr><th>Nome</th><th>Matrícula</th><th>Lotação</th><th>Cargo / nível</th><th className="text-end">Capitais</th><th className="text-end">Interior TO</th><th className="text-end">Outro estado</th><th>CPF</th><th>Situação</th><th></th></tr></thead>
             <tbody>{q.data.map(p => <tr key={p.id} className={p.ativo ? '' : 'text-muted'}>
-              <td><strong>{p.nome}</strong></td><td>{p.matricula || '—'}</td><td>{p.lotacao || '—'}</td><td>{p.nivelDescricao}</td>
+              <td><strong>{p.nome}</strong></td><td>{p.matricula || '—'}</td><td>{p.lotacao || '—'}</td><td>{p.cargo ?? p.nivelDescricao ?? '—'}</td>
               <td className="text-end">{moeda(p.valorCapitais)}</td><td className="text-end">{moeda(p.valorInteriorEstado)}</td><td className="text-end">{moeda(p.valorInteriorOutroEstado)}</td>
               <td>{p.cpf}</td><td><span className={`badge badge-plain ${p.ativo ? 'text-bg-success' : 'text-bg-secondary'}`}>{p.ativo ? 'Ativo' : 'Inativo'}</span></td>
               <td className="text-end text-nowrap"><Link className="btn btn-sm btn-secondary btn-icon" to={`/diarias/profissionais/${p.id}/editar`} title="Editar"><i className="bi bi-pencil"></i></Link>{' '}<button className={`btn btn-sm btn-icon ${p.ativo ? 'btn-outline-danger' : 'btn-outline-success'}`} title={p.ativo ? 'Inativar' : 'Reativar'} onClick={() => alternar(p.id, !p.ativo)}><i className={`bi ${p.ativo ? 'bi-person-x' : 'bi-person-check'}`}></i></button></td>

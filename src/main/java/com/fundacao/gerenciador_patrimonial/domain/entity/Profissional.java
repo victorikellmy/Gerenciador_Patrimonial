@@ -3,7 +3,11 @@ package com.fundacao.gerenciador_patrimonial.domain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-/** Quem recebe diária: servidor/militar com nível funcional e dados bancários. */
+/**
+ * Quem recebe diária: militar, funcionário ou prestador. O cadastro é alimentado pelo próprio
+ * requerimento de diária (a cada pedido os dados informados são gravados aqui) e reaproveitado
+ * na solicitação seguinte, buscando por nome, CPF ou matrícula.
+ */
 @Entity
 @Table(name = "profissional", indexes = {
         @Index(name = "idx_profissional_cpf",  columnList = "cpf"),
@@ -27,8 +31,13 @@ public class Profissional {
     @Column(length = 60)
     private String lotacao;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "nivel_diaria_id", nullable = false)
+    /** Cargo, posto ou função, como sai no requerimento. */
+    @Column(length = 120)
+    private String cargo;
+
+    /** Linha da tabela de valores (opcional): só serve para sugerir o valor unitário. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nivel_diaria_id")
     private NivelDiaria nivel;
 
     @Column(nullable = false, length = 14)
@@ -40,8 +49,21 @@ public class Profissional {
     @Column(name = "orgao_expedidor", length = 30)
     private String orgaoExpedidor;
 
+    /** Texto livre herdado do Transportes; substituído pelos campos estruturados abaixo. */
     @Column(name = "dados_bancarios", length = 160)
     private String dadosBancarios;
+
+    @Column(length = 3)
+    private String banco;
+
+    @Column(length = 15)
+    private String agencia;
+
+    @Column(name = "conta_corrente", length = 20)
+    private String contaCorrente;
+
+    @Column(length = 120)
+    private String pix;
 
     @Column(nullable = false)
     @Builder.Default

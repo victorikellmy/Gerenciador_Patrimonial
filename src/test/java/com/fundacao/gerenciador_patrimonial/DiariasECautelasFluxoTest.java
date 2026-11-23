@@ -41,6 +41,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -114,24 +115,42 @@ class DiariasECautelasFluxoTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valorCapitais").isNumber());
 
-        // 2) Fiscal abre a solicitação (2 diárias × valor interior do Estado)
+        // A busca do formulário acha o profissional pelo CPF sem pontuação
+        mvc.perform(get("/api/diarias/profissionais/busca").param("termo", "52998224725").with(user(fiscal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(prof.getId()));
+
+        // Pedido no formato antigo (app até a versão 1.4) é recusado com orientação
         mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"profissionalId":%d,"itinerario":"Palmas → Gurupi → Palmas","partida":"%s","horaSaida":"06:00",
                                  "retorno":"%s","horaChegada":"20:00","meioTransporte":"VEICULO_OFICIAL","recurso":"PROPRIO",
                                  "numeroDiarias":2,"valorUnitario":243.23,"finalidade":"Instrução"}"""
                                 .formatted(prof.getId(), LocalDate.now().plusDays(2), LocalDate.now().plusDays(3))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value(org.hamcrest.Matchers.containsString("aplicativo")));
+
+        // 2) Fiscal abre o requerimento: 06:00 de D+2 às 20:00 de D+3 = 1 período de 24h + 0,5 de alimentação
+        mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content(requerimento(prof.getId(), "Sgt. Teste Diária", "52998224725", "1º BPM - PALMAS", "001",
+                                LocalDate.now().plusDays(2), "06:00", LocalDate.now().plusDays(3), "20:00", "243.23")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("SOLICITADO"))
-                .andExpect(jsonPath("$.valorTotal").value(486.46));
+                .andExpect(jsonPath("$.numeroDiarias").value(1.5))
+                .andExpect(jsonPath("$.valorTotal").value(364.85))
+                .andExpect(jsonPath("$.tipoDiaria").value("INTERIOR_ESTADO"))
+                .andExpect(jsonPath("$.numeroRequerimento").value(org.hamcrest.Matchers.matchesPattern("\\d+/\\d{4}")))
+                .andExpect(jsonPath("$.calculo.integrais").value(1));
         Diaria d = diariaRepo.findAll().stream().filter(x -> x.getProfissional().getId().equals(prof.getId())).findFirst().orElseThrow();
+        // o cadastro passa a ter o que foi informado no requerimento
+        var atualizado = profissionalRepo.findFirstByCpf(cpf).orElseThrow();
+        assertThat(atualizado.getCargo()).isEqualTo("Segundo Sargento PM");
+        assertThat(atualizado.getBanco()).isEqualTo("001");
 
         // Retorno antes da partida é recusado
         mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"profissionalId":%d,"itinerario":"X","partida":"%s","retorno":"%s","meioTransporte":"AEREO",
-                                 "recurso":"PROPRIO","numeroDiarias":1,"valorUnitario":100}"""
-                                .formatted(prof.getId(), LocalDate.now().plusDays(5), LocalDate.now())))
+                        .content(requerimento(prof.getId(), "Sgt. Teste Diária", "52998224725", "1º BPM - PALMAS", "001",
+                                LocalDate.now().plusDays(5), "06:00", LocalDate.now(), "20:00", "100")))
                 .andExpect(status().is4xxClientError());
 
         // 3) Presidente não pode deferir ainda (precisa estar confirmada); fiscal não confirma; admin confirma
@@ -146,7 +165,7 @@ class DiariasECautelasFluxoTest {
 
         // Presidente vê as confirmadas por padrão e defere; financeiro não pode deferir
         mvc.perform(get("/api/diarias").param("padraoDoPerfil", "true").with(user(presidente))).andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[?(@.id == %d)].itinerario".formatted(d.getId())).value("Palmas → Gurupi → Palmas"))
+                .andExpect(jsonPath("$.content[?(@.id == %d)].itinerario".formatted(d.getId())).value("Gurupi"))
                 .andExpect(jsonPath("$.content[*].status").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("CONFIRMADO"))));
         mvc.perform(post("/api/diarias/" + d.getId() + "/deferir").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
@@ -179,6 +198,9 @@ class DiariasECautelasFluxoTest {
         mvc.perform(get("/api/diarias/" + d.getId() + "/historico")).andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].paraStatus").exists());
         mvc.perform(get("/api/diarias/" + d.getId() + "/pdf")).andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("Requerimento_Diaria_")));
+        mvc.perform(get("/api/diarias/" + d.getId() + "/extrato")).andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
         mvc.perform(get("/api/diarias/pagas").with(user(financeiro))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.lista[?(@.id == %d)].profissionalNome".formatted(d.getId())).value("SGT. TESTE DIÁRIA"));
@@ -190,6 +212,104 @@ class DiariasECautelasFluxoTest {
         mvc.perform(post("/api/patrimonios").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/me/resumo").with(user(presidente))).andExpect(status().isOk());
+    }
+
+    /**
+     * "Conforme vai solicitando, vai guardando": o primeiro requerimento cadastra o profissional;
+     * no seguinte basta o CPF (ou a busca por nome) e o cadastro é reaproveitado e atualizado.
+     */
+    @Test
+    void requerimentoCadastraOProfissionalEReaproveitaNaProximaVez() throws Exception {
+        String cpfDigitos = "7" + String.format("%010d", (long) (Math.random() * 9_999_999_999L));
+        String cpf = com.fundacao.gerenciador_patrimonial.service.DiariaService.formatarCpf(cpfDigitos);
+        assertThat(profissionalRepo.findFirstByCpf(cpf)).isEmpty();
+        LocalDate saida = LocalDate.now().plusDays(10);
+
+        // 1ª vez: ninguém cadastrado; o requerimento cria o profissional
+        String r1 = mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content(requerimento(null, "Fulana de Tal Requerente", cpfDigitos, "QCG - PALMAS", "001",
+                                saida, "08:00", saida.plusDays(2), "19:00", "318.00")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numeroDiarias").value(2.5))
+                .andExpect(jsonPath("$.valorTotal").value(795.0))
+                .andExpect(jsonPath("$.profissionalNome").value("FULANA DE TAL REQUERENTE"))
+                .andReturn().getResponse().getContentAsString();
+        var j1 = new com.fasterxml.jackson.databind.ObjectMapper().readTree(r1);
+        long diaria1 = j1.get("id").asLong();
+        var prof = profissionalRepo.findFirstByCpf(cpf).orElseThrow();
+        assertThat(prof.getLotacao()).isEqualTo("QCG - PALMAS");
+        assertThat(prof.getAgencia()).isEqualTo("1234-5");
+        assertThat(prof.getPix()).isEqualTo("chave.pix@exemplo.org");
+
+        // A busca por parte do nome traz todos os dados para preencher o formulário
+        mvc.perform(get("/api/diarias/profissionais/busca").param("termo", "tal requer").with(user(fiscal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == %d)].cargo".formatted(prof.getId())).value("Segundo Sargento PM"))
+                .andExpect(jsonPath("$[?(@.id == %d)].contaCorrente".formatted(prof.getId())).value("56789-X"));
+        mvc.perform(get("/api/diarias/profissionais/busca").param("termo", "tal").with(user(presidente)))
+                .andExpect(status().isForbidden());
+
+        // 2ª vez: só o CPF identifica; lotação e banco novos atualizam o cadastro, sem duplicar
+        String r2 = mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content(requerimento(null, "Fulana de Tal Requerente", cpfDigitos, "5º BPM - PORTO NACIONAL", "104",
+                                saida.plusDays(20), "07:00", saida.plusDays(20), "13:00", "318.00")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numeroDiarias").value(0.5))
+                .andExpect(jsonPath("$.profissionalId").value(prof.getId()))
+                .andReturn().getResponse().getContentAsString();
+        var j2 = new com.fasterxml.jackson.databind.ObjectMapper().readTree(r2);
+        assertThat(profissionalRepo.findAll().stream().filter(p -> cpf.equals(p.getCpf()))).hasSize(1);
+        assertThat(profissionalRepo.findFirstByCpf(cpf).orElseThrow().getLotacao()).isEqualTo("5º BPM - PORTO NACIONAL");
+        // numeração em sequência dentro do ano
+        String[] n1 = j1.get("numeroRequerimento").asText().split("/");
+        String[] n2 = j2.get("numeroRequerimento").asText().split("/");
+        if (n1[1].equals(n2[1])) assertThat(Integer.parseInt(n2[0])).isEqualTo(Integer.parseInt(n1[0]) + 1);
+        // a primeira diária guarda os dados como eram no pedido dela
+        mvc.perform(get("/api/diarias/" + diaria1)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.profissionalLotacao").value("QCG - PALMAS"))
+                .andExpect(jsonPath("$.banco").value("001"));
+
+        // Regras do formulário: banco com 3 dígitos, nome sem números e afastamento que gera diária
+        mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content(requerimento(null, "Fulana de Tal Requerente", cpfDigitos, "QCG", "12",
+                                saida, "08:00", saida.plusDays(1), "19:00", "318.00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value(org.hamcrest.Matchers.containsString("Banco")));
+        mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content(requerimento(null, "Fulana 2 de Tal", cpfDigitos, "QCG", "001",
+                                saida, "08:00", saida.plusDays(1), "19:00", "318.00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value(org.hamcrest.Matchers.containsString("sem números")));
+        mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content(requerimento(null, "Fulana de Tal Requerente", cpfDigitos, "QCG", "001",
+                                saida, "08:00", saida, "11:00", "318.00")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value(org.hamcrest.Matchers.containsString("não gera diária")));
+        mvc.perform(post("/api/diarias").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON)
+                        .content(requerimento(null, "Fulana de Tal Requerente", cpfDigitos, "QCG", "001",
+                                saida, "08:00", saida.plusDays(1), "19:00", "318.00").replace("\"tipoDiaria\":\"INTERIOR_ESTADO\",", "")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value(org.hamcrest.Matchers.containsString("tipo de diária")));
+
+        // Prévia do cálculo usada pelo formulário
+        mvc.perform(get("/api/diarias/calculo").param("partida", saida.toString()).param("horaSaida", "08:00")
+                        .param("retorno", saida.plusDays(2).toString()).param("horaChegada", "19:00").with(user(fiscal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quantidade").value(2.5))
+                .andExpect(jsonPath("$.refeicoes.length()").value(2));
+    }
+
+    /** Requerimento completo no contrato novo (Anexo II). */
+    private static String requerimento(Long profissionalId, String nome, String cpf, String lotacao, String banco,
+                                       LocalDate partida, String horaSaida, LocalDate retorno, String horaChegada, String valorUnitario) {
+        return """
+                {"profissionalId":%s,"nome":"%s","matricula":"12345-6","cargo":"Segundo Sargento PM","lotacao":"%s",
+                 "cpf":"%s","rg":"1234567","orgaoExpedidor":"SSP/TO",
+                 "origem":"Palmas","itinerario":"Gurupi","partida":"%s","horaSaida":"%s","retorno":"%s","horaChegada":"%s",
+                 "meioTransporte":"VEICULO_OFICIAL","recurso":"PROPRIO","finalidade":"Instrução no 4º BPM.",
+                 "banco":"%s","agencia":"1234-5","contaCorrente":"56789-x","pix":"chave.pix@exemplo.org",
+                 "tipoDiaria":"INTERIOR_ESTADO","valorUnitario":%s}"""
+                .formatted(profissionalId, nome, lotacao, cpf, partida, horaSaida, retorno, horaChegada, banco, valorUnitario);
     }
 
     @Test

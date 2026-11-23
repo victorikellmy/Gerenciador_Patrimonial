@@ -47,6 +47,10 @@ app:
       usuario: ${TRANSPORTES_DB_USER:transportes}
       senha: ${TRANSPORTES_DB_SENHA:}
       importar-no-boot: ${TRANSPORTES_IMPORTAR_NO_BOOT:true}
+  diarias:
+    # Quem assina o parecer no Requerimento de Diárias (Anexo II da Portaria 001/2019).
+    autoridade-nome: ${DIARIAS_AUTORIDADE_NOME:Luiz Cláudio Gonçalves Benício – CEL PM R/R}
+    autoridade-cargo: ${DIARIAS_AUTORIDADE_CARGO:DIRETOR PRESIDENTE DA FUNDAÇÃO PRÓ-TOCANTINS}
   importacao:
     # Seed automático da planilha base no primeiro start.
     # Idempotente: só roda se o banco estiver sem patrimônios.

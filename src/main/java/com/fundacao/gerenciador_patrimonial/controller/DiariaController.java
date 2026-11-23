@@ -10,9 +10,11 @@ import com.fundacao.gerenciador_patrimonial.dto.response.DiariaResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.NivelDiariaResponse;
 import com.fundacao.gerenciador_patrimonial.dto.response.ProfissionalResponse;
 import com.fundacao.gerenciador_patrimonial.security.UsuarioAutenticado;
+import com.fundacao.gerenciador_patrimonial.service.CalculoDiarias;
 import com.fundacao.gerenciador_patrimonial.service.DiariaService;
 import com.fundacao.gerenciador_patrimonial.service.report.exporter.DiariaPdfExporter;
 import com.fundacao.gerenciador_patrimonial.service.report.exporter.FrotaExporter;
+import com.fundacao.gerenciador_patrimonial.service.report.exporter.RequerimentoDiariaPdf;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,6 +46,7 @@ public class DiariaController {
     private final DiariaService service;
     private final DiariaPdfExporter pdf;
     private final FrotaExporter exporter;
+    private final RequerimentoDiariaPdf requerimento;
 
     public record Transicao(String observacao, @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataPagamento) {}
 
@@ -69,11 +73,34 @@ public class DiariaController {
     @GetMapping("/{id:\\d+}/historico")
     public List<DiariaHistoricoResponse> historico(@PathVariable Long id) { return service.historico(id); }
 
+    /** Requerimento de Diárias preenchido (Anexo II da Portaria 001/2019), para salvar e enviar pelo SGD. */
     @GetMapping("/{id:\\d+}/pdf")
     public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
+        DiariaResponse d = service.buscar(id);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, org.springframework.http.ContentDisposition.inline()
+                        .filename(RequerimentoDiariaPdf.nomeArquivo(d)).build().toString()) // nome só com ASCII
+                .body(requerimento.gerar(d));
+    }
+
+    /** Extrato interno com o histórico de aprovação (o antigo "Solicitação em PDF"). */
+    @GetMapping("/{id:\\d+}/extrato")
+    public ResponseEntity<byte[]> extrato(@PathVariable Long id) {
         byte[] bytes = pdf.solicitacaoDiaria(service.buscar(id), service.historico(id));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"diaria-" + id + ".pdf\"").body(bytes);
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"diaria-" + id + "-extrato.pdf\"").body(bytes);
+    }
+
+    /**
+     * Apuração da quantidade de diárias para as datas/horários informados (prévia do formulário;
+     * ao salvar, o servidor refaz a conta).
+     */
+    @GetMapping("/calculo")
+    public CalculoDiarias.Resultado calculo(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate partida,
+                                            @RequestParam @DateTimeFormat(pattern = "HH:mm") LocalTime horaSaida,
+                                            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate retorno,
+                                            @RequestParam @DateTimeFormat(pattern = "HH:mm") LocalTime horaChegada) {
+        return CalculoDiarias.calcular(partida.atTime(horaSaida), retorno.atTime(horaChegada));
     }
 
     @PostMapping
@@ -150,10 +177,21 @@ public class DiariaController {
     @GetMapping("/profissionais")
     public List<ProfissionalResponse> profissionais(@RequestParam(required = false) String busca,
                                                     @RequestParam(defaultValue = "false") boolean ativos) {
-        return ativos ? service.profissionaisAtivos() : service.listarProfissionais(busca);
+        // "Somente ativos" com texto de busca: filtra o resultado da busca (antes a busca era ignorada).
+        if (busca != null && !busca.isBlank()) {
+            List<ProfissionalResponse> achados = service.listarProfissionais(busca);
+            return ativos ? achados.stream().filter(ProfissionalResponse::ativo).toList() : achados;
+        }
+        return ativos ? service.profissionaisAtivos() : service.listarProfissionais(null);
     }
 
-    @GetMapping("/profissionais/{id}")
+    /** Busca do formulário de diária por nome, CPF ou matrícula (até 10 resultados). */
+    @GetMapping("/profissionais/busca")
+    public List<ProfissionalResponse> buscarProfissionais(@RequestParam(required = false) String termo) {
+        return service.buscarParaRequerimento(termo);
+    }
+
+    @GetMapping("/profissionais/{id:\\d+}")
     public ProfissionalResponse profissional(@PathVariable Long id) { return service.buscarProfissional(id); }
 
     @PostMapping("/profissionais")
