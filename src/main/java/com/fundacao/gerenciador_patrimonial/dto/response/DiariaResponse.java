@@ -72,7 +72,7 @@ public record DiariaResponse(
                 d.getValorUnitario(), d.getValorTotal(), d.getFinalidade(), d.getSolicitante(), d.getStatus(),
                 d.getDataPagamento(), d.getMotivoIndeferimento(), d.getCriadoEm(), d.isEditavel(),
                 d.getNumeroRequerimento(), d.getOrigem(), d.getTipoDiaria(),
-                ou(d.getProfCargo(), ou(p.getCargo(), nivelDescricao)), nivel != null ? nivel.getId() : null,
+                ou(d.getProfCargo(), ou(p.getCargo(), nivelDescricao)), nivel != null && nivel.isAtivo() ? nivel.getId() : null,
                 d.getBanco(), d.getAgencia(), d.getContaCorrente(), d.getPix(), calculo(d));
     }
 

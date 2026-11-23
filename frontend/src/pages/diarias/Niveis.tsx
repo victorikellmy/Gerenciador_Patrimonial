@@ -24,7 +24,7 @@ export default function Niveis() {
   const alternar = async (n: NivelDiaria) => { try { await api.diarias.ativoNivel(n.id, !n.ativo); qc.invalidateQueries({ queryKey: ['niveis'] }) } catch (ex) { toast.erro(ex instanceof Error ? ex.message : 'Falha.') } }
   return (
     <>
-      <PageHeader titulo="Tabela de valores de diárias" subtitulo="Valor por cargo/posto/graduação conforme o destino." acoes={admin && <button className="btn btn-primary" onClick={() => setForm({ ...vazio })}><i className="bi bi-plus-lg"></i> Novo nível</button>} />
+      <PageHeader titulo="Tabela de valores de diárias" subtitulo="Anexo I da Portaria 001/2019: valor da diária por nível funcional, conforme o destino." acoes={admin && <button className="btn btn-primary" onClick={() => setForm({ ...vazio })}><i className="bi bi-plus-lg"></i> Novo nível</button>} />
       {form && <Card className="mb-3"><form onSubmit={salvar}><Section icon="bi-table" titulo={form.id ? 'Editar nível' : 'Novo nível'} semBorda>
         <div className="row g-3">
           <div className="col-md-5"><label className="form-label required">Descrição</label><input className="form-control" required value={form.descricao} onChange={e => setForm({ ...form, descricao: e.target.value })} /></div>

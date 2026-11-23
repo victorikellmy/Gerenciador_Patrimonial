@@ -27,7 +27,8 @@ public record ProfissionalResponse(
         String pix
 ) {
     public static ProfissionalResponse from(Profissional p) {
-        var n = p.getNivel();
+        // Nível inativo (tabela de valores antiga) conta como "sem nível": não sugere valor revogado.
+        var n = p.getNivel() != null && p.getNivel().isAtivo() ? p.getNivel() : null;
         return new ProfissionalResponse(p.getId(), p.getNome(), p.getMatricula(), p.getLotacao(),
                 n != null ? n.getId() : null, n != null ? n.getDescricao() : null,
                 n != null ? n.getValorCapitais() : null, n != null ? n.getValorInteriorEstado() : null,

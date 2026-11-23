@@ -220,9 +220,9 @@ public class FrotaDemoSeeder implements ApplicationRunner {
     private void seedDiariasECautelas(LocalDate hoje) {
         var niveis = diarias.niveisAtivos();
         if (niveis.isEmpty()) return;
-        Long nivelSgt = niveis.stream().filter(n -> n.descricao().contains("Sgt")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
-        Long nivelCap = niveis.stream().filter(n -> n.descricao().contains("Capitão")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
-        Long nivelCb = niveis.stream().filter(n -> n.descricao().contains("Cabo")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
+        Long nivelSgt = niveis.stream().filter(n -> n.descricao().startsWith("Assistente")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
+        Long nivelCap = niveis.stream().filter(n -> n.descricao().startsWith("Supervisor")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
+        Long nivelCb = niveis.stream().filter(n -> n.descricao().startsWith("Auxiliar")).map(n -> n.id()).findFirst().orElse(niveis.get(0).id());
 
         // Cadastro prévio só do terceiro; os dois primeiros nascem do próprio requerimento de diária
         // (é assim que o cadastro de profissionais é alimentado no dia a dia).

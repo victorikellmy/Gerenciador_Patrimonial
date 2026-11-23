@@ -95,9 +95,14 @@ class DiariasECautelasFluxoTest {
 
     @Test
     void fluxoCompletoDaDiaria() throws Exception {
-        // Tabela de valores veio da migration V10
-        assertThat(nivelRepo.findByAtivoTrueOrderByIdAsc()).hasSizeGreaterThanOrEqualTo(7);
-        Long nivelId = nivelRepo.findByAtivoTrueOrderByIdAsc().get(4).getId(); // Assistente; Sgt
+        // Tabela de valores: Anexo I da Portaria 001/2019 (V15); a da 004/2018 (V10) fica inativa
+        var niveis = nivelRepo.findByAtivoTrueOrderByIdAsc();
+        assertThat(niveis).extracting(n -> n.getValorCapitais().toPlainString() + "/" + n.getValorInteriorEstado().toPlainString()
+                        + "/" + n.getValorInteriorOutroEstado().toPlainString())
+                .contains("626.00/394.00/517.00", "476.00/318.00/408.00", "427.00/281.00/367.00", "381.00/261.00/319.00", "243.00/163.00/207.00");
+        assertThat(niveis).noneMatch(n -> n.getDescricao().contains("Aluno-Soldado"));
+        assertThat(nivelRepo.findAllByOrderByAtivoDescIdAsc()).anyMatch(n -> !n.isAtivo() && n.getDescricao().contains("Aluno-Soldado"));
+        Long nivelId = niveis.stream().filter(n -> n.getDescricao().startsWith("Assistente")).findFirst().orElseThrow().getId();
 
         // 1) Fiscal cadastra o profissional
         String cpf = "529.982.247-25";
@@ -113,7 +118,8 @@ class DiariasECautelasFluxoTest {
         // Valores da tabela para o formulário
         mvc.perform(get("/api/diarias/valores/" + prof.getId()).with(user(fiscal)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valorCapitais").isNumber());
+                .andExpect(jsonPath("$.valorCapitais").value(381.0))
+                .andExpect(jsonPath("$.valorInteriorEstado").value(261.0));
 
         // A busca do formulário acha o profissional pelo CPF sem pontuação
         mvc.perform(get("/api/diarias/profissionais/busca").param("termo", "52998224725").with(user(fiscal)))
