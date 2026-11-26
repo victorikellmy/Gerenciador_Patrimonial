@@ -10,6 +10,7 @@ export type ResultadoConferencia = 'PENDENTE' | 'OK' | 'AVARIADO' | 'NAO_LOCALIZ
 export type StatusPendencia = 'PENDENTE' | 'CONCLUIDA' | 'DESCARTADA'
 export type Combustivel = 'GASOLINA' | 'ETANOL' | 'DIESEL' | 'GNV'
 export type TipoServicoVeiculo = 'REVISAO' | 'CONSERTO' | 'TROCA_OLEO' | 'BALANCEAMENTO' | 'PNEUS' | 'FREIOS' | 'ELETRICA' | 'LAVA_JATO' | 'OUTRO'
+/** CONFIRMADO só aparece no histórico antigo (etapa de confirmação extinta em 26/11/2026). */
 export type StatusDiaria = 'SOLICITADO' | 'CONFIRMADO' | 'DEFERIDO' | 'INDEFERIDO' | 'PAGO'
 export type MeioTransporte = 'VEICULO_OFICIAL' | 'AEREO' | 'RODOVIARIO' | 'OUTRO'
 export type RecursoDiaria = 'PROPRIO' | 'CONVENIO' | 'OUTRA'

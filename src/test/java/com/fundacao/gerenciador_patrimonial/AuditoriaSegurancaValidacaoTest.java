@@ -241,8 +241,6 @@ class AuditoriaSegurancaValidacaoTest {
                         .content(corpo.formatted(prof, LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), "100")))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long id = json.readTree(criada).get("id").asLong();
-        mvc.perform(post("/api/diarias/" + id + "/confirmar").with(user(admin)).contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isOk());
         mvc.perform(post("/api/diarias/" + id + "/deferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(jsonPath("$.status").value("DEFERIDO"));
 

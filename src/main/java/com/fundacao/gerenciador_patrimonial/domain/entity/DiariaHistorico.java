@@ -6,7 +6,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-/** Trilha de quem abriu, confirmou, deferiu, indeferiu ou pagou cada diária. */
+/** Trilha de quem abriu, deferiu, indeferiu ou pagou cada diária. */
 @Entity
 @Table(name = "diaria_historico", indexes = @Index(name = "idx_diaria_historico_diaria", columnList = "diaria_id"))
 @Getter @Setter

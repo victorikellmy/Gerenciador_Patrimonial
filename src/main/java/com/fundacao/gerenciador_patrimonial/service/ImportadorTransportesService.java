@@ -374,7 +374,7 @@ public class ImportadorTransportesService {
                         .valorTotal(total != null ? total : nDiarias.multiply(unit))
                         .finalidade(truncar(limpar(rs.getString("finalidade")), 2000))
                         .solicitante(truncar(limparOu(rs.getString("solicitante"), "Transportes FPTO"), 160))
-                        .status(com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.de(rs.getString("status")))
+                        .status(statusAtualDiaria(rs.getString("status")))
                         .dataPagamento(rs.getDate("data_pagamento") != null ? rs.getDate("data_pagamento").toLocalDate() : null)
                         .motivoIndeferimento(truncar(limpar(rs.getString("motivo_indeferimento")), 500))
                         .criadoEm(criado != null ? criado.toLocalDateTime() : null)
@@ -522,5 +522,12 @@ public class ImportadorTransportesService {
     private static String truncar(String s, int max) {
         if (s == null) return null;
         return s.length() <= max ? s : s.substring(0, max);
+    }
+
+    /** A confirmação pelo administrador foi extinta: diária confirmada no Transportes chega aguardando o Presidente. */
+    private static com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria statusAtualDiaria(String texto) {
+        var s = com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.de(texto);
+        return s == com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.CONFIRMADO
+                ? com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria.SOLICITADO : s;
     }
 }

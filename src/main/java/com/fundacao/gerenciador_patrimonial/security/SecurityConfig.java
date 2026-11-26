@@ -121,7 +121,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/frota/gestao", "/api/frota/gestao/**", "/api/frota/export/gestao").hasAnyRole("ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE")
                         // Patrimônios ainda sem ficha de veículo: só para quem cadastra veículos.
                         .requestMatchers("/api/frota/patrimonios-disponiveis").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
-                        // --- Diárias: abrir/editar ADMIN e FISCAL; confirmar ADMIN; deferir/indeferir PRESIDENTE; pagar FINANCEIRO ---
+                        // --- Diárias: abrir/editar ADMIN e FISCAL; deferir/indeferir PRESIDENTE; pagar FINANCEIRO (ADMIN pode tudo).
+                        //     /confirmar é a etapa extinta: continua só para ADMIN e responde 409 (app antigo). ---
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/confirmar", "/api/diarias/niveis/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/diarias/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.POST, "/api/diarias/*/deferir", "/api/diarias/*/indeferir").hasAnyRole("ADMINISTRADOR", "PRESIDENTE")

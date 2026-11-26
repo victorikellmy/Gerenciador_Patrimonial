@@ -7,11 +7,12 @@ import { useAuth } from '../../auth/AuthContext'
 import { Badge, Card, Carregando, EmptyState, Erro, Filtro, PageHeader, Paginacao } from '../../components/ui'
 import { badgeStatusDiaria, data, moeda, numero, rotulo } from '../../utils/format'
 
-const STATUS: StatusDiaria[] = ['SOLICITADO', 'CONFIRMADO', 'DEFERIDO', 'INDEFERIDO', 'PAGO']
+// CONFIRMADO (confirmação pelo administrador) foi extinta: a solicitada vai direto para o Presidente.
+const STATUS: StatusDiaria[] = ['SOLICITADO', 'DEFERIDO', 'INDEFERIDO', 'PAGO']
 
 export default function DiariasLista() {
   const { usuario, temPerfil } = useAuth()
-  const padrao: StatusDiaria | '' = usuario?.perfil === 'PRESIDENTE' ? 'CONFIRMADO' : usuario?.perfil === 'FINANCEIRO' ? 'DEFERIDO' : usuario?.perfil === 'ADMINISTRADOR' ? 'SOLICITADO' : ''
+  const padrao: StatusDiaria | '' = usuario?.perfil === 'PRESIDENTE' ? 'SOLICITADO' : usuario?.perfil === 'FINANCEIRO' ? 'DEFERIDO' : ''
   const [status, setStatus] = useState<StatusDiaria | ''>(padrao)
   const [f, setF] = useState({ de: '', ate: '', texto: '' })
   const [aplicado, setAplicado] = useState(f)

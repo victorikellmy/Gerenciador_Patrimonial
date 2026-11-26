@@ -113,9 +113,10 @@ public class DiariaController {
     @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<Void> excluir(@PathVariable Long id) { service.excluir(id); return ResponseEntity.noContent().build(); }
 
+    /** Etapa extinta: responde 409 explicando que a diária vai direto para o Presidente (app antigo). */
     @PostMapping("/{id:\\d+}/confirmar")
-    public DiariaResponse confirmar(@PathVariable Long id, @RequestBody(required = false) Transicao t) {
-        return service.transicionar(id, StatusDiaria.CONFIRMADO, t != null ? t.observacao() : null, null);
+    public DiariaResponse confirmar(@PathVariable Long id) {
+        return service.transicionar(id, StatusDiaria.CONFIRMADO, null, null);
     }
 
     @PostMapping("/{id:\\d+}/deferir")

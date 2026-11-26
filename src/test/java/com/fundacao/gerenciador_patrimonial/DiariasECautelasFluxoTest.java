@@ -8,6 +8,7 @@ import com.fundacao.gerenciador_patrimonial.domain.entity.Usuario;
 import com.fundacao.gerenciador_patrimonial.domain.entity.Veiculo;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Perfil;
 import com.fundacao.gerenciador_patrimonial.domain.enums.StatusDiaria;
+import com.fundacao.gerenciador_patrimonial.service.DiariaService;
 import com.fundacao.gerenciador_patrimonial.domain.enums.TipoLocal;
 import com.fundacao.gerenciador_patrimonial.repository.CautelaRepository;
 import com.fundacao.gerenciador_patrimonial.repository.DiariaRepository;
@@ -46,8 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Diárias pela API (profissional → solicitação → confirmar → deferir → pagar, com perfis
- * PRESIDENTE e FINANCEIRO), PDF, relatório de pagas; cautela com termo em PDF e
+ * Diárias pela API (profissional → solicitação → deferir (Presidente) → pagar (Financeiro),
+ * sem etapa de confirmação), PDF, relatório de pagas; cautela com termo em PDF e
  * encerramento; autocomplete de titulares.
  */
 @SpringBootTest(properties = {
@@ -159,29 +160,39 @@ class DiariasECautelasFluxoTest {
                                 LocalDate.now().plusDays(5), "06:00", LocalDate.now(), "20:00", "100")))
                 .andExpect(status().is4xxClientError());
 
-        // 3) Presidente não pode deferir ainda (precisa estar confirmada); fiscal não confirma; admin confirma
-        mvc.perform(post("/api/diarias/" + d.getId() + "/deferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().is4xxClientError());
-        assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.SOLICITADO);
+        // 3) Sem etapa de confirmação: a solicitada vai direto para o Presidente. /confirmar só
+        //    responde 409 (app antigo); fiscal nem chega lá (403).
         mvc.perform(post("/api/diarias/" + d.getId() + "/confirmar").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
         mvc.perform(post("/api/diarias/" + d.getId() + "/confirmar").contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CONFIRMADO"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value(DiariaService.SEM_CONFIRMACAO));
+        assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.SOLICITADO);
+        // Financeiro não paga o que não foi deferido
+        mvc.perform(post("/api/diarias/" + d.getId() + "/pagar").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isConflict());
 
-        // Presidente vê as confirmadas por padrão e defere; financeiro não pode deferir
+        // Presidente vê as solicitadas por padrão e tem badge de pendência; financeiro não pode deferir
         mvc.perform(get("/api/diarias").param("padraoDoPerfil", "true").with(user(presidente))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[?(@.id == %d)].itinerario".formatted(d.getId())).value("Gurupi"))
-                .andExpect(jsonPath("$.content[*].status").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("CONFIRMADO"))));
+                .andExpect(jsonPath("$.content[*].status").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("SOLICITADO"))));
+        long pendentesPresidente = diariaRepo.findAll().stream().filter(x -> x.getStatus() == StatusDiaria.SOLICITADO).count();
+        mvc.perform(get("/api/me/resumo").with(user(presidente))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.diariasPendentes").value((int) pendentesPresidente));
         mvc.perform(post("/api/diarias/" + d.getId() + "/deferir").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/diarias/" + d.getId() + "/deferir").with(user(fiscal)).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isForbidden());
         mvc.perform(post("/api/diarias/" + d.getId() + "/indeferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().is4xxClientError()); // sem motivo não indefere
-        assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.CONFIRMADO);
+        assertThat(diariaRepo.findById(d.getId()).orElseThrow().getStatus()).isEqualTo(StatusDiaria.SOLICITADO);
         mvc.perform(post("/api/diarias/" + d.getId() + "/deferir").with(user(presidente)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"observacao\":\"OK\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DEFERIDO"));
+        long pendentesFinanceiro = diariaRepo.findAll().stream().filter(x -> x.getStatus() == StatusDiaria.DEFERIDO).count();
+        mvc.perform(get("/api/me/resumo").with(user(financeiro))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.diariasPendentes").value((int) pendentesFinanceiro));
 
         // 4) Financeiro paga; data futura é recusada; diária paga não se exclui
         mvc.perform(post("/api/diarias/" + d.getId() + "/pagar").with(user(financeiro)).contentType(MediaType.APPLICATION_JSON)

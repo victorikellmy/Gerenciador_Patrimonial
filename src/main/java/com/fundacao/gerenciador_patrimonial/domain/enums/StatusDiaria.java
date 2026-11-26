@@ -3,13 +3,18 @@ package com.fundacao.gerenciador_patrimonial.domain.enums;
 import java.util.Set;
 
 /**
- * Fluxo da diária (herdado do Transportes FPTO):
+ * Fluxo da diária:
  * <pre>
- *   SOLICITADO  → (ADMINISTRADOR confirma)             → CONFIRMADO
- *   CONFIRMADO  → (PRESIDENTE defere / indefere)        → DEFERIDO | INDEFERIDO
+ *   SOLICITADO  → (PRESIDENTE defere / indefere)        → DEFERIDO | INDEFERIDO
  *   DEFERIDO    → (FINANCEIRO registra o pagamento)     → PAGO
  * </pre>
  * PAGO é terminal: não se edita nem se exclui uma diária paga.
+ *
+ * <p>CONFIRMADO é a antiga etapa de confirmação pelo administrador, extinta em 26/11/2026: nenhuma
+ * transição leva a ela e a migration V17 devolveu as diárias que estavam nela para SOLICITADO.
+ * Continua no enum porque o histórico (diaria_historico) e o banco do Transportes ainda a citam
+ * (o importador converte a situação atual para SOLICITADO); se alguma aparecer, o Presidente
+ * decide como se fosse solicitada.</p>
  */
 public enum StatusDiaria {
     SOLICITADO("Solicitada", "text-bg-secondary"),
@@ -31,8 +36,7 @@ public enum StatusDiaria {
 
     public Set<StatusDiaria> proximos() {
         return switch (this) {
-            case SOLICITADO -> Set.of(CONFIRMADO);
-            case CONFIRMADO -> Set.of(DEFERIDO, INDEFERIDO);
+            case SOLICITADO, CONFIRMADO -> Set.of(DEFERIDO, INDEFERIDO);
             case DEFERIDO -> Set.of(PAGO);
             case INDEFERIDO, PAGO -> Set.of();
         };
@@ -42,7 +46,7 @@ public enum StatusDiaria {
 
     /**
      * Pode ser alterada enquanto não foi paga. Alterar uma diária que já passou da solicitação
-     * (confirmada, deferida ou indeferida) a devolve para SOLICITADO (ver DiariaService.atualizar).
+     * (deferida ou indeferida) a devolve para SOLICITADO (ver DiariaService.atualizar).
      */
     public boolean isEditavel() { return this != PAGO; }
 

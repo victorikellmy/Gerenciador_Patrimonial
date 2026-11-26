@@ -7,7 +7,8 @@ O portal do Patrimônio mudou o contrato de abertura de diárias (branch homolog
 C:\Users\victorikellmy\IdeaProjects\Gerenciador_Patrimonial, migration V14). Preciso que o app acompanhe.
 Hoje (versão 1.4) o formulário de diária do app envia o contrato antigo e o servidor responde 409 com a
 mensagem "Esta versão do aplicativo não envia os dados do novo Requerimento de Diárias...". Listar, ver,
-confirmar, deferir, indeferir e pagar continuam funcionando sem mudança.
+deferir, indeferir e pagar continuam funcionando (a etapa "confirmar" foi extinta depois: ver a seção
+"Fluxo sem confirmação" deste arquivo).
 
 Leia no portal, antes de mexer no app:
 - dto/request/DiariaRequest.java, dto/response/DiariaResponse.java, dto/response/ProfissionalResponse.java
@@ -51,6 +52,40 @@ O que muda no app
 6. GET /api/diarias/{id}/pdf agora devolve o Requerimento de Diárias no modelo do Anexo II da Portaria
    001/2019 (é o documento que vai para o SGD). O resumo antigo com histórico está em
    GET /api/diarias/{id}/extrato. Renomeie o botão para "Requerimento em PDF".
+
+Ao terminar: suba a versão do app (versionCode e versionName), rode os testes, gere o APK assinado e me
+diga o que mudou. Não publique o APK no portal sem eu confirmar.
+```
+
+## Fluxo sem confirmação (26/11/2026)
+
+Cole também este texto (pode ir na mesma sessão do item acima, se ainda não foi feito).
+
+```text
+O portal do Patrimônio tirou a etapa de confirmação das diárias (branch homologacao de
+C:\Users\victorikellmy\IdeaProjects\Gerenciador_Patrimonial, migration V17). Fluxo novo:
+SOLICITADO → DEFERIDO/INDEFERIDO (Presidente; ADMINISTRADOR também pode) → PAGO (Financeiro;
+ADMINISTRADOR também pode). Não existe mais SOLICITADO → CONFIRMADO.
+
+Leia no portal: domain/enums/StatusDiaria.java, service/DiariaService.java (transicionar,
+statusPadrao, SEM_CONFIRMACAO), controller/MeController.java (resumo) e
+frontend/src/pages/diarias/{Lista,Detalhe}.tsx (tela de referência).
+
+O que muda no app (ui/diarias/DiariasScreens.kt e afins):
+1. Detalhe: na diária SOLICITADO mostre para PRESIDENTE e ADMINISTRADOR os botões "Autorizar (deferir)"
+   e "Não autorizar (indeferir)" (motivo obrigatório para indeferir; deferir com observação opcional),
+   que hoje só aparecem em CONFIRMADO. Tire o botão "Confirmar solicitação". Para os outros perfis,
+   o texto é "Aguardando decisão do Presidente". Trate CONFIRMADO (só aparece em dado antigo) igual a
+   SOLICITADO.
+2. Lista: o filtro padrão do PRESIDENTE passa a ser SOLICITADO (o servidor já faz isso com
+   padraoDoPerfil=true); o do ADMINISTRADOR passa a ser "Todas". Tire CONFIRMADO dos chips de filtro,
+   mas mantenha o valor no enum StatusDiaria (o histórico antigo ainda o traz).
+3. POST /api/diarias/{id}/confirmar agora sempre responde 409 com a mensagem "A etapa de confirmação foi
+   extinta..."; não chame mais. Os demais endpoints (deferir, indeferir, pagar) não mudaram.
+4. GET /api/me/resumo: diariasPendentes do PRESIDENTE conta SOLICITADO; do ADMINISTRADOR é 0;
+   do FINANCEIRO continua DEFERIDO.
+5. Texto ao editar diária deferida/indeferida: "volta para Solicitada e precisa de nova decisão do
+   Presidente" (antes falava em nova confirmação).
 
 Ao terminar: suba a versão do app (versionCode e versionName), rode os testes, gere o APK assinado e me
 diga o que mudou. Não publique o APK no portal sem eu confirmar.

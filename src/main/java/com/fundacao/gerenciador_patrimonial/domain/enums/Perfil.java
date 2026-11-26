@@ -5,7 +5,7 @@ package com.fundacao.gerenciador_patrimonial.domain.enums;
  * {@code ROLE_<PERFIL>}.
  */
 public enum Perfil {
-    /** Acesso total: cadastrar, editar, movimentar, dar baixa, excluir, gerir usuários, confirmar diárias. */
+    /** Acesso total: cadastrar, editar, movimentar, dar baixa, excluir, gerir usuários; nas diárias abre, edita, exclui e pode agir em qualquer etapa. */
     ADMINISTRADOR,
 
     /** Operação (coordenação): leitura, movimentação, frota, abre e edita diárias; NÃO exclui nem gere usuários. */
@@ -17,7 +17,7 @@ public enum Perfil {
      */
     GERENTE,
 
-    /** Presidente da FPTO: vê as diárias e DEFERE / INDEFERE as confirmadas; relatórios. */
+    /** Presidente da FPTO: vê as diárias e DEFERE / INDEFERE as solicitadas; relatórios. */
     PRESIDENTE,
 
     /** Financeiro: vê as diárias deferidas e REGISTRA O PAGAMENTO; relatório de diárias pagas. */

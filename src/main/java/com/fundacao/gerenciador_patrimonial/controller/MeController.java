@@ -42,8 +42,8 @@ public class MeController {
     @GetMapping("/resumo")
     public Resumo resumo(@AuthenticationPrincipal UsuarioAutenticado principal) {
         long diarias = switch (principal.getUsuario().getPerfil()) {
-            case ADMINISTRADOR -> diariaService.contar(StatusDiaria.SOLICITADO);
-            case PRESIDENTE -> diariaService.contar(StatusDiaria.CONFIRMADO);
+            // O administrador não tem mais etapa própria (a confirmação foi extinta): quem decide é o Presidente.
+            case PRESIDENTE -> diariaService.contar(StatusDiaria.SOLICITADO);
             case FINANCEIRO -> diariaService.contar(StatusDiaria.DEFERIDO);
             default -> 0L;
         };

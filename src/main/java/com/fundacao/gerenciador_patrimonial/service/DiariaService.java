@@ -45,7 +45,7 @@ import java.util.regex.Pattern;
 /**
  * Diárias de viagem: requerimento do Anexo II da Portaria 001/2019 GAB. PRES, tabela de valores
  * por nível e cadastro de profissionais. Fluxo:
- * SOLICITADO → CONFIRMADO (admin) → DEFERIDO/INDEFERIDO (presidente) → PAGO (financeiro).
+ * SOLICITADO → DEFERIDO/INDEFERIDO (presidente) → PAGO (financeiro).
  *
  * <p>Regras do requerimento: todos os campos do pedido são obrigatórios; a quantidade de diárias
  * é apurada pelo servidor ({@link CalculoDiarias}); os dados do profissional informados no pedido
@@ -57,6 +57,10 @@ import java.util.regex.Pattern;
 public class DiariaService {
 
     private static final String ENT = "Diaria";
+
+    /** Resposta a quem ainda chama /confirmar (app Android até a versão que acompanhar o fluxo novo). */
+    public static final String SEM_CONFIRMACAO = "A etapa de confirmação foi extinta: a diária solicitada vai direto "
+            + "para a decisão do Presidente. Atualize o aplicativo.";
 
     /** Parecer registrado quando o presidente autoriza sem escrever observação (texto do Anexo II). */
     public static final String FUNDAMENTACAO_PADRAO = "AUTORIZADO, com base nas atribuições constantes no disposto no "
@@ -185,11 +189,11 @@ public class DiariaService {
     // Diárias
     // =========================================================================
 
-    /** Situação que cada perfil quer ver ao abrir a tela: presidente decide as confirmadas, financeiro paga as deferidas. */
+    /** Situação que cada perfil quer ver ao abrir a tela: presidente decide as solicitadas, financeiro paga as deferidas. */
     public static StatusDiaria statusPadrao(UsuarioAutenticado logado) {
         if (logado == null) return null;
         Perfil p = logado.getUsuario().getPerfil();
-        if (p == Perfil.PRESIDENTE) return StatusDiaria.CONFIRMADO;
+        if (p == Perfil.PRESIDENTE) return StatusDiaria.SOLICITADO;
         if (p == Perfil.FINANCEIRO) return StatusDiaria.DEFERIDO;
         return null;
     }
@@ -275,9 +279,9 @@ public class DiariaService {
         d.setNumeroRequerimento(numeroPara(d, req, d.getDataSolicitacao()));
         aplicar(d, req, p);
         String depois = resumo(d);
-        // Separação de funções: o que foi confirmado/deferido vale para os dados daquele momento.
-        // Qualquer alteração depois disso devolve a diária para "Solicitada" (nova confirmação e
-        // novo deferimento), para que o Financeiro nunca pague valor ou beneficiário não aprovado.
+        // Separação de funções: o que foi deferido/indeferido vale para os dados daquele momento.
+        // Qualquer alteração depois disso devolve a diária para "Solicitada" (nova decisão do
+        // Presidente), para que o Financeiro nunca pague valor ou beneficiário não aprovado.
         String obs;
         if (anterior != StatusDiaria.SOLICITADO) {
             d.setStatus(StatusDiaria.SOLICITADO);
@@ -294,6 +298,7 @@ public class DiariaService {
 
     /** Única porta de mudança de situação. Valida a transição e grava o histórico com quem fez. */
     public DiariaResponse transicionar(Long id, StatusDiaria destino, String observacao, LocalDate dataPagamento) {
+        if (destino == StatusDiaria.CONFIRMADO) throw new RegraDeNegocioException(SEM_CONFIRMACAO);
         Diaria d = carregar(id);
         StatusDiaria origem = d.getStatus();
         if (!origem.podeIr(destino)) {

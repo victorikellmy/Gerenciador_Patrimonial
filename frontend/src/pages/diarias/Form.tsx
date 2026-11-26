@@ -176,7 +176,7 @@ export default function DiariaForm() {
       <PageHeader voltar={voltar} titulo={editando ? 'Editar requerimento de diárias' : 'Novo requerimento de diárias'}
         subtitulo="Anexo II da Portaria 001/2019. Ao salvar, o sistema gera o requerimento em PDF para envio pelo SGD." />
       {editando && existente.data && existente.data.status !== 'SOLICITADO' && (
-        <div className="alert alert-warning"><i className="bi bi-exclamation-triangle-fill"></i><div>Esta diária está <strong>{existente.data.status === 'CONFIRMADO' ? 'confirmada' : existente.data.status === 'DEFERIDO' ? 'deferida' : 'indeferida'}</strong>. Ao salvar alterações ela volta para <strong>Solicitada</strong> e precisa de nova confirmação e novo deferimento. Os valores de antes e depois ficam no histórico.</div></div>
+        <div className="alert alert-warning"><i className="bi bi-exclamation-triangle-fill"></i><div>Esta diária está <strong>{existente.data.status === 'DEFERIDO' ? 'deferida' : 'indeferida'}</strong>. Ao salvar alterações ela volta para <strong>Solicitada</strong> e precisa de nova decisão do Presidente. Os valores de antes e depois ficam no histórico.</div></div>
       )}
       <form onSubmit={salvar}><Card style={{ overflow: 'visible' }}>
         {erro && <div className="alert alert-danger m-3 mb-0" role="alert"><i className="bi bi-exclamation-triangle-fill"></i> {erro}</div>}

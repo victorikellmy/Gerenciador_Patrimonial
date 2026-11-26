@@ -251,14 +251,10 @@ public class FrotaDemoSeeder implements ApplicationRunner {
                 "7654321", "SSP-TO", nivelCap, "Palmas", "Anápolis", hoje.minusDays(30), LocalTime.of(8, 0), hoje.minusDays(28), LocalTime.of(18, 0),
                 MeioTransporte.RODOVIARIO, RecursoDiaria.PROPRIO, "Curso de capacitação", "104", "0001", "12345-6", "maria.souza@exemplo.org",
                 com.fundacao.gerenciador_patrimonial.domain.enums.TipoDiaria.INTERIOR_OUTRO_ESTADO, valores.get(nivelCap).valorInteriorOutroEstado(), hoje.minusDays(35)));
-        // d1 fica solicitada; d2 confirmada; d3 deferida; d4 paga; d5 indeferida
-        diarias.transicionar(d2.id(), StatusDiaria.CONFIRMADO, null, null);
-        diarias.transicionar(d3.id(), StatusDiaria.CONFIRMADO, null, null);
+        // d1 e d2 ficam solicitadas (aguardando o Presidente); d3 deferida; d4 paga; d5 indeferida
         diarias.transicionar(d3.id(), StatusDiaria.DEFERIDO, null, null);
-        diarias.transicionar(d4.id(), StatusDiaria.CONFIRMADO, null, null);
         diarias.transicionar(d4.id(), StatusDiaria.DEFERIDO, null, null);
         diarias.transicionar(d4.id(), StatusDiaria.PAGO, "Pago via TED", hoje.minusDays(35));
-        diarias.transicionar(d5.id(), StatusDiaria.CONFIRMADO, null, null);
         diarias.transicionar(d5.id(), StatusDiaria.INDEFERIDO, "Sem previsão orçamentária no mês", null);
 
         // Cautela em aberto do veículo 1 (SAVEIRO) para condutor externo
