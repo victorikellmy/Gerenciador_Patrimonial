@@ -23,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Login é único (verificado antes de persistir).</li>
  *   <li>Na edição, senha vazia = mantém a atual.</li>
  *   <li>Troca de senha pelo próprio usuário exige a senha atual.</li>
+ *   <li>Usuário da rede (origem DOMINIO): senha e login são os do AD; mudar o perfil
+ *       ou a permissão de abastecer grava nos grupos do AD.</li>
  * </ul>
  */
 @Service
@@ -31,6 +33,7 @@ public class UsuarioService {
 
     private final UsuarioRepository repo;
     private final PasswordEncoder passwordEncoder;
+    private final com.fundacao.gerenciador_patrimonial.service.dominio.DominioUsuarioService dominioUsuarios;
 
     // =========================================================================
     // CRUD básico
@@ -71,6 +74,7 @@ public class UsuarioService {
     @Transactional
     public UsuarioResponse atualizar(Long id, UsuarioRequest req) {
         Usuario u = buscarEntidade(id);
+        if (u.isDoDominio()) return atualizarDoDominio(u, req);
 
         // Se mudou o login, garantir unicidade
         String novoLogin = req.login().trim().toLowerCase();
@@ -94,6 +98,23 @@ public class UsuarioService {
         return UsuarioResponse.from(repo.save(u));
     }
 
+    /** Usuário da rede: nome e ativo ficam no sistema; perfil/abastecer vão para os grupos do AD. */
+    private UsuarioResponse atualizarDoDominio(Usuario u, UsuarioRequest req) {
+        if (req.senha() != null && !req.senha().isBlank()) {
+            throw new RegraDeNegocioException("A senha deste usuário é a da rede da Fundação: troque-a no Windows.");
+        }
+        if (!u.getLogin().equals(req.login().trim().toLowerCase())) {
+            throw new RegraDeNegocioException("O login de um usuário da rede é o do AD e não pode ser alterado.");
+        }
+        boolean abastecer = req.podeAbastecer() != null ? req.podeAbastecer() : u.isPodeAbastecer();
+        if (req.perfil() != u.getPerfil() || abastecer != u.isPodeAbastecer()) {
+            dominioUsuarios.definirAcesso(u.getLogin(), req.perfil(), abastecer);
+        }
+        u.setNomeCompleto(req.nomeCompleto().trim());
+        if (req.ativo() != null) u.setAtivo(req.ativo());
+        return UsuarioResponse.from(repo.save(u));
+    }
+
     /** Inativa em vez de deletar — preserva auditoria. */
     @Transactional
     public void inativar(Long id) {
@@ -114,6 +135,10 @@ public class UsuarioService {
         Usuario u = repo.findByLogin(login)
                 .orElseThrow(() -> new RecursoNaoEncontradoException(
                         "Usuário não encontrado: " + login));
+        if (u.isDoDominio()) {
+            throw new RegraDeNegocioException("Sua senha é a mesma da rede da Fundação. Troque-a no Windows "
+                    + "(Ctrl+Alt+Del → Alterar uma senha).");
+        }
 
         if (!passwordEncoder.matches(req.senhaAtual(), u.getSenhaHash())) {
             throw new RegraDeNegocioException("Senha atual incorreta.");

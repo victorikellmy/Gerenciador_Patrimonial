@@ -38,6 +38,8 @@ import ProfissionalForm from './pages/diarias/ProfissionalForm'
 import Niveis from './pages/diarias/Niveis'
 import Usuarios from './pages/Usuarios'
 import UsuarioForm from './pages/UsuarioForm'
+import UsuariosRede from './pages/UsuariosRede'
+import AcessoPendente from './pages/AcessoPendente'
 import Importacao from './pages/Importacao'
 import Relatorios from './pages/Relatorios'
 import Auditoria from './pages/Auditoria'
@@ -62,9 +64,10 @@ function Perfis({ perfis }: { perfis: Perfil[] }) {
   return <Outlet />
 }
 
-/** Raiz: o dashboard para quem tem leitura; motorista (sem dashboard) vai para a frota. */
+/** Raiz: o dashboard para quem tem leitura; motorista (sem dashboard) vai para a frota; conta da rede sem grupo vê o aviso. */
 function Inicio() {
   const { usuario } = useAuth()
+  if (usuario?.perfil === 'USUARIO') return <AcessoPendente />
   return usuario?.perfil === 'MOTORISTA' ? <Navigate to="/frota" replace /> : <Dashboard />
 }
 
@@ -137,6 +140,7 @@ export default function App() {
 
         <Route element={<Perfis perfis={ADM} />}>
           <Route path="/usuarios" element={<Usuarios />} />
+          <Route path="/usuarios/rede" element={<UsuariosRede />} />
           <Route path="/usuarios/novo" element={<UsuarioForm />} />
           <Route path="/usuarios/:id/editar" element={<UsuarioForm />} />
           <Route path="/importacao" element={<Importacao />} />

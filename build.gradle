@@ -31,6 +31,11 @@ dependencies {
     // --- Segurança (CORRIGIDO: Removido o "git" do final) ---
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
+    // --- Login pela rede (Active Directory / Samba AD do domínio FPTO.LOCAL) ---
+    // Autenticação por bind LDAP e gestão dos grupos do Patrimônio no AD; o servidor
+    // LDAP em memória do mesmo pacote é usado nos testes.
+    implementation 'com.unboundid:unboundid-ldapsdk:7.0.1'
+
     // --- Migrações de banco (Flyway) ---
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly    'org.flywaydb:flyway-database-postgresql'

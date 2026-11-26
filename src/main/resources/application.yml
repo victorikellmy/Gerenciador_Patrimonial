@@ -25,6 +25,23 @@ server:
 
 # Pastas de upload (Sprint 3 — StorageService local)
 app:
+  # Login pela rede da Fundação: Active Directory (Samba AD) do domínio FPTO.LOCAL, na VM
+  # 192.168.13.40 (dc01.fpto.local). Ligado, quem tem conta no domínio entra com o mesmo
+  # usuário/senha do Windows; o perfil vem dos grupos Patrimonio-* da OU abaixo, que o
+  # administrador gerencia em Usuários › Grupos da rede. Passo a passo: docs/INTEGRACAO_AD.md
+  ad:
+    habilitado: ${AD_HABILITADO:false}
+    urls: ${AD_URLS:ldaps://192.168.13.40:636}
+    dominio: ${AD_DOMINIO:fpto.local}
+    base: ${AD_BASE:DC=fpto,DC=local}
+    usuario-servico: ${AD_USUARIO_SERVICO:svc-patrimonio@fpto.local}
+    senha-servico: ${AD_SENHA_SERVICO:}
+    ou-grupos: ${AD_OU_GRUPOS:OU=Patrimonio,DC=fpto,DC=local}
+    prefixo-grupo: ${AD_PREFIXO_GRUPO:Patrimonio-}
+    # CA do Samba (no DC: /var/lib/samba/private/tls/ca.pem). Vazio = truststore da JVM.
+    certificado-ca: ${AD_CERTIFICADO_CA:}
+    confiar-em-qualquer-certificado: ${AD_CONFIAR_EM_QUALQUER_CERTIFICADO:false}
+    timeout-ms: ${AD_TIMEOUT_MS:5000}
   storage:
     tipo: LOCAL                 # LOCAL | S3 (futuro)
     pasta-raiz: ./uploads

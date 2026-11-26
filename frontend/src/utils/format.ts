@@ -24,7 +24,7 @@ export const rotulos: Record<string, string> = {
   NOVO: 'Novo', OTIMO: 'Ótimo', BOM: 'Bom', BOM_REGULAR: 'Bom/Regular', REGULAR: 'Regular', REGULAR_RUIM: 'Regular/Ruim', RUIM: 'Ruim', INSERVIVEL: 'Inservível',
   PENDENTE: 'Pendente', OK: 'OK', AVARIADO: 'Avariado', NAO_LOCALIZADO: 'Não localizado', CONCLUIDA: 'Concluída', DESCARTADA: 'Descartada',
   // perfis
-  ADMINISTRADOR: 'Administrador', FISCAL: 'Fiscal', GERENTE: 'Gerente', PRESIDENTE: 'Presidente', FINANCEIRO: 'Financeiro', MOTORISTA: 'Motorista', INTEGRACAO: 'Integração',
+  ADMINISTRADOR: 'Administrador', FISCAL: 'Fiscal', GERENTE: 'Gerente', PRESIDENTE: 'Presidente', FINANCEIRO: 'Financeiro', MOTORISTA: 'Motorista', INTEGRACAO: 'Integração', USUARIO: 'Usuário padrão', LOCAL: 'Local', DOMINIO: 'Rede',
   NOTA_FISCAL: 'Nota fiscal', FOTO: 'Foto', MANUAL: 'Manual',
   // seguro da frota
   VIGENTE: 'Vigente', VENCENDO: 'Vencendo', VENCIDO: 'Vencido', FUTURO: 'A iniciar',

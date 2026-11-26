@@ -1,6 +1,7 @@
 package com.fundacao.gerenciador_patrimonial.dto.response;
 
 import com.fundacao.gerenciador_patrimonial.domain.entity.Usuario;
+import com.fundacao.gerenciador_patrimonial.domain.enums.OrigemUsuario;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Perfil;
 
 import java.time.LocalDateTime;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
  * @param senhaProvisoria true quando o usuário ainda precisa trocar a senha
  *                        definida pelo administrador (primeiro acesso)
  * @param podeAbastecer   permissão extra para registrar abastecimentos da frota
+ * @param origem          LOCAL (senha do sistema) ou DOMINIO (senha da rede, perfil pelos grupos do AD)
  */
 public record UsuarioResponse(
         Long id,
@@ -20,11 +22,13 @@ public record UsuarioResponse(
         boolean ativo,
         boolean senhaProvisoria,
         boolean podeAbastecer,
-        LocalDateTime criadoEm
+        LocalDateTime criadoEm,
+        OrigemUsuario origem
 ) {
     public static UsuarioResponse from(Usuario u) {
         return new UsuarioResponse(
                 u.getId(), u.getNomeCompleto(), u.getLogin(),
-                u.getPerfil(), u.isAtivo(), u.isSenhaProvisoria(), u.isPodeAbastecer(), u.getCriadoEm());
+                u.getPerfil(), u.isAtivo(), u.isSenhaProvisoria(), u.isPodeAbastecer(), u.getCriadoEm(),
+                u.getOrigem());
     }
 }

@@ -1,6 +1,8 @@
 // Espelho dos DTOs do back-end (dto/response e dto/request).
 
-export type Perfil = 'ADMINISTRADOR' | 'FISCAL' | 'GERENTE' | 'PRESIDENTE' | 'FINANCEIRO' | 'MOTORISTA' | 'INTEGRACAO'
+export type Perfil = 'ADMINISTRADOR' | 'FISCAL' | 'GERENTE' | 'PRESIDENTE' | 'FINANCEIRO' | 'MOTORISTA' | 'INTEGRACAO' | 'USUARIO'
+/** LOCAL = senha do sistema; DOMINIO = senha da rede (AD FPTO.LOCAL), perfil pelos grupos do AD. */
+export type OrigemUsuario = 'LOCAL' | 'DOMINIO'
 export type Conservacao = 'NOVO' | 'OTIMO' | 'BOM' | 'BOM_REGULAR' | 'REGULAR' | 'REGULAR_RUIM' | 'RUIM' | 'INSERVIVEL'
 export type SituacaoPatrimonio = 'ATIVO' | 'BAIXADO' | 'MANUTENCAO' | 'CAUTELADO' | 'EM_APURACAO'
 export type TipoAnexo = 'NOTA_FISCAL' | 'FOTO' | 'MANUAL' | 'OUTRO'
@@ -25,7 +27,13 @@ export interface Page<T> {
 }
 
 export interface Usuario {
-  id: number; nomeCompleto: string; login: string; perfil: Perfil; ativo: boolean; senhaProvisoria: boolean; podeAbastecer?: boolean; criadoEm?: string
+  id: number; nomeCompleto: string; login: string; perfil: Perfil; ativo: boolean; senhaProvisoria: boolean; podeAbastecer?: boolean; criadoEm?: string; origem?: OrigemUsuario
+}
+export interface DominioGrupo { chave: string; nome: string; descricao: string; existe: boolean; membros: number }
+export interface DominioStatus { habilitado: boolean; dominio?: string; servidores: string[]; ouGrupos?: string; conectado: boolean; erro?: string; grupos: DominioGrupo[] }
+export interface UsuarioDominio {
+  login: string; nome: string; email?: string; ativoNoDominio: boolean; perfil: Perfil; podeAbastecer: boolean
+  usuarioId?: number; ativoNoSistema?: boolean; origem?: OrigemUsuario
 }
 export interface UsuarioRequest {
   nomeCompleto: string; login: string; senha?: string; perfil: Perfil; ativo: boolean; exigirTrocaSenha: boolean; podeAbastecer?: boolean

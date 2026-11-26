@@ -51,6 +51,7 @@ export default function Login() {
                 <span className="input-group-text"><i className="bi bi-key"></i></span>
                 <input type="password" className="form-control" autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} required />
               </div>
+              <div className="form-text">Use o mesmo usuário e senha da rede da Fundação (Windows).</div>
             </div>
             <button className="btn btn-primary w-100" type="submit" disabled={enviando}>
               {enviando ? <span className="spinner-border spinner-border-sm"></span> : <i className="bi bi-box-arrow-in-right"></i>} Entrar

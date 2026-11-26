@@ -61,12 +61,23 @@ services:
       TRANSPORTES_DB_USER:  ${TRANSPORTES_DB_USER:-transportes}
       TRANSPORTES_DB_SENHA: ${TRANSPORTES_DB_SENHA:-}
       TRANSPORTES_IMPORTAR_NO_BOOT: ${TRANSPORTES_IMPORTAR_NO_BOOT:-true}
+      # Login pela rede (AD FPTO.LOCAL na VM 192.168.13.40). Passo a passo em docs/INTEGRACAO_AD.md.
+      AD_HABILITADO:      ${AD_HABILITADO:-false}
+      AD_URLS:            ${AD_URLS:-ldaps://192.168.13.40:636}
+      AD_DOMINIO:         ${AD_DOMINIO:-fpto.local}
+      AD_BASE:            ${AD_BASE:-DC=fpto,DC=local}
+      AD_USUARIO_SERVICO: ${AD_USUARIO_SERVICO:-svc-patrimonio@fpto.local}
+      AD_SENHA_SERVICO:   ${AD_SENHA_SERVICO:-}
+      AD_OU_GRUPOS:       ${AD_OU_GRUPOS:-OU=Patrimonio,DC=fpto,DC=local}
+      AD_CERTIFICADO_CA:  ${AD_CERTIFICADO_CA:-/config/ad-ca.pem}
       JAVA_OPTS: "-Xms512m -Xmx1g"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       # Anexos vão para o servidor de armazenamento via NFS.
       - uploads_nfs:/uploads
+      # CA do Samba AD (copiada do DC para ./config/ad-ca.pem ao lado do compose).
+      - ./config:/config:ro
     ports:
       # A porta 80 do host é do dashboard do Umbrel; 8080/8081 também estão em uso.
       # 8082 fica livre para o reverse proxy (443) apontar quando o domínio for vinculado.

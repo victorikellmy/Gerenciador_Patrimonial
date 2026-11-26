@@ -28,6 +28,18 @@ export default function TrocarSenha() {
     } catch (ex) { setErro(ex instanceof Error ? ex.message : 'Não foi possível alterar a senha.') } finally { setSalvando(false) }
   }
 
+  if (usuario?.origem === 'DOMINIO') return (
+    <>
+      <PageHeader titulo="Trocar senha" subtitulo="Sua conta é a da rede da Fundação." />
+      <div className="row justify-content-center"><div className="col-lg-6"><Card>
+        <Section icon="bi-diagram-3" titulo="Senha da rede" semBorda>
+          <p className="mb-2">Você entra no Patrimônio com o mesmo usuário e senha do Windows (<code>FPTO\{usuario.login}</code>). Para trocar, use o Windows:</p>
+          <p className="mb-0"><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Del</kbd> → <strong>Alterar uma senha</strong>. A nova senha passa a valer aqui também.</p>
+        </Section>
+      </Card></div></div>
+    </>
+  )
+
   return (
     <>
       <PageHeader titulo="Trocar senha" subtitulo={obrigatoria ? 'Primeiro acesso: defina uma nova senha para continuar.' : 'Altere a senha da sua conta.'} />

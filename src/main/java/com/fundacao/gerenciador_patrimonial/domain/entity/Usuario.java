@@ -1,5 +1,6 @@
 package com.fundacao.gerenciador_patrimonial.domain.entity;
 
+import com.fundacao.gerenciador_patrimonial.domain.enums.OrigemUsuario;
 import com.fundacao.gerenciador_patrimonial.domain.enums.Perfil;
 import jakarta.persistence.*;
 import lombok.*;
@@ -61,6 +62,18 @@ public class Usuario {
     @Column(name = "pode_abastecer", nullable = false)
     @Builder.Default
     private boolean podeAbastecer = false;
+
+    /**
+     * LOCAL: senha guardada aqui (BCrypt). DOMINIO: a senha é a da rede (AD), conferida a
+     * cada login, e o perfil vem dos grupos do Patrimônio no AD; {@code senhaHash} guarda
+     * só uma marca que nunca confere com senha nenhuma.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private OrigemUsuario origem = OrigemUsuario.LOCAL;
+
+    public boolean isDoDominio() { return origem == OrigemUsuario.DOMINIO; }
 
     @CreatedDate
     @Column(name = "criado_em", nullable = false, updatable = false)

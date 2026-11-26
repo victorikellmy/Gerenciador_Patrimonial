@@ -1,6 +1,14 @@
 package com.fundacao.gerenciador_patrimonial.security;
 
+import com.fundacao.gerenciador_patrimonial.config.DominioProperties;
+import com.fundacao.gerenciador_patrimonial.service.dominio.DiretorioAd;
+import com.fundacao.gerenciador_patrimonial.service.dominio.DominioUsuarioService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.security.authentication.AuthenticationEventPublisher;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -32,13 +40,15 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
  */
 @Configuration
 @EnableMethodSecurity
+@EnableConfigurationProperties(DominioProperties.class)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final com.fundacao.gerenciador_patrimonial.repository.UsuarioRepository usuarioRepo;
 
     private static final String[] LEITURA = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO"};
-    private static final String[] TODOS_HUMANOS = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO", "MOTORISTA"};
+    /** USUARIO = conta da rede ainda sem grupo do Patrimônio: só a própria conta (/api/me, /api/auth). */
+    private static final String[] TODOS_HUMANOS = {"ADMINISTRADOR", "FISCAL", "GERENTE", "PRESIDENTE", "FINANCEIRO", "MOTORISTA", "USUARIO"};
 
     /** BCrypt com cost 10 (default) — resistente a brute force. */
     @Bean
@@ -46,11 +56,25 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /** Exposto para o login por JSON da SPA ({@code POST /api/auth/login}). */
+    /**
+     * Login da SPA ({@code POST /api/auth/login}) e HTTP Basic da API: primeiro a senha da rede
+     * (AD FPTO.LOCAL, só quando {@code app.ad.habilitado}), depois a senha local do sistema.
+     * Os eventos de sucesso/falha alimentam o {@link TentativasLoginService}.
+     */
     @Bean
-    public org.springframework.security.authentication.AuthenticationManager authenticationManager(
-            org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(CustomUserDetailsService userDetailsService,
+                                                       PasswordEncoder passwordEncoder,
+                                                       DiretorioAd diretorio,
+                                                       DominioUsuarioService dominioUsuarios,
+                                                       TentativasLoginService tentativas,
+                                                       AuthenticationEventPublisher eventos) {
+        DaoAuthenticationProvider local = new DaoAuthenticationProvider();
+        local.setUserDetailsService(userDetailsService);
+        local.setPasswordEncoder(passwordEncoder);
+        ProviderManager manager = new ProviderManager(
+                new DominioAuthenticationProvider(diretorio, dominioUsuarios, usuarioRepo, tentativas), local);
+        manager.setAuthenticationEventPublisher(eventos);
+        return manager;
     }
 
     // =========================================================================
@@ -62,9 +86,11 @@ public class SecurityConfig {
     //
     @Bean
     @org.springframework.core.annotation.Order(1)
-    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain apiFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
         http
                 .securityMatcher("/api/**")
+                // Mesmo gerenciador do login da SPA: o Basic do app Android também aceita a senha da rede.
+                .authenticationManager(authenticationManager)
                 // CSRF desligado: o app Android usa Basic sem sessão e a SPA usa sessão com cookie
                 // SameSite=Lax (server.servlet.session.cookie.same-site), o que bloqueia POST cross-site.
                 .csrf(AbstractHttpConfigurer::disable)

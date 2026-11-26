@@ -161,6 +161,14 @@ export const api = {
     atualizar: (id: number, r: T.UsuarioRequest) => http.put<T.Usuario>(`/api/usuarios/${id}`, r),
     inativar: (id: number) => http.del<void>(`/api/usuarios/${id}`),
   },
+  /** Contas da rede (AD FPTO.LOCAL) e os grupos do Patrimônio: as alterações são gravadas no AD. */
+  dominio: {
+    status: () => http.get<T.DominioStatus>('/api/admin/dominio/status'),
+    criarGrupos: () => http.post<T.DominioStatus>('/api/admin/dominio/grupos'),
+    usuarios: (termo = '') => http.get<T.UsuarioDominio[]>('/api/admin/dominio/usuarios' + qs({ termo })),
+    definirAcesso: (login: string, perfil: T.Perfil | null, podeAbastecer: boolean) =>
+      http.put<T.UsuarioDominio>(`/api/admin/dominio/usuarios/${encodeURIComponent(login)}`, { perfil, podeAbastecer }),
+  },
   auditoria: {
     buscar: (f: Record<string, unknown>, page = 0, size = 50) => http.get<T.Page<T.Auditoria>>('/api/admin/auditoria' + qs({ ...f, page, size })),
   },

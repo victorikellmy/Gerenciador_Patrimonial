@@ -20,5 +20,7 @@ public enum AcaoAuditoria {
     /** Conferência física registrada em um levantamento patrimonial. */
     LEVANTAMENTO,
     /** Lançamento da frota (abastecimento, manutenção, deslocamento) ou cadastro de veículo. */
-    FROTA
+    FROTA,
+    /** Acesso alterado nos grupos do Patrimônio no AD (ou usuário da rede convertido no primeiro login). */
+    GRUPO_DOMINIO
 }

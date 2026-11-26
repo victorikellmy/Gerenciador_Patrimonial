@@ -60,6 +60,10 @@ public class AuthController {
         } catch (org.springframework.security.authentication.LockedException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("mensagem", "Muitas tentativas de login. Aguarde alguns minutos e tente de novo."));
+        } catch (org.springframework.security.authentication.InternalAuthenticationServiceException e) {
+            // Conta da rede com o AD fora do ar (as contas locais seguem entrando pela senha do sistema).
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("mensagem", "Não foi possível conferir a senha no servidor da rede agora. Tente de novo em instantes."));
         } catch (AuthenticationException e) {
             // Mesma mensagem para senha errada, login inexistente e conta inativa: não revela o estado da conta.
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("mensagem", "Usuário ou senha inválidos."));

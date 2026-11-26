@@ -33,5 +33,12 @@ public enum Perfil {
      * Usuário técnico de sistema externo (ex.: Almoxarifado). Só acessa
      * {@code /api/integracao/**} via HTTP Basic; sem acesso à interface web.
      */
-    INTEGRACAO
+    INTEGRACAO,
+
+    /**
+     * Usuário padrão da rede: entrou com a conta do domínio (AD FPTO.LOCAL) mas ainda
+     * não está em nenhum grupo do Patrimônio. Só vê a própria conta até o administrador
+     * incluí-lo em um grupo (aba "Grupos da rede" em Usuários).
+     */
+    USUARIO
 }
