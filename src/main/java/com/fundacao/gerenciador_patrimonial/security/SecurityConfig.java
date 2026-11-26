@@ -112,6 +112,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/frota/seguros", "/api/frota/seguros/**",
                                                           "/api/frota/sinistros", "/api/frota/sinistros/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
                         .requestMatchers(HttpMethod.POST, "/api/frota/veiculos", "/api/frota/veiculos/*/manutencao-status").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
+                        // Motorista edita abastecimento e deslocamento (só os que ele registrou: FrotaService.exigirAutor).
+                        .requestMatchers(HttpMethod.PUT, "/api/frota/abastecimentos/*", "/api/frota/deslocamentos/*").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE", "MOTORISTA")
                         .requestMatchers(HttpMethod.PUT, "/api/frota/**").hasAnyRole("ADMINISTRADOR", "FISCAL", "PRESIDENTE")
                         // Trocar a NF de um lançamento existente é edição: só ADMIN/FISCAL/PRESIDENTE. O motorista
                         // anexa a NF junto com o cadastro (multipart em /veiculos/{id}/abastecimentos|manutencoes).

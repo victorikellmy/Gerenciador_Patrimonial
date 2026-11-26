@@ -116,7 +116,7 @@ export default function LancamentoForm({ tipo }: { tipo: Tipo }) {
             </>}
           </div>
         </Section>
-        {tipo !== 'deslocamento' && <Section icon="bi-paperclip" titulo="Nota fiscal" desc={nfObrigatoria ? 'Obrigatória: PDF ou foto do cupom/nota.' : 'PDF ou foto do cupom/nota (opcional para gestores).'} semBorda>
+        {tipo !== 'deslocamento' && (gestorFrota || !editando) && <Section icon="bi-paperclip" titulo="Nota fiscal" desc={nfObrigatoria ? 'Obrigatória: PDF ou foto do cupom/nota.' : 'PDF ou foto do cupom/nota (opcional para gestores).'} semBorda>
           <input type="file" className="form-control" accept="application/pdf,image/*" capture="environment" required={nfObrigatoria} onChange={e => setNf(e.target.files?.[0] ?? null)} />
           {editando && (existente.data as Abastecimento)?.possuiNotaFiscal && <div className="form-text">Já existe uma nota anexada ({(existente.data as Abastecimento).nfNomeOriginal}). Enviar outra substitui a atual.</div>}
         </Section>}

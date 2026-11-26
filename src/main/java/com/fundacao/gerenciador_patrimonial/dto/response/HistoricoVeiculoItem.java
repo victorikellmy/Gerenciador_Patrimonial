@@ -19,7 +19,9 @@ public record HistoricoVeiculoItem(
         BigDecimal valor,
         String motorista,
         boolean emAndamento,
-        boolean possuiNotaFiscal
+        boolean possuiNotaFiscal,
+        /** Login de quem lançou: motorista só edita o que registrou. */
+        String registradoPor
 ) {
     public enum Tipo { ABASTECIMENTO, MANUTENCAO, DESLOCAMENTO }
 }
