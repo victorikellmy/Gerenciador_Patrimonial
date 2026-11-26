@@ -220,6 +220,7 @@ public class FrotaService {
         validarData(req.data());
         Abastecimento a = abastecimentoRepo.findComVeiculo(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Abastecimento", id));
+        exigirAutor(a.getRegistradoPor());
         aplicar(a, req);
         a.getVeiculo().atualizarKm(a.getKm());
         auditoriaService.registrar(AcaoAuditoria.FROTA, ENT_VEICULO, a.getVeiculo().getId(),
@@ -390,6 +391,7 @@ public class FrotaService {
         validarDeslocamento(req);
         Deslocamento d = deslocamentoRepo.findComVeiculo(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Deslocamento", id));
+        exigirAutor(d.getRegistradoPor());
         aplicar(d, req);
         d.getVeiculo().atualizarKm(d.getKmInicial());
         d.getVeiculo().atualizarKm(d.getKmFinal());
@@ -500,7 +502,7 @@ public class FrotaService {
                     + (a.getPostoCidade() != null ? a.getPostoCidade() : "");
             itens.add(new HistoricoVeiculoItem(Tipo.ABASTECIMENTO, a.getId(), a.getData(), null,
                     "Abastecimento · " + a.getCombustivel().getRotulo(), detalhe.isBlank() ? null : detalhe,
-                    a.getKm(), a.getValor(), a.getMotorista(), false, a.possuiNotaFiscal()));
+                    a.getKm(), a.getValor(), a.getMotorista(), false, a.possuiNotaFiscal(), a.getRegistradoPor()));
         }
         for (ManutencaoVeiculo m : manutencaoRepo.findByVeiculoIdOrderByDataDescIdDesc(veiculoId)) {
             String detalhe = (m.getDescricao() != null ? m.getDescricao() : "")
@@ -508,7 +510,7 @@ public class FrotaService {
                     + (m.getProximaRevisaoKm() != null ? " · próxima revisão em " + m.getProximaRevisaoKm() + " km" : "");
             itens.add(new HistoricoVeiculoItem(Tipo.MANUTENCAO, m.getId(), m.getData(), null,
                     "Manutenção · " + m.getServico().getRotulo(), detalhe.isBlank() ? null : detalhe.trim(),
-                    m.getKm(), m.getValor(), m.getMotorista(), false, m.possuiNotaFiscal()));
+                    m.getKm(), m.getValor(), m.getMotorista(), false, m.possuiNotaFiscal(), m.getRegistradoPor()));
         }
         for (Deslocamento d : deslocamentoRepo.findByVeiculoIdOrderByDataViagemDescIdDesc(veiculoId)) {
             String detalhe = d.getMotivo()
@@ -517,7 +519,7 @@ public class FrotaService {
                     + (d.getLotacao() != null ? " · " + d.getLotacao() : "");
             itens.add(new HistoricoVeiculoItem(Tipo.DESLOCAMENTO, d.getId(), d.getDataViagem(), d.getHoraSaida(),
                     "Saída · " + d.getDestino(), detalhe,
-                    d.getKmFinal() != null ? d.getKmFinal() : d.getKmInicial(), null, d.getMotorista(), d.isEmAndamento(), false));
+                    d.getKmFinal() != null ? d.getKmFinal() : d.getKmInicial(), null, d.getMotorista(), d.isEmAndamento(), false, d.getRegistradoPor()));
         }
         itens.sort(Comparator.comparing(HistoricoVeiculoItem::data).reversed()
                 .thenComparing(i -> i.hora() == null ? java.time.LocalTime.MIN : i.hora(), Comparator.reverseOrder())
@@ -848,6 +850,16 @@ public class FrotaService {
 
     private static String normalizarPlaca(String placa) {
         return placa.trim().toUpperCase().replaceAll("\\s+", "");
+    }
+
+    /** Motorista só edita o lançamento que ele mesmo registrou; quem gere a frota edita qualquer um. */
+    static void exigirAutor(String registradoPor) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean motorista = auth != null && auth.getAuthorities().stream()
+                .anyMatch(g -> "ROLE_MOTORISTA".equals(g.getAuthority()));
+        if (motorista && (registradoPor == null || !registradoPor.equalsIgnoreCase(auth.getName()))) {
+            throw new RegraDeNegocioException("Você só pode editar lançamentos registrados por você.");
+        }
     }
 
     private static String loginAtual() {

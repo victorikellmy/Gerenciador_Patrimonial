@@ -115,7 +115,7 @@ export interface Deslocamento {
   horaSaida?: string; kmInicial?: number; horaChegada?: string; kmFinal?: number; kmRodados?: number; emAndamento: boolean; motorista: string; lotacao?: string; observacao?: string; registradoPor?: string
 }
 export interface DeslocamentoRequest { veiculoId: number | ''; dataViagem: string; destino: string; motivo: string; titular?: string; assistido?: string; horaSaida?: string; kmInicial?: number | ''; horaChegada?: string; kmFinal?: number | ''; motorista: string; lotacao?: string; observacao?: string }
-export interface HistoricoItem { tipo: 'ABASTECIMENTO' | 'MANUTENCAO' | 'DESLOCAMENTO'; id: number; data: string; hora?: string; titulo: string; detalhe?: string; km?: number; valor?: number; motorista?: string; emAndamento: boolean; possuiNotaFiscal: boolean }
+export interface HistoricoItem { tipo: 'ABASTECIMENTO' | 'MANUTENCAO' | 'DESLOCAMENTO'; id: number; data: string; hora?: string; titulo: string; detalhe?: string; km?: number; valor?: number; motorista?: string; emAndamento: boolean; possuiNotaFiscal: boolean; registradoPor?: string }
 export interface VeiculoResumo {
   kmAtual?: number; combustivelAno: number; litrosAno: number; manutencaoAno: number; kmRodadosAno: number; consumoMedioKmPorLitro?: number
   qtdAbastecimentos: number; qtdManutencoes: number; qtdDeslocamentos: number; deslocamentoAberto?: Deslocamento; proximaRevisaoKm?: number; proximaRevisaoData?: string; revisaoVencida: boolean

@@ -275,6 +275,64 @@ class FrotaFluxoTest {
     }
 
     @Test
+    void motoristaEditaSeusAbastecimentosEDeslocamentos() throws Exception {
+        mvc.perform(post("/api/frota/veiculos").contentType(MediaType.APPLICATION_JSON)
+                        .content(veiculoJson(placa, "HILUX", ",\"combustivelPadrao\":\"DIESEL\"")))
+                .andExpect(status().isCreated());
+        Veiculo v = veiculoRepo.findByPlacaIgnoreCase(placa).orElseThrow();
+        String abastJson = """
+                {"veiculoId":%d,"data":"%s","km":2000,"combustivel":"DIESEL","quantidadeLitros":%s,"valor":300.00,"motorista":"Motorista Demo"}""";
+        String saidaJson = """
+                {"veiculoId":%d,"dataViagem":"%s","destino":"%s","motivo":"Apoio","horaSaida":"08:00","kmInicial":2100,
+                 "horaChegada":"10:00","kmFinal":2150,"motorista":"Motorista Demo"}""";
+
+        // Lançamentos do próprio motorista
+        mvc.perform(multipart("/api/frota/veiculos/" + v.getId() + "/abastecimentos")
+                        .file(new MockMultipartFile("dados", "", "application/json", abastJson.formatted(v.getId(), hoje(), "50").getBytes()))
+                        .file(new MockMultipartFile("arquivo", "nf.pdf", "application/pdf", "%PDF-1.4".getBytes())).with(user(motorista)))
+                .andExpect(status().isCreated());
+        var meuAbast = abastecimentoRepo.findByVeiculoIdOrderByDataDescIdDesc(v.getId()).get(0);
+        mvc.perform(post("/api/frota/veiculos/" + v.getId() + "/deslocamentos").with(user(motorista))
+                        .contentType(MediaType.APPLICATION_JSON).content(saidaJson.formatted(v.getId(), hoje(), "Gurupi")))
+                .andExpect(status().isCreated());
+        var minhaSaida = deslocamentoRepo.findByVeiculoIdOrderByDataViagemDescIdDesc(v.getId()).get(0);
+
+        // Histórico informa quem lançou (a SPA usa para mostrar o botão de editar)
+        mvc.perform(get("/api/frota/veiculos/" + v.getId() + "/historico").with(user(motorista))).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.tipo == 'ABASTECIMENTO')].registradoPor").value(hasItem("motorista.teste")));
+
+        // Motorista edita o que registrou
+        mvc.perform(put("/api/frota/abastecimentos/" + meuAbast.getId()).with(user(motorista))
+                        .contentType(MediaType.APPLICATION_JSON).content(abastJson.formatted(v.getId(), hoje(), "55")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quantidadeLitros").value(55));
+        mvc.perform(put("/api/frota/deslocamentos/" + minhaSaida.getId()).with(user(motorista))
+                        .contentType(MediaType.APPLICATION_JSON).content(saidaJson.formatted(v.getId(), hoje(), "Araguaína")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.destino").value("Araguaína"));
+
+        // ...mas não o lançado por outra pessoa (aqui, o admin)
+        mvc.perform(post("/api/frota/veiculos/" + v.getId() + "/abastecimentos").contentType(MediaType.APPLICATION_JSON)
+                        .content(abastJson.formatted(v.getId(), hoje(), "40")))
+                .andExpect(status().isCreated());
+        var doAdmin = abastecimentoRepo.findByVeiculoIdOrderByDataDescIdDesc(v.getId()).stream()
+                .filter(a -> "admin.frota".equals(a.getRegistradoPor())).findFirst().orElseThrow();
+        mvc.perform(put("/api/frota/abastecimentos/" + doAdmin.getId()).with(user(motorista))
+                        .contentType(MediaType.APPLICATION_JSON).content(abastJson.formatted(v.getId(), hoje(), "99")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem", containsString("registrados por você")));
+        assertThat(abastecimentoRepo.findById(doAdmin.getId()).orElseThrow().getQuantidadeLitros()).isEqualByComparingTo("40");
+
+        // Manutenção e troca de NF continuam só com quem gere a frota
+        mvc.perform(put("/api/frota/manutencoes/1").with(user(motorista))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(multipart("/api/frota/abastecimentos/" + meuAbast.getId() + "/nota-fiscal")
+                        .file(new MockMultipartFile("arquivo", "nf2.pdf", "application/pdf", "%PDF-1.4".getBytes())).with(user(motorista)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void gerenteComPermissaoExtraRegistraAbastecimentoComNf() throws Exception {
         mvc.perform(post("/api/frota/veiculos").contentType(MediaType.APPLICATION_JSON)
                         .content(veiculoJson(placa, "HILUX", ",\"combustivelPadrao\":\"DIESEL\"")))

@@ -15,7 +15,7 @@ const tipoCor: Record<string, string> = { ABASTECIMENTO: 'text-bg-light', MANUTE
 export default function FrotaVeiculo() {
   const { id } = useParams()
   const vid = Number(id)
-  const { temPerfil, podeAbastecer } = useAuth()
+  const { temPerfil, podeAbastecer, usuario } = useAuth()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
@@ -35,6 +35,8 @@ export default function FrotaVeiculo() {
   const { veiculo: v, resumo: r } = ficha.data
   const gestor = temPerfil('ADMINISTRADOR', 'FISCAL', 'PRESIDENTE')
   const opera = temPerfil('ADMINISTRADOR', 'FISCAL', 'PRESIDENTE', 'MOTORISTA')
+  // Motorista edita o abastecimento/deslocamento que ele mesmo registrou.
+  const podeEditar = (h: { tipo: string; registradoPor?: string }) => gestor || (temPerfil('MOTORISTA') && h.tipo !== 'MANUTENCAO' && !!usuario && h.registradoPor?.toLowerCase() === usuario.login.toLowerCase())
   const aberto = r.deslocamentoAberto
   const registrarChegada = (e: FormEvent) => { e.preventDefault(); if (!aberto) return; acao(() => api.frota.finalizarDeslocamento(aberto.id, Number(chegada.kmFinal), chegada.horaChegada), 'Chegada registrada.') }
   const historico = (hist.data ?? []).filter(h => !filtro || h.tipo === filtro)
@@ -92,7 +94,7 @@ export default function FrotaVeiculo() {
                 <td><div className="cell-stack"><span className="cell-primary">{h.titulo}{h.emAndamento && <span className="badge badge-plain text-bg-info ms-2">em andamento</span>}</span><span className="cell-secondary">{h.detalhe}</span></div></td>
                 <td className="text-end">{numero(h.km)}</td><td className="text-end">{h.valor != null ? moeda(h.valor) : '—'}</td><td>{h.motorista || '—'}</td>
                 <td>{h.possuiNotaFiscal && h.tipo !== 'DESLOCAMENTO' ? <button className="btn btn-sm btn-link p-0" onClick={() => abrirArquivo(api.frota.nfUrl(h.tipo === 'ABASTECIMENTO' ? 'abastecimentos' : 'manutencoes', h.id))}><i className="bi bi-paperclip"></i> NF</button> : '—'}</td>
-                <td className="text-end text-nowrap">{gestor && <><Link className="btn btn-sm btn-secondary btn-icon" title="Editar" to={editarUrl(h)}><i className="bi bi-pencil"></i></Link>{' '}{temPerfil('ADMINISTRADOR') && <button className="btn btn-sm btn-outline-danger btn-icon" title="Excluir" disabled={ocupado} onClick={() => excluir(h)}><i className="bi bi-trash"></i></button>}</>}</td>
+                <td className="text-end text-nowrap">{podeEditar(h) && <Link className="btn btn-sm btn-secondary btn-icon" title="Editar" to={editarUrl(h)}><i className="bi bi-pencil"></i></Link>}{' '}{temPerfil('ADMINISTRADOR') && <button className="btn btn-sm btn-outline-danger btn-icon" title="Excluir" disabled={ocupado} onClick={() => excluir(h)}><i className="bi bi-trash"></i></button>}</td>
               </tr>))}</tbody>
           </table></div>)}
       </Card>
